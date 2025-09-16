@@ -1,0 +1,25 @@
+{
+  "structures": [
+    "small_warehouse.json",
+    "medium_warehouse.json"
+  ],
+  "strains": [
+    "ak-47.json",
+    "northern-lights.json",
+    "skunk-1.json",
+    "sour-diesel.json",
+    "white-widow.json"
+  ],
+  "devices": [
+    "climate_unit_01.json",
+    "co2injector-01.json",
+    "dehumidifier-01.json",
+    "humidity_control_unit_01.json",
+    "veg_light_01.json"
+  ],
+  "cultivationMethods": [
+    "basic_soil_pot.json",
+    "scrog.json",
+    "sog.json"
+  ]
+}

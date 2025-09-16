@@ -1,0 +1,40 @@
+{
+  "id": "basic-soil",
+  "kind": "CultivationMethod",
+  "name": "Basic Soil Pot",
+  "setupCost": 2.0,
+  "laborIntensity": 0.1,
+  "areaPerPlant": 0.5,
+  "minimumSpacing": 0.5,
+  "maxCycles": 1,
+  "substrate": {
+    "type": "soil",
+    "costPerSquareMeter": 2.5,
+    "maxCycles": 1
+  },
+  "containerSpec": {
+    "type": "pot",
+    "volumeInLiters": 10,
+    "footprintArea": 0.25,
+    "reusableCycles": 3,
+    "costPerUnit": 1.5,
+    "packingDensity": 0.9
+  },
+  "strainTraitCompatibility": {},
+  "idealConditions": {
+    "idealTemperature": [20, 28],
+    "idealHumidity": [0.5, 0.7]
+  },
+  "meta": {
+    "description": "Simple cultivation method: one plant per pot in soil. Low setup cost, minimal labor, universally compatible.",
+    "advantages": [
+      "Very low initial cost",
+      "Compatible with most strains",
+      "Easy to manage"
+    ],
+    "disadvantages": [
+      "Moderate space usage",
+      "Lower productivity than advanced methods"
+    ]
+  }
+}

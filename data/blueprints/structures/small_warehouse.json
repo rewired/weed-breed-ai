@@ -1,0 +1,10 @@
+{
+  "id": "small-warehouse",
+  "name": "Small Warehouse",
+  "footprint": {
+    "length_m": 20,
+    "width_m": 20
+  },
+  "rentalCostPerSqmPerMonth": 10,
+  "upfrontFee": 500
+}
