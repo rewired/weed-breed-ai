@@ -1,8 +1,14 @@
-import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint } from './types';
+import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice } from './types';
 
 const BLUEPRINT_BASE_PATH = '/data/blueprints/';
 
 type BlueprintWithId = { id: string };
+
+// This type helps us model the structure of the JSON file.
+interface DevicePricesFile {
+  devicePrices: Record<string, DevicePrice>;
+}
+
 
 async function fetchAndStore<T extends BlueprintWithId>(basePath: string, files: string[], store: Record<string, T>): Promise<void> {
   if (!files || files.length === 0) {
@@ -61,14 +67,25 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       strains: {},
       devices: {},
       cultivationMethods: {},
+      devicePrices: {},
     };
     
+    const devicePricesPromise = fetch('/data/prices/devicePrices.json')
+      .then(res => res.json())
+      .then((data: DevicePricesFile) => {
+        db.devicePrices = data.devicePrices;
+      }).catch(e => {
+        console.error("Failed to load device prices", e);
+        throw e;
+      });
+
     // Load all blueprints based on the manifest
     await Promise.all([
       fetchAndStore<StructureBlueprint>(`${BLUEPRINT_BASE_PATH}structures/`, structureFiles, db.structures),
       fetchAndStore<StrainBlueprint>(`${BLUEPRINT_BASE_PATH}strains/`, strainFiles, db.strains),
       fetchAndStore<DeviceBlueprint>(`${BLUEPRINT_BASE_PATH}devices/`, deviceFiles, db.devices),
       fetchAndStore<CultivationMethodBlueprint>(`${BLUEPRINT_BASE_PATH}cultivationMethods/`, cultivationMethodFiles, db.cultivationMethods),
+      devicePricesPromise,
     ]);
     
     blueprintDB = db;

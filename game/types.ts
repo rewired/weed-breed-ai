@@ -1,4 +1,10 @@
 import { RoomPurpose } from './roomPurposes';
+import { Company } from './models/Company';
+import { Structure } from './models/Structure';
+import { Room } from './models/Room';
+import { Zone } from './models/Zone';
+
+export { Company, Structure, Room, Zone };
 
 export interface StructureBlueprint {
   id: string;
@@ -28,51 +34,23 @@ export interface CultivationMethodBlueprint {
   kind: string;
 }
 
+export interface DevicePrice {
+    capitalExpenditure: number;
+    baseMaintenanceCostPerTick: number;
+    costIncreasePer1000Ticks: number;
+}
+
 export interface BlueprintDB {
   structures: Record<string, StructureBlueprint>;
   strains: Record<string, StrainBlueprint>;
   devices: Record<string, DeviceBlueprint>;
   cultivationMethods: Record<string, CultivationMethodBlueprint>;
+  devicePrices: Record<string, DevicePrice>;
 }
 
 export interface GameState {
   ticks: number;
   company: Company;
-}
-
-export interface Company {
-  id: string;
-  name: string;
-  capital: number;
-  structures: Record<string, Structure>;
-  employees: Record<string, Employee>;
-  inventory: Record<string, any>; // Simplified for now
-  history: any[]; // Simplified for now
-}
-
-export interface Structure {
-  id: string;
-  blueprintId: string;
-  name: string;
-  area_m2: number;
-  rooms: Record<string, Room>;
-}
-
-export interface Room {
-  id: string;
-  name: string;
-  area_m2: number;
-  purpose: RoomPurpose;
-  zones: Record<string, Zone>;
-}
-
-export interface Zone {
-  id: string;
-  name: string;
-  area_m2: number;
-  plants: Record<string, Plant>;
-  devices: Record<string, Device>;
-  currentEnvironment: Record<string, any>; // Simplified
 }
 
 export interface Employee {
