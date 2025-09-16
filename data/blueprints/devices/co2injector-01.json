@@ -1,0 +1,26 @@
+{
+  "id": "c701efa6-1e90-4f28-8934-ea9c584596e4",
+  "kind": "CO2Injector",
+  "name": "CO2 Pulse",
+  "quality": 0.85,
+  "complexity": 0.15,
+  "lifespanInHours": 8760,
+  "settings": {
+    "power": 0.05,
+    "targetCO2": 1100,
+    "hysteresis": 60,
+    "pulsePpmPerTick": 150
+  },
+  "meta": {
+    "description": "Automated CO2 injector for controlled enrichment.",
+    "advantages": [
+      "Precise dosing",
+      "Energy efficient"
+    ],
+    "disadvantages": [
+      "Requires CO2 supply",
+      "Overuse can harm plants"
+    ]
+  }
+}
+
