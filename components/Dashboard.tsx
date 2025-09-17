@@ -8,9 +8,9 @@ interface DashboardProps {
   isSimRunning: boolean;
   onStart: () => void;
   onPause: () => void;
-  onReset: () => void;
-  onSaveClick: () => void;
-  onLoadClick: () => void;
+  onReset: (context?: any) => void;
+  onSaveClick: (context?: any) => void;
+  onLoadClick: (context?: any) => void;
   onExportClick: () => void;
   onFinancesClick: () => void;
   gameSpeed: GameSpeed;
@@ -19,6 +19,7 @@ interface DashboardProps {
   alerts: Alert[];
   onNavigateToAlert: (location: AlertLocation) => void;
   onAcknowledgeAlert: (alertId: string) => void;
+  onGameMenuToggle: (isOpen: boolean) => void;
 }
 
 const speedOptions: { label: string; speed: GameSpeed }[] = [
@@ -56,12 +57,17 @@ const AlertIcon = ({ type }: { type: string }) => {
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert, onGameMenuToggle }) => {
   const [progress, setProgress] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [isGameMenuOpen, setGameMenuOpen] = useState(false);
+
   const tickStartTimeRef = useRef(Date.now());
   const animationFrameRef = useRef<number | null>(null);
+  const wasRunningBeforeMenu = useRef(false);
+
   const alertsContainerRef = useRef<HTMLDivElement>(null);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
 
 
   // --- Date and Time Calculation ---
@@ -99,21 +105,69 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
     };
   }, [ticks, isSimRunning, gameSpeed]);
 
+  // --- Click Outside Handlers for Popovers ---
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (alertsContainerRef.current && !alertsContainerRef.current.contains(event.target as Node)) {
+        if (isAlertsOpen && alertsContainerRef.current && !alertsContainerRef.current.contains(event.target as Node)) {
             setIsAlertsOpen(false);
+        }
+        if (isGameMenuOpen && menuContainerRef.current && !menuContainerRef.current.contains(event.target as Node)) {
+             onGameMenuToggle(false);
+             if (wasRunningBeforeMenu.current) {
+                onStart();
+            }
+            wasRunningBeforeMenu.current = false;
+            setGameMenuOpen(false);
         }
     };
 
-    if (isAlertsOpen) {
-        document.addEventListener('mousedown', handleClickOutside);
-    }
-
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
         document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAlertsOpen]);
+  }, [isAlertsOpen, isGameMenuOpen, onStart, onGameMenuToggle]);
+
+  const handleMenuToggle = () => {
+    setGameMenuOpen(prev => {
+        const isOpening = !prev;
+        onGameMenuToggle(isOpening);
+        if (isOpening) {
+            if (isSimRunning) {
+                onPause();
+                wasRunningBeforeMenu.current = true;
+            } else {
+                wasRunningBeforeMenu.current = false;
+            }
+        } else { // is closing
+            if (wasRunningBeforeMenu.current) {
+                onStart();
+            }
+            wasRunningBeforeMenu.current = false;
+        }
+        return isOpening;
+    });
+  };
+
+  const handleMenuAction = (handler: (context?: any) => void) => {
+    // This function is for actions that open a modal.
+    // It passes the pre-menu running state to the modal,
+    // and lets the modal system handle resuming the simulation.
+    onGameMenuToggle(false);
+    handler({ prePauseState: wasRunningBeforeMenu.current });
+    setGameMenuOpen(false);
+    wasRunningBeforeMenu.current = false;
+  };
+
+  const handleExportAction = () => {
+    // This action doesn't open a modal, so we manage the pause state directly.
+    onGameMenuToggle(false);
+    onExportClick();
+    setGameMenuOpen(false);
+    if (wasRunningBeforeMenu.current) {
+        onStart();
+    }
+    wasRunningBeforeMenu.current = false;
+  };
 
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
@@ -212,20 +266,28 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
                 </div>
             )}
         </div>
-
-        <button className="btn btn-secondary btn-icon" onClick={onSaveClick} title="Save Game" aria-label="Save Game">
-          <span className="material-symbols-outlined">save</span>
-        </button>
-        <button className="btn btn-secondary btn-icon" onClick={onLoadClick} title="Load Game" aria-label="Load Game">
-          <span className="material-symbols-outlined">folder_open</span>
-        </button>
-        <button className="btn btn-secondary btn-icon" onClick={onExportClick} title="Export Game" aria-label="Export Game">
-          <span className="material-symbols-outlined">download</span>
-        </button>
         
-        <button className="btn btn-reset btn-icon" onClick={onReset} title="Reset Game" aria-label="Reset Game">
-          <span className="material-symbols-outlined">restart_alt</span>
-        </button>
+        <div className="game-menu-container" ref={menuContainerRef}>
+            <button className="btn btn-secondary btn-icon" onClick={handleMenuToggle} title="Game Menu" aria-label="Game Menu">
+                <span className="material-symbols-outlined">settings</span>
+            </button>
+            {isGameMenuOpen && (
+                <div className="game-menu-flyout">
+                    <button className="btn btn-secondary btn-flyout" onClick={() => handleMenuAction(onSaveClick)}>
+                        <span className="material-symbols-outlined">save</span> Save Game
+                    </button>
+                    <button className="btn btn-secondary btn-flyout" onClick={() => handleMenuAction(onLoadClick)}>
+                        <span className="material-symbols-outlined">folder_open</span> Load Game
+                    </button>
+                    <button className="btn btn-secondary btn-flyout" onClick={handleExportAction}>
+                        <span className="material-symbols-outlined">download</span> Export Game
+                    </button>
+                    <button className="btn btn-danger btn-flyout" onClick={() => handleMenuAction(onReset)}>
+                        <span className="material-symbols-outlined">restart_alt</span> Reset Game
+                    </button>
+                </div>
+            )}
+        </div>
       </div>
     </header>
   );

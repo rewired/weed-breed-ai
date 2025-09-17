@@ -109,10 +109,10 @@ const DefaultRoomContent: React.FC<RoomDetailProps> = ({ room, onZoneClick, comp
                     </>
                   )}
               </div>
-              <p>Area: {zone.area_m2} m²</p>
-              <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>
-              <p>Plants: {plantSummary}</p>
-              {expectedYield > 0 && <p>Exp. Yield: {expectedYield.toFixed(1)}g</p>}
+              <p>Area: <span className="card-info-value">{zone.area_m2} m²</span></p>
+              <p>Method: <span className="card-info-value">{cultivationMethod ? cultivationMethod.name : 'N/A'}</span></p>
+              <p>Plants: <span className="card-info-value">{plantSummary}</span></p>
+              {expectedYield > 0 && <p>Exp. Yield: <span className="card-info-value">{expectedYield.toFixed(1)}g</span></p>}
             </div>
           );
         })}

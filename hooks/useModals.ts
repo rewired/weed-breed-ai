@@ -128,8 +128,10 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
   
   const openModal = useCallback((type: ModalType, context?: any) => {
     if (PAUSING_MODALS.includes(type)) {
+      // Use the pre-pause state from context if available (from the game menu),
+      // otherwise use the current simulation state.
+      wasRunningBeforeModal.current = context?.prePauseState ?? isSimRunning;
       if (isSimRunning) {
-        wasRunningBeforeModal.current = true;
         setIsSimRunning(false);
       }
     }

@@ -36,10 +36,10 @@ const Structures: React.FC<StructuresProps> = ({ company, onRentClick, onStructu
               <div className="card__header">
                   <h3>{structure.name}</h3>
               </div>
-              <p>Area: {structure.area_m2} m²</p>
-              <p>Rooms: {Object.keys(structure.rooms).length}</p>
-              {plantSummaryText && <p>Plants: {plantSummaryText}</p>}
-              {expectedYield > 0 && <p>Exp. Yield: {expectedYield.toFixed(1)}g</p>}
+              <p>Area: <span className="card-info-value">{structure.area_m2} m²</span></p>
+              <p>Rooms: <span className="card-info-value">{Object.keys(structure.rooms).length}</span></p>
+              {plantSummaryText && <p>Plants: <span className="card-info-value">{plantSummaryText}</span></p>}
+              {expectedYield > 0 && <p>Exp. Yield: <span className="card-info-value">{expectedYield.toFixed(1)}g</span></p>}
             </div>
           );
         })}

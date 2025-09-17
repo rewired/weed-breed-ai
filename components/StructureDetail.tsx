@@ -136,11 +136,11 @@ const StructureDetail: React.FC<StructureDetailProps> = ({ structure, company, o
                     </>
                   )}
               </div>
-              <p>Area: {room.area_m2} m²</p>
-              <p>Purpose: {getPurposeName(room.purpose)}</p>
-              <p>Zones: {Object.keys(room.zones).length}</p>
-              {plantSummaryText !== null && <p>Plants: {plantSummaryText}</p>}
-              {expectedYield > 0 && <p>Exp. Yield: {expectedYield.toFixed(1)}g</p>}
+              <p>Area: <span className="card-info-value">{room.area_m2} m²</span></p>
+              <p>Purpose: <span className="card-info-value">{getPurposeName(room.purpose)}</span></p>
+              <p>Zones: <span className="card-info-value">{Object.keys(room.zones).length}</span></p>
+              {plantSummaryText !== null && <p>Plants: <span className="card-info-value">{plantSummaryText}</span></p>}
+              {expectedYield > 0 && <p>Exp. Yield: <span className="card-info-value">{expectedYield.toFixed(1)}g</span></p>}
             </div>
           );
         })}

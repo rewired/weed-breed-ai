@@ -48,6 +48,8 @@ const App = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousAlertsRef = useRef<Set<string>>(new Set());
+  const [isGameMenuOpen, setGameMenuOpen] = useState(false);
+
 
   // Auto-pause on new alerts
   useEffect(() => {
@@ -489,8 +491,15 @@ const App = () => {
   //--- Render ---//
 
   if (isLoading) {
-    return <div className="loading-screen">Loading Game...</div>;
+    return (
+      <div className="content-area">
+        <div className="loading-screen">Loading Game...</div>
+      </div>
+    );
   }
+
+  const isAnyModalOpen = Object.values(modalState).some(v => typeof v === 'boolean' && v);
+  const isBlurred = isGameMenuOpen || isAnyModalOpen;
 
   return (
     <>
@@ -501,8 +510,8 @@ const App = () => {
         accept=".json,application/json" 
         onChange={handleFileSelect} 
       />
-      {gameState ? (
-        <>
+      <div className="app-container">
+        {gameState && (
           <Dashboard 
             capital={gameState.company.capital}
             cumulativeYield_g={gameState.company.cumulativeYield_g}
@@ -510,9 +519,9 @@ const App = () => {
             isSimRunning={isSimRunning}
             onStart={() => setIsSimRunning(true)}
             onPause={() => setIsSimRunning(false)}
-            onReset={() => openModal('reset')}
-            onSaveClick={() => openModal('save')}
-            onLoadClick={() => openModal('load')}
+            onReset={(context) => openModal('reset', context)}
+            onSaveClick={(context) => openModal('save', context)}
+            onLoadClick={(context) => openModal('load', context)}
             onExportClick={exportGame}
             onFinancesClick={handleFinancesClick}
             gameSpeed={gameSpeed}
@@ -521,45 +530,51 @@ const App = () => {
             alerts={gameState.company.alerts}
             onNavigateToAlert={handleNavigateToAlert}
             onAcknowledgeAlert={handleAcknowledgeAlert}
+            onGameMenuToggle={setGameMenuOpen}
           />
-          <main>
-            <Navigation
-              structure={selectedStructure}
-              room={selectedRoom}
-              zone={selectedZone}
-              onBack={handleBack}
-              onRootClick={goToRoot}
-              onStructureClick={goToStructureView}
-              onRoomClick={goToRoomView}
+        )}
+        <div className={`content-area ${isBlurred ? 'blurred' : ''}`}>
+          {gameState ? (
+            <main>
+              <Navigation
+                structure={selectedStructure}
+                room={selectedRoom}
+                zone={selectedZone}
+                onBack={handleBack}
+                onRootClick={goToRoot}
+                onStructureClick={goToStructureView}
+                onRoomClick={goToRoomView}
+              />
+              <MainView 
+                  company={gameState.company}
+                  ticks={gameState.ticks}
+                  currentView={currentView}
+                  selectedStructure={selectedStructure}
+                  selectedRoom={selectedRoom}
+                  selectedZone={selectedZone}
+                  onStructureClick={setSelectedStructureId}
+                  onRoomClick={setSelectedRoomId}
+                  onZoneClick={setSelectedZoneId}
+                  onOpenModal={openModal}
+                  // FIX: Corrected typo from onToggleDeviceGroupStatus to handleToggleDeviceGroupStatus.
+                  onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
+                  onHarvest={handleHarvest}
+                  onDuplicateRoom={handleDuplicateRoom}
+                  onDuplicateZone={handleDuplicateZone}
+                  onRenameRoom={handleRenameRoom}
+                  onRenameZone={handleRenameZone}
+                  onNavigateToZone={handleNavigateToZone}
+              />
+            </main>
+          ) : (
+            <StartScreen 
+              onNewGameClick={() => openModal('newGame')}
+              onLoadGameClick={() => openModal('load')}
+              onImportClick={handleImportClick}
             />
-            <MainView 
-                company={gameState.company}
-                ticks={gameState.ticks}
-                currentView={currentView}
-                selectedStructure={selectedStructure}
-                selectedRoom={selectedRoom}
-                selectedZone={selectedZone}
-                onStructureClick={setSelectedStructureId}
-                onRoomClick={setSelectedRoomId}
-                onZoneClick={setSelectedZoneId}
-                onOpenModal={openModal}
-                onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
-                onHarvest={handleHarvest}
-                onDuplicateRoom={handleDuplicateRoom}
-                onDuplicateZone={handleDuplicateZone}
-                onRenameRoom={handleRenameRoom}
-                onRenameZone={handleRenameZone}
-                onNavigateToZone={handleNavigateToZone}
-            />
-          </main>
-        </>
-      ) : (
-        <StartScreen 
-          onNewGameClick={() => openModal('newGame')}
-          onLoadGameClick={() => openModal('load')}
-          onImportClick={handleImportClick}
-        />
-      )}
+          )}
+        </div>
+      </div>
 
       <Modals 
         gameState={gameState}

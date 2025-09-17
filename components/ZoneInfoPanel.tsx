@@ -36,19 +36,19 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
       <div className="zone-detail-info-panel">
           {/* General Info */}
           <div className="card">
-              <p>Area: {zone.area_m2} m²</p>
-              <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>
-              <p>Plants: {plantCount} / {plantCapacity}</p>
+              <p>Area: <span className="card-info-value">{zone.area_m2} m²</span></p>
+              <p>Method: <span className="card-info-value">{cultivationMethod ? cultivationMethod.name : 'N/A'}</span></p>
+              <p>Plants: <span className="card-info-value">{plantCount} / {plantCapacity}</span></p>
           </div>
           {/* Supplies */}
           <div className="card">
             <h5>Supplies</h5>
              <div className="env-stats">
-                  <span>Water: {zone.waterLevel_L?.toFixed(2) ?? '0.00'} L</span>
-                  <span>Nutrients: {zone.nutrientLevel_g?.toFixed(2) ?? '0.00'} g</span>
+                  <span>Water: <span className="card-info-value">{zone.waterLevel_L?.toFixed(2) ?? '0.00'} L</span></span>
+                  <span>Nutrients: <span className="card-info-value">{zone.nutrientLevel_g?.toFixed(2) ?? '0.00'} g</span></span>
             </div>
             <div className="consumption-display">
-                <p>Consumption: {supplyConsumption.waterPerDay.toFixed(2)} L/day, {supplyConsumption.nutrientsPerDay.toFixed(2)} g/day</p>
+                <p>Consumption: <span className="card-info-value">{supplyConsumption.waterPerDay.toFixed(2)} L/day</span>, <span className="card-info-value">{supplyConsumption.nutrientsPerDay.toFixed(2)} g/day</span></p>
             </div>
             <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.5rem'}}>
                 <button className="btn-add-item" style={{flex: 1}} onClick={() => onOpenModal('addSupply', { activeZoneId: zone.id, supplyType: 'water' })}>+ Water</button>
@@ -64,12 +64,12 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
                 </button>
               </div>
               <div className="lighting-stats">
-                  <span>Cycle: {zone.lightCycle.on}h / {zone.lightCycle.off}h</span>
+                  <span>Cycle: <span className="card-info-value">{zone.lightCycle.on}h / {zone.lightCycle.off}h</span></span>
                   <span className={isLightingSufficient ? 'lighting-ok' : 'lighting-insufficient'}>
-                      Coverage: {lightingDetails.coverage.toFixed(1)} / {zone.area_m2.toFixed(1)} m²
+                      Coverage: <span className="card-info-value">{lightingDetails.coverage.toFixed(1)} / {zone.area_m2.toFixed(1)} m²</span>
                   </span>
-                  <span>Avg PPFD: {lightingDetails.averagePPFD.toFixed(0)} µmol/m²/s</span>
-                  <span>DLI: {lightingDetails.dli.toFixed(1)} mol/m²/day</span>
+                  <span>Avg PPFD: <span className="card-info-value">{lightingDetails.averagePPFD.toFixed(0)} µmol/m²/s</span></span>
+                  <span>DLI: <span className="card-info-value">{lightingDetails.dli.toFixed(1)} mol/m²/day</span></span>
               </div>
           </div>
           {/* Climate */}
@@ -77,7 +77,7 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
               <h5>Climate</h5>
               <div className="climate-stats">
                   <span className={isClimateSufficient ? 'lighting-ok' : 'lighting-insufficient'}>
-                      Airflow: {climateDetails.actualAirflow.toFixed(0)} / {climateDetails.requiredAirflow.toFixed(0)} m³/h
+                      Airflow: <span className="card-info-value">{climateDetails.actualAirflow.toFixed(0)} / {climateDetails.requiredAirflow.toFixed(0)} m³/h</span>
                   </span>
               </div>
           </div>
@@ -85,14 +85,14 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
           <div className="card">
               <h5>Environment</h5>
               <div className="env-stats">
-                  <span>Temp: {temperature_C?.toFixed(1) ?? 'N/A'} °C</span>
-                  <span>RH: {(humidity_rh * 100)?.toFixed(0) ?? 'N/A'} %</span>
-                  <span>CO₂: {co2_ppm?.toFixed(0) ?? 'N/A'} ppm</span>
+                  <span>Temp: <span className="card-info-value">{temperature_C?.toFixed(1) ?? 'N/A'} °C</span></span>
+                  <span>RH: <span className="card-info-value">{(humidity_rh * 100)?.toFixed(0) ?? 'N/A'} %</span></span>
+                  <span>CO₂: <span className="card-info-value">{co2_ppm?.toFixed(0) ?? 'N/A'} ppm</span></span>
                   <span className={isHumiditySufficient ? 'lighting-ok' : 'lighting-insufficient'}>
-                    Dehumid.: {humidityDetails.actualDehumidification.toFixed(2)}/{humidityDetails.requiredDehumidification.toFixed(2)} kg/h
+                    Dehumid.: <span className="card-info-value">{humidityDetails.actualDehumidification.toFixed(2)}/{humidityDetails.requiredDehumidification.toFixed(2)} kg/h</span>
                   </span>
                    <span className={isCO2Sufficient ? 'lighting-ok' : 'lighting-insufficient'}>
-                    CO₂ Inj.: {co2Details.actualInjectionRate.toFixed(0)}/{co2Details.requiredInjectionRate.toFixed(0)} ppm/t
+                    CO₂ Inj.: <span className="card-info-value">{co2Details.actualInjectionRate.toFixed(0)}/{co2Details.requiredInjectionRate.toFixed(0)} ppm/t</span>
                   </span>
               </div>
           </div>
