@@ -1,12 +1,12 @@
 import { GameState, Company } from './types';
 
-export function initialGameState(): GameState {
+export function initialGameState(companyName: string = 'Weedbreed'): GameState {
   return {
     ticks: 0,
     company: new Company({
-      id: 'company-1',
-      name: 'Weedbreed',
-      capital: 5000,
+      id: `company-${Date.now()}`,
+      name: companyName,
+      capital: 100000,
       structures: {},
       employees: {},
       inventory: {},

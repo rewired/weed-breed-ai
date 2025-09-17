@@ -112,7 +112,7 @@
 
 .card-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
 }
 
@@ -156,6 +156,13 @@
 .card p {
   margin: 0.25rem 0;
   color: var(--text-secondary-color);
+}
+
+.lighting-ok {
+  color: var(--primary-color);
+}
+.lighting-insufficient {
+  color: var(--warning-color);
 }
 
 .btn {
@@ -308,26 +315,55 @@
   border-color: var(--primary-color);
 }
 
+.form-group-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.form-group-inline input {
+  width: auto;
+  flex-grow: 1;
+}
+.btn-max {
+  padding: 0.75rem 1rem;
+  background-color: var(--border-color);
+  color: var(--text-secondary-color);
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.btn-max:hover:not(:disabled) {
+  background-color: #555;
+  color: var(--text-color);
+}
+.btn-max:disabled {
+  background-color: #383838;
+  color: #666;
+  cursor: not-allowed;
+}
+
 .placeholder-text {
   color: var(--text-secondary-color);
   text-align: center;
   padding: 2rem;
 }
 
-.zone-inventory {
+.zone-inventory, .zone-environment, .zone-plantings, .zone-lighting, .zone-climate {
   margin-top: 1rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-color);
 }
 
-.zone-inventory h5 {
+.zone-inventory h5, .zone-environment h5, .zone-plantings h5, .zone-lighting h5, .zone-climate h5 {
   margin: 0 0 0.5rem 0;
   text-transform: uppercase;
   font-size: 0.8rem;
   color: var(--text-secondary-color);
 }
 
-.zone-inventory ul {
+.zone-inventory ul, .zone-plantings ul {
   list-style-type: none;
   padding: 0;
   margin: 0 0 0.5rem 0;
@@ -335,7 +371,109 @@
 }
 
 .zone-inventory li {
-  padding: 0.1rem 0;
+  padding: 0.2rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zone-inventory li[data-clickable="true"] {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  padding: 0.2rem 0.4rem;
+  margin: 0 -0.4rem;
+  border-radius: 4px;
+}
+.zone-inventory li[data-clickable="true"]:hover {
+  background-color: var(--border-color);
+}
+
+.planting-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+.planting-item {
+  background-color: #222;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.planting-item-header {
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+.planting-item-body {
+  font-size: 0.85rem;
+  color: var(--text-secondary-color);
+  display: flex;
+  justify-content: space-between;
+}
+.planting-item-value {
+  color: var(--text-color);
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.device-name-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.device-status-indicator.status-on {
+  background-color: var(--primary-color);
+  box-shadow: 0 0 5px var(--primary-color);
+}
+.device-status-indicator.status-off {
+  background-color: #666;
+}
+.device-status-indicator.status-mixed {
+  background-color: var(--warning-color);
+  box-shadow: 0 0 5px var(--warning-color);
+}
+.device-status-indicator.status-broken {
+  background-color: var(--danger-color);
+  box-shadow: 0 0 5px var(--danger-color);
+}
+
+.device-count {
+    color: var(--text-secondary-color);
+    font-size: 0.9em;
+}
+
+.env-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary-color);
+}
+
+.climate-stats {
+  font-size: 0.9rem;
+  color: var(--text-secondary-color);
+}
+
+.lighting-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary-color);
+}
+.lighting-stats > span:first-child {
+  grid-column: 1 / -1;
 }
 
 .placeholder-text-small {

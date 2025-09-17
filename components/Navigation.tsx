@@ -6,9 +6,10 @@ interface NavigationProps {
   room: Room | null;
   onBack: () => void;
   onRootClick: () => void;
+  onStructureClick: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ structure, room, onBack, onRootClick }) => {
+const Navigation: React.FC<NavigationProps> = ({ structure, room, onBack, onRootClick, onStructureClick }) => {
   const showBack = !!structure;
 
   return (
@@ -22,7 +23,13 @@ const Navigation: React.FC<NavigationProps> = ({ structure, room, onBack, onRoot
       {structure && (
         <>
           <span className="nav-path-separator">/</span>
-          <span>{structure.name}</span>
+          {room ? (
+            <span className="nav-path-link" onClick={onStructureClick}>
+              {structure.name}
+            </span>
+          ) : (
+            <span>{structure.name}</span>
+          )}
         </>
       )}
       {room && (

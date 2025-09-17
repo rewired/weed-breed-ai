@@ -4,8 +4,636 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Weedbreed</title>
-    <link rel="stylesheet" href="styles/global.css" />
-    <link rel="stylesheet" href="styles/components.css" />
+    <style>
+      :root {
+        --background-color: #1a1a1a;
+        --surface-color: #2c2c2c;
+        --primary-color: #4caf50;
+        --primary-hover-color: #5cb85c;
+        --text-color: #e0e0e0;
+        --text-secondary-color: #a0a0a0;
+        --border-color: #444;
+        --danger-color: #dc3545;
+        --danger-hover-color: #c82333;
+        --warning-color: #ffc107;
+        --warning-hover-color: #e0a800;
+        --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-family);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: var(--background-color);
+        color: var(--text-color);
+      }
+
+      #root {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      main {
+        padding: 2rem;
+        flex-grow: 1;
+      }
+
+      h1, h2, h3 {
+        color: var(--text-color);
+        margin-top: 0;
+      }
+
+      .loading-screen, .start-screen {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        gap: 1rem;
+      }
+      .start-screen h1 {
+        font-size: 3rem;
+        color: var(--primary-color);
+      }
+      .start-screen p {
+        font-size: 1.2rem;
+        color: var(--text-secondary-color);
+        margin-bottom: 2rem;
+      }
+      .start-screen-actions {
+        display: flex;
+        gap: 1rem;
+      }
+      
+      /* Dashboard */
+      .dashboard {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--surface-color);
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      }
+
+      .dashboard-metrics {
+        display: flex;
+        gap: 2rem;
+      }
+
+      .dashboard-metric {
+        text-align: center;
+      }
+
+      .dashboard-metric__label {
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .dashboard-metric__value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--primary-color);
+      }
+
+      .dashboard-controls {
+        display: flex;
+        gap: 1rem;
+      }
+
+      /* Navigation */
+      .navigation {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+        color: var(--text-secondary-color);
+      }
+
+      .nav-back-btn {
+        background: none;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary-color);
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 0.5rem;
+      }
+      .nav-back-btn:hover {
+        background-color: var(--border-color);
+        color: var(--text-color);
+      }
+
+      .nav-path-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .nav-path-link:hover {
+        text-decoration: underline;
+      }
+      .nav-path-separator {
+        margin: 0 0.25rem;
+      }
+
+      /* Content Panels */
+      .content-panel {
+        padding: 1.5rem;
+        background-color: var(--surface-color);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+      }
+
+      .content-panel__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .content-panel__title-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .content-panel__title-group h2 {
+        margin-bottom: 0;
+      }
+
+      .purpose-badge {
+        background-color: var(--border-color);
+        color: var(--text-secondary-color);
+        padding: 0.25rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+
+      .card-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+      }
+
+      .card {
+        background-color: var(--background-color);
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .card[data-clickable="true"] {
+          cursor: pointer;
+      }
+
+      .card[data-clickable="true"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      }
+
+      .card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      .card__header h3 {
+        margin: 0;
+        color: var(--primary-color);
+      }
+
+      .card__actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .card p {
+        margin: 0.25rem 0;
+        color: var(--text-secondary-color);
+      }
+      
+      .lighting-ok {
+        color: var(--primary-color);
+      }
+      .lighting-insufficient {
+        color: var(--warning-color);
+      }
+
+      .btn {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        font-weight: bold;
+        color: white;
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        text-transform: uppercase;
+      }
+
+      .btn:hover {
+        background-color: var(--primary-hover-color);
+      }
+
+      .btn:disabled {
+        background-color: #555;
+        color: #999;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background-color: #6c757d;
+      }
+
+      .btn-secondary:hover {
+        background-color: #5a6268;
+      }
+
+      .btn-danger {
+        background-color: var(--danger-color);
+      }
+      .btn-danger:hover {
+        background-color: var(--danger-hover-color);
+      }
+
+      .btn-start {
+          background-color: var(--primary-color);
+      }
+      .btn-start:hover {
+          background-color: var(--primary-hover-color);
+      }
+
+      .btn-pause {
+          background-color: var(--warning-color);
+          color: #1a1a1a;
+      }
+      .btn-pause:hover {
+          background-color: var(--warning-hover-color);
+      }
+
+      .btn-reset {
+          background-color: var(--danger-color);
+      }
+      .btn-reset:hover {
+          background-color: var(--danger-hover-color);
+      }
+
+      .btn-rename {
+        background: none;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary-color);
+        padding: 0.2rem 0.6rem;
+        font-size: 0.8rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-rename:hover {
+        background-color: var(--border-color);
+        color: var(--text-color);
+      }
+
+      .btn-delete {
+        background: none;
+        border: 1px solid var(--danger-color);
+        color: var(--danger-color);
+        padding: 0.2rem 0.6rem;
+        font-size: 0.8rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-delete:hover {
+        background-color: var(--danger-color);
+        color: white;
+      }
+
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.75);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background-color: var(--surface-color);
+        padding: 2rem;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-actions {
+        margin-top: 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-secondary-color);
+      }
+
+      .form-group input, .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-color);
+        font-size: 1rem;
+        box-sizing: border-box;
+      }
+
+      .form-group input:focus, .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+      
+      .form-group-inline {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .form-group-inline input {
+        width: auto;
+        flex-grow: 1;
+      }
+      .btn-max {
+        padding: 0.75rem 1rem;
+        background-color: var(--border-color);
+        color: var(--text-secondary-color);
+        border: none;
+        border-radius: 4px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      .btn-max:hover:not(:disabled) {
+        background-color: #555;
+        color: var(--text-color);
+      }
+      .btn-max:disabled {
+        background-color: #383838;
+        color: #666;
+        cursor: not-allowed;
+      }
+
+      .placeholder-text {
+        color: var(--text-secondary-color);
+        text-align: center;
+        padding: 2rem;
+      }
+
+      .zone-inventory, .zone-environment, .zone-plantings, .zone-lighting, .zone-climate {
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .zone-inventory h5, .zone-environment h5, .zone-plantings h5, .zone-lighting h5, .zone-climate h5 {
+        margin: 0 0 0.5rem 0;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        color: var(--text-secondary-color);
+      }
+
+      .zone-inventory ul, .zone-plantings ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0 0 0.5rem 0;
+        font-size: 0.9rem;
+      }
+
+      .zone-inventory li {
+        padding: 0.2rem 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      
+      .zone-inventory li[data-clickable="true"] {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        padding: 0.2rem 0.4rem;
+        margin: 0 -0.4rem;
+        border-radius: 4px;
+      }
+      .zone-inventory li[data-clickable="true"]:hover {
+        background-color: var(--border-color);
+      }
+      
+      .planting-list {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0;
+      }
+      .planting-item {
+        background-color: #222;
+        border: 1px solid var(--border-color);
+        border-left: 3px solid var(--primary-color);
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.5rem;
+      }
+      .planting-item-header {
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+      }
+      .planting-item-body {
+        font-size: 0.85rem;
+        color: var(--text-secondary-color);
+        display: flex;
+        justify-content: space-between;
+      }
+      .planting-item-value {
+        color: var(--text-color);
+        font-weight: bold;
+        text-transform: capitalize;
+      }
+      
+      .device-name-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .device-status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .device-status-indicator.status-on {
+        background-color: var(--primary-color);
+        box-shadow: 0 0 5px var(--primary-color);
+      }
+      .device-status-indicator.status-off {
+        background-color: #666;
+      }
+      .device-status-indicator.status-mixed {
+        background-color: var(--warning-color);
+        box-shadow: 0 0 5px var(--warning-color);
+      }
+      .device-status-indicator.status-broken {
+        background-color: var(--danger-color);
+        box-shadow: 0 0 5px var(--danger-color);
+      }
+
+      .device-count {
+        color: var(--text-secondary-color);
+        font-size: 0.9em;
+      }
+
+      .env-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem 1rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+      }
+
+      .climate-stats {
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+      }
+
+      .lighting-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem 1rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+      }
+      .lighting-stats > span:first-child {
+        grid-column: 1 / -1;
+      }
+
+      .placeholder-text-small {
+        font-size: 0.8rem;
+        color: #666;
+        font-style: italic;
+        margin: 0.25rem 0 0.5rem 0;
+      }
+
+      .btn-add-item {
+        width: 100%;
+        padding: 0.4rem;
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        background-color: transparent;
+        border: 1px solid var(--primary-color);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 0.5rem;
+      }
+
+      .btn-add-item:hover {
+        background-color: var(--primary-color);
+        color: var(--background-color);
+      }
+
+      .sufficiency-preview {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+      }
+      .sufficiency-preview h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+        color: var(--text-secondary-color);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+      }
+      .sufficiency-preview p {
+        margin: 0;
+        color: var(--text-secondary-color);
+        line-height: 1.4;
+      }
+
+      /* Save/Load List Styles */
+      .save-game-list {
+        max-height: 250px;
+        overflow-y: auto;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.5rem;
+      }
+      .btn-list-item {
+        display: block;
+        width: 100%;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        padding: 0.75rem 1rem;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+      }
+      .btn-list-item:hover {
+        background-color: var(--border-color);
+      }
+      .save-game-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+      }
+      .save-game-list-item:hover {
+        background-color: var(--border-color);
+      }
+      .save-game-list-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .save-game-list-actions .btn {
+        padding: 0.3rem 0.8rem;
+        font-size: 0.9rem;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

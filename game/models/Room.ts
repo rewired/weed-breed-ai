@@ -1,5 +1,6 @@
 import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
+import { Company, Structure } from '../types';
 
 export class Room {
   id: string;
@@ -43,7 +44,6 @@ export class Room {
       cultivationMethodId: cultivationMethodId,
       plants: {},
       devices: {},
-      currentEnvironment: {},
     });
     
     this.zones[newZoneId] = newZone;
@@ -52,6 +52,12 @@ export class Room {
   
   deleteZone(zoneId: string): void {
     delete this.zones[zoneId];
+  }
+
+  update(company: Company, structure: Structure) {
+    for (const zoneId in this.zones) {
+      this.zones[zoneId].update(company, structure);
+    }
   }
 
   toJSON() {

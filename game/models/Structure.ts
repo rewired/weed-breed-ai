@@ -1,6 +1,6 @@
 import { Room } from './Room';
 import { RoomPurpose } from '../roomPurposes';
-import { StructureBlueprint } from '../types';
+import { StructureBlueprint, Company } from '../types';
 
 const TICKS_PER_MONTH = 30;
 
@@ -9,6 +9,7 @@ export class Structure {
   blueprintId: string;
   name: string;
   area_m2: number;
+  height_m: number;
   rooms: Record<string, Room>;
 
   constructor(data: any) {
@@ -16,6 +17,7 @@ export class Structure {
     this.blueprintId = data.blueprintId;
     this.name = data.name;
     this.area_m2 = data.area_m2;
+    this.height_m = data.height_m;
     this.rooms = {};
     if (data.rooms) {
       for (const roomId in data.rooms) {
@@ -59,6 +61,12 @@ export class Structure {
     const monthlyCost = this.area_m2 * blueprint.rentalCostPerSqmPerMonth;
     return monthlyCost / TICKS_PER_MONTH;
   }
+
+  update(company: Company) {
+    for (const roomId in this.rooms) {
+      this.rooms[roomId].update(company, this);
+    }
+  }
   
   toJSON() {
     return {
@@ -66,6 +74,7 @@ export class Structure {
       blueprintId: this.blueprintId,
       name: this.name,
       area_m2: this.area_m2,
+      height_m: this.height_m,
       rooms: Object.fromEntries(Object.entries(this.rooms).map(([id, room]) => [id, room.toJSON()])),
     };
   }

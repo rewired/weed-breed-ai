@@ -1,0 +1,69 @@
+import { Plant, GrowthStage } from './Plant';
+import { StrainBlueprint } from '../types';
+
+interface Environment {
+    temperature_C: number;
+}
+
+export class Planting {
+    id: string;
+    strainId: string;
+    quantity: number;
+    plants: Plant[];
+
+    constructor(data: any) {
+        this.id = data.id;
+        this.strainId = data.strainId;
+        this.quantity = data.quantity;
+        
+        // If loading from save, data.plants will be an array of plain objects
+        if (data.plants && data.plants.length > 0 && !(data.plants[0] instanceof Plant)) {
+            this.plants = data.plants.map((plantData: any) => {
+                const plant = new Plant(plantData.strainId);
+                Object.assign(plant, plantData); // Re-hydrate instance
+                return plant;
+            });
+        } 
+        // If creating a new planting from scratch
+        else if (!data.plants) {
+            this.plants = [];
+            for (let i = 0; i < this.quantity; i++) {
+                this.plants.push(new Plant(this.strainId));
+            }
+        } 
+        // If it's already an array of Plant instances (e.g., from a previous session in memory)
+        else {
+             this.plants = data.plants;
+        }
+    }
+
+    update(strain: StrainBlueprint, environment: Environment) {
+        this.plants.forEach(plant => {
+            if (plant.growthStage !== GrowthStage.Dead) {
+                plant.update(strain, environment);
+            }
+        });
+    }
+
+    getAverageHealth(): number {
+        if (this.plants.length === 0) return 0;
+        const totalHealth = this.plants.reduce((sum, plant) => sum + plant.health, 0);
+        return totalHealth / this.plants.length;
+    }
+
+    getGrowthStage(): GrowthStage {
+        if (this.plants.length === 0) return GrowthStage.Seedling; // Default
+        // For simplicity, we'll return the stage of the first plant.
+        // A more complex model could show a distribution.
+        return this.plants[0].growthStage;
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            strainId: this.strainId,
+            quantity: this.quantity,
+            plants: this.plants.map(p => p.toJSON()),
+        };
+    }
+}

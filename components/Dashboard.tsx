@@ -7,9 +7,11 @@ interface DashboardProps {
   onStart: () => void;
   onPause: () => void;
   onReset: () => void;
+  onSaveClick: () => void;
+  onLoadClick: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick }) => {
   return (
     <header className="dashboard">
       <div className="dashboard-metrics">
@@ -25,6 +27,8 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onS
         </div>
       </div>
       <div className="dashboard-controls">
+        <button className="btn btn-secondary" onClick={onSaveClick}>Save</button>
+        <button className="btn btn-secondary" onClick={onLoadClick}>Load</button>
         {!isSimRunning ? (
             <button className="btn btn-start" onClick={onStart}>Start</button>
         ) : (

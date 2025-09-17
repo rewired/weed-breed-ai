@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useViewManager } from './hooks/useViewManager';
 import { useModals } from './hooks/useModals';
@@ -7,11 +7,25 @@ import Dashboard from './components/Dashboard';
 import Navigation from './components/Navigation';
 import MainView from './views/MainView';
 import { Modals } from './components/modals';
-import { getBlueprints } from './game/blueprints';
+import { getAvailableStrains, getBlueprints } from './game/blueprints';
+import StartScreen from './views/StartScreen';
 
 const App = () => {
-  const { gameState, isLoading, isSimRunning, setIsSimRunning, updateGameState, resetGame } = useGameState();
-  const { selectedStructureId, selectedRoomId, setSelectedStructureId, setSelectedRoomId, handleBack, goToRoot } = useViewManager();
+  const { 
+    gameState, 
+    isLoading, 
+    isSimRunning, 
+    setIsSimRunning, 
+    updateGameState, 
+    resetGame,
+    saveGame,
+    loadGame,
+    deleteGame,
+    startNewGame,
+    getSaveGames,
+  } = useGameState();
+
+  const { selectedStructureId, selectedRoomId, setSelectedStructureId, setSelectedRoomId, handleBack, goToRoot, goToStructureView } = useViewManager();
 
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
@@ -19,16 +33,47 @@ const App = () => {
   const { modalState, formState, openModal, closeModal, updateForm, resetForm } = useModals({
     selectedStructure,
     selectedRoom,
+    gameState,
   });
   
   //--- Action Handlers ---//
-  // These handlers are defined here, in the orchestrator component, because they
-  // often need to combine actions from multiple domains (e.g., game state, view state, and modal state).
+
+  const handleStartNewGame = useCallback(() => {
+    if (!formState.newCompanyName) {
+      alert("Please enter a company name.");
+      return;
+    }
+    startNewGame(formState.newCompanyName);
+    closeModal('newGame');
+  }, [formState.newCompanyName, startNewGame, closeModal]);
+
+  const handleSaveGame = useCallback(() => {
+    if (!formState.saveGameName) {
+      alert("Please enter a name for your save game.");
+      return;
+    }
+    saveGame(formState.saveGameName);
+    closeModal('save');
+  }, [formState.saveGameName, saveGame, closeModal]);
+
+  const handleLoadGame = useCallback((saveName: string) => {
+    loadGame(saveName);
+    closeModal('load');
+  }, [loadGame, closeModal]);
+
+  const handleDeleteGame = useCallback((saveName: string) => {
+    if (window.confirm(`Are you sure you want to delete the save game "${saveName}"?`)) {
+        deleteGame(saveName);
+        // We need to re-open the modal with the updated list.
+        // A bit of a hack, but necessary with the current modal structure.
+        closeModal('load');
+        setTimeout(() => openModal('load'), 0);
+    }
+  }, [deleteGame, closeModal, openModal]);
+
 
   const handleRentStructure = useCallback(() => {
     if (!gameState || !formState.selectedStructureBlueprintId) return;
-    // FIX: The rentStructure method expects a StructureBlueprint object, not an ID.
-    // We fetch the blueprint object using the ID from the form state.
     const blueprint = getBlueprints().structures[formState.selectedStructureBlueprintId];
     if (!blueprint) {
       console.error(`Could not find structure blueprint with ID: ${formState.selectedStructureBlueprintId}`);
@@ -64,17 +109,48 @@ const App = () => {
   }, [selectedRoom, formState, updateGameState, closeModal]);
   
   const handleAddDevice = useCallback(() => {
-    if (!gameState || !selectedRoom || !modalState.activeZoneId || !formState.selectedDeviceBlueprintId) return;
+    if (!gameState || !selectedRoom || !modalState.activeZoneId || !formState.selectedDeviceBlueprintId || !formState.deviceQuantity) return;
     const zone = selectedRoom.zones[modalState.activeZoneId];
     if (!zone) return;
     
-    const success = gameState.company.purchaseDeviceForZone(formState.selectedDeviceBlueprintId, zone);
+    const success = gameState.company.purchaseDevicesForZone(formState.selectedDeviceBlueprintId, zone, formState.deviceQuantity);
     if (success) {
       updateGameState();
       closeModal('addDevice');
     }
-  }, [gameState, selectedRoom, modalState.activeZoneId, formState.selectedDeviceBlueprintId, updateGameState, closeModal]);
+  }, [gameState, selectedRoom, modalState.activeZoneId, formState.selectedDeviceBlueprintId, formState.deviceQuantity, updateGameState, closeModal]);
 
+  const handlePlantStrain = useCallback(() => {
+    if (!gameState || !selectedRoom || !modalState.activeZoneId || !formState.plantStrainId || formState.plantQuantity <= 0) return;
+    
+    const zone = selectedRoom.zones[modalState.activeZoneId];
+    if (!zone) {
+        console.error(`Zone with id ${modalState.activeZoneId} not found in room ${selectedRoom.id}`);
+        return;
+    }
+
+    const success = zone.plantStrain(formState.plantStrainId, formState.plantQuantity, gameState.company);
+    
+    if (success) {
+        updateGameState();
+        closeModal('plantStrain');
+    }
+}, [gameState, selectedRoom, modalState.activeZoneId, formState.plantStrainId, formState.plantQuantity, updateGameState, closeModal]);
+
+  const handleBreedStrain = useCallback(() => {
+    if (!gameState || !formState.parentAId || !formState.parentBId || !formState.newStrainName) return;
+
+    const allStrains = getAvailableStrains(gameState.company);
+    const parentA = allStrains[formState.parentAId];
+    const parentB = allStrains[formState.parentBId];
+    
+    const newStrain = gameState.company.breedStrain(parentA, parentB, formState.newStrainName);
+    
+    if (newStrain) {
+      updateGameState();
+      closeModal('breedStrain');
+    }
+  }, [gameState, formState, updateGameState, closeModal]);
 
   const handleRenameItem = useCallback(() => {
     if (!gameState || !modalState.itemToRename) return;
@@ -114,6 +190,14 @@ const App = () => {
     closeModal('delete');
   }, [gameState, modalState.itemToDelete, selectedStructureId, selectedRoomId, selectedStructure, selectedRoom, goToRoot, setSelectedRoomId, updateGameState, closeModal]);
 
+  const handleToggleDeviceGroupStatus = useCallback((zoneId: string, blueprintId: string) => {
+    if (!selectedRoom) return;
+    const zone = selectedRoom.zones[zoneId];
+    if (zone) {
+        zone.toggleDeviceGroupStatus(blueprintId);
+        updateGameState();
+    }
+  }, [selectedRoom, updateGameState]);
 
   const handleResetConfirm = useCallback(() => {
     resetGame();
@@ -124,39 +208,54 @@ const App = () => {
 
   //--- Render ---//
 
-  if (isLoading || !gameState) {
+  if (isLoading) {
     return <div className="loading-screen">Loading Game...</div>;
   }
 
   return (
     <>
-      <Dashboard 
-        capital={gameState.company.capital}
-        ticks={gameState.ticks}
-        isSimRunning={isSimRunning}
-        onStart={() => setIsSimRunning(true)}
-        onPause={() => setIsSimRunning(false)}
-        onReset={() => openModal('reset')}
-      />
-      <main>
-        <Navigation
-          structure={selectedStructure}
-          room={selectedRoom}
-          onBack={handleBack}
-          onRootClick={goToRoot}
+      {gameState ? (
+        <>
+          <Dashboard 
+            capital={gameState.company.capital}
+            ticks={gameState.ticks}
+            isSimRunning={isSimRunning}
+            onStart={() => setIsSimRunning(true)}
+            onPause={() => setIsSimRunning(false)}
+            onReset={() => openModal('reset')}
+            onSaveClick={() => openModal('save')}
+            onLoadClick={() => openModal('load')}
+          />
+          <main>
+            <Navigation
+              structure={selectedStructure}
+              room={selectedRoom}
+              onBack={handleBack}
+              onRootClick={goToRoot}
+              onStructureClick={goToStructureView}
+            />
+            <MainView 
+                company={gameState.company}
+                selectedStructure={selectedStructure}
+                selectedRoom={selectedRoom}
+                onStructureClick={setSelectedStructureId}
+                onRoomClick={setSelectedRoomId}
+                onOpenModal={openModal}
+                onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
+            />
+          </main>
+        </>
+      ) : (
+        <StartScreen 
+          onNewGameClick={() => openModal('newGame')}
+          onLoadGameClick={() => openModal('load')}
         />
-        <MainView 
-            company={gameState.company}
-            selectedStructure={selectedStructure}
-            selectedRoom={selectedRoom}
-            onStructureClick={setSelectedStructureId}
-            onRoomClick={setSelectedRoomId}
-            onOpenModal={openModal}
-        />
-      </main>
+      )}
 
       <Modals 
         gameState={gameState}
+        selectedRoom={selectedRoom}
+        selectedStructure={selectedStructure}
         modalState={modalState}
         formState={formState}
         closeModal={closeModal}
@@ -167,9 +266,18 @@ const App = () => {
           handleAddRoom,
           handleAddZone,
           handleAddDevice,
+          handlePlantStrain,
+          handleBreedStrain,
           handleRenameItem,
           handleDeleteItem,
           handleResetConfirm,
+          handleStartNewGame,
+          handleSaveGame,
+          handleLoadGame,
+          handleDeleteGame,
+        }}
+        dynamicData={{
+            saveGames: getSaveGames()
         }}
       />
     </>

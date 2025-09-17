@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { RoomPurpose } from '../game/roomPurposes';
-import { getBlueprints } from '../game/blueprints';
-import { Structure, Room } from '../game/types';
+import { getBlueprints, getAvailableStrains } from '../game/blueprints';
+import { Structure, Room, Company, GameState } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load';
 
 interface ModalState {
   rent: boolean;
@@ -13,6 +13,11 @@ interface ModalState {
   reset: boolean;
   rename: boolean;
   delete: boolean;
+  breedStrain: boolean;
+  plantStrain: boolean;
+  newGame: boolean;
+  save: boolean;
+  load: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
   itemToDelete: { type: 'structure' | 'room' | 'zone', id: string, name: string } | null;
   activeZoneId: string | null;
@@ -26,6 +31,18 @@ interface FormState {
   renameValue: string;
   selectedStructureBlueprintId: string | null;
   selectedDeviceBlueprintId: string | null;
+  deviceQuantity: number;
+  // For breeding modal
+  parentAId: string | null;
+  parentBId: string | null;
+  newStrainName: string;
+  // For planting modal
+  plantStrainId: string | null;
+  plantQuantity: number;
+  // For New Game modal
+  newCompanyName: string;
+  // For Save Game modal
+  saveGameName: string;
 }
 
 const initialModalState: ModalState = {
@@ -36,6 +53,11 @@ const initialModalState: ModalState = {
   reset: false,
   rename: false,
   delete: false,
+  breedStrain: false,
+  plantStrain: false,
+  newGame: false,
+  save: false,
+  load: false,
   itemToRename: null,
   itemToDelete: null,
   activeZoneId: null,
@@ -49,14 +71,23 @@ const initialFormState: FormState = {
   renameValue: '',
   selectedStructureBlueprintId: null,
   selectedDeviceBlueprintId: null,
+  deviceQuantity: 1,
+  parentAId: null,
+  parentBId: null,
+  newStrainName: '',
+  plantStrainId: null,
+  plantQuantity: 1,
+  newCompanyName: 'My Company',
+  saveGameName: '',
 };
 
 interface UseModalsProps {
     selectedStructure: Structure | null;
     selectedRoom: Room | null;
+    gameState?: GameState | null; 
 }
 
-export const useModals = ({ selectedStructure, selectedRoom }: UseModalsProps) => {
+export const useModals = ({ selectedStructure, selectedRoom, gameState }: UseModalsProps) => {
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [formState, setFormState] = useState<FormState>(initialFormState);
   
@@ -64,19 +95,19 @@ export const useModals = ({ selectedStructure, selectedRoom }: UseModalsProps) =
     setModalState(prev => ({ ...prev, [type]: true, ...context }));
   }, []);
 
+  const resetForm = useCallback(() => {
+    setFormState(initialFormState);
+  }, []);
+
   const closeModal = useCallback((type: ModalType) => {
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'rename', 'delete'].includes(type)) {
+    if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save'].includes(type)) {
         resetForm();
     }
-  }, []);
+  }, [resetForm]);
 
   const updateForm = useCallback((field: keyof FormState, value: any) => {
     setFormState(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  const resetForm = useCallback(() => {
-    setFormState(initialFormState);
   }, []);
 
   // Set initial form values when modals are opened
@@ -95,11 +126,31 @@ export const useModals = ({ selectedStructure, selectedRoom }: UseModalsProps) =
         const blueprints = getBlueprints().devices;
         const firstId = Object.keys(blueprints)[0];
         updateForm('selectedDeviceBlueprintId', firstId || null);
+        updateForm('deviceQuantity', 1);
+    }
+    if(modalState.breedStrain && gameState) {
+        const availableStrains = getAvailableStrains(gameState.company);
+        const strainIds = Object.keys(availableStrains);
+        if (strainIds.length > 0) {
+            updateForm('parentAId', strainIds[0]);
+            updateForm('parentBId', strainIds.length > 1 ? strainIds[1] : strainIds[0]);
+        }
+    }
+    if (modalState.plantStrain && gameState) {
+        const strains = getAvailableStrains(gameState.company);
+        const firstId = Object.keys(strains)[0];
+        updateForm('plantStrainId', firstId || null);
+        updateForm('plantQuantity', 1);
     }
     if(modalState.rename && modalState.itemToRename) {
         updateForm('renameValue', modalState.itemToRename.currentName);
     }
-  }, [modalState.rent, modalState.addZone, modalState.addDevice, modalState.rename, modalState.itemToRename, updateForm]);
+    if (modalState.save && gameState) {
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      const suggestedName = `${gameState.company.name} - ${timestamp}`;
+      updateForm('saveGameName', suggestedName);
+    }
+  }, [modalState, updateForm, gameState]);
 
   return {
     modalState,

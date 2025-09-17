@@ -11,18 +11,23 @@ interface MainViewProps {
     onStructureClick: (id: string) => void;
     onRoomClick: (id: string) => void;
     onOpenModal: (type: any, context?: any) => void;
+    onToggleDeviceGroupStatus: (zoneId: string, blueprintId: string) => void;
 }
 
-const MainView: React.FC<MainViewProps> = ({ company, selectedStructure, selectedRoom, onStructureClick, onRoomClick, onOpenModal }) => {
+const MainView: React.FC<MainViewProps> = ({ company, selectedStructure, selectedRoom, onStructureClick, onRoomClick, onOpenModal, onToggleDeviceGroupStatus }) => {
     if (selectedStructure && selectedRoom) {
         return <RoomDetail 
+            structure={selectedStructure}
             room={selectedRoom} 
+            company={company}
             onAddZoneClick={() => onOpenModal('addZone')}
             onRenameRoomClick={(id, name) => onOpenModal('rename', { itemToRename: { type: 'room', id, currentName: name }})}
             onRenameZoneClick={(id, name) => onOpenModal('rename', { itemToRename: { type: 'zone', id, currentName: name }})}
             onDeleteRoomClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'room', id, name }})}
             onDeleteZoneClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'zone', id, name }})}
             onAddDeviceClick={(zoneId) => onOpenModal('addDevice', { activeZoneId: zoneId })}
+            onToggleDeviceGroupStatus={onToggleDeviceGroupStatus}
+            onOpenModal={onOpenModal}
         />;
     } 
     

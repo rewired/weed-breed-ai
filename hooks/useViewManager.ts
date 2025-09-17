@@ -17,6 +17,10 @@ export const useViewManager = () => {
     setSelectedRoomId(null);
   }, []);
 
+  const goToStructureView = useCallback(() => {
+    setSelectedRoomId(null);
+  }, []);
+
   return {
     selectedStructureId,
     selectedRoomId,
@@ -24,5 +28,6 @@ export const useViewManager = () => {
     setSelectedRoomId,
     handleBack,
     goToRoot,
+    goToStructureView,
   };
 };

@@ -1,4 +1,4 @@
-import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice } from './types';
+import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice } from './types';
 
 const BLUEPRINT_BASE_PATH = '/data/blueprints/';
 
@@ -7,6 +7,10 @@ type BlueprintWithId = { id: string };
 // This type helps us model the structure of the JSON file.
 interface DevicePricesFile {
   devicePrices: Record<string, DevicePrice>;
+}
+
+interface StrainPricesFile {
+  strainPrices: Record<string, StrainPrice>;
 }
 
 
@@ -44,6 +48,14 @@ export function getBlueprints(): BlueprintDB {
   return blueprintDB;
 }
 
+export function getAvailableStrains(company: Company): Record<string, StrainBlueprint> {
+    const baseStrains = getBlueprints().strains;
+    return {
+        ...baseStrains,
+        ...(company.customStrains || {}),
+    };
+}
+
 export function loadAllBlueprints(): Promise<BlueprintDB> {
   if (blueprintPromise) {
     return blueprintPromise;
@@ -68,6 +80,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       devices: {},
       cultivationMethods: {},
       devicePrices: {},
+      strainPrices: {},
     };
     
     const devicePricesPromise = fetch('/data/prices/devicePrices.json')
@@ -78,6 +91,15 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
         console.error("Failed to load device prices", e);
         throw e;
       });
+      
+    const strainPricesPromise = fetch('/data/prices/strainPrices.json')
+      .then(res => res.json())
+      .then((data: StrainPricesFile) => {
+        db.strainPrices = data.strainPrices;
+      }).catch(e => {
+        console.error("Failed to load strain prices", e);
+        throw e;
+      });
 
     // Load all blueprints based on the manifest
     await Promise.all([
@@ -86,6 +108,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       fetchAndStore<DeviceBlueprint>(`${BLUEPRINT_BASE_PATH}devices/`, deviceFiles, db.devices),
       fetchAndStore<CultivationMethodBlueprint>(`${BLUEPRINT_BASE_PATH}cultivationMethods/`, cultivationMethodFiles, db.cultivationMethods),
       devicePricesPromise,
+      strainPricesPromise,
     ]);
     
     blueprintDB = db;
