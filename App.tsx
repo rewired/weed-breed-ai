@@ -248,6 +248,30 @@ const App = () => {
     closeModal('rename');
   }, [gameState, modalState.itemToRename, formState.renameValue, selectedStructure, selectedRoom, updateGameState, closeModal]);
 
+  const handleRenameRoom = useCallback((roomId: string, newName: string) => {
+    if (!gameState) return;
+    const room = Object.values(gameState.company.structures)
+      .flatMap(s => Object.values(s.rooms))
+      .find(r => r.id === roomId);
+    if (room && newName.trim()) {
+      room.name = newName.trim();
+      updateGameState();
+    }
+  }, [gameState, updateGameState]);
+
+  const handleRenameZone = useCallback((zoneId: string, newName: string) => {
+    if (!gameState) return;
+    const zone = Object.values(gameState.company.structures)
+      .flatMap(s => Object.values(s.rooms))
+      .flatMap(r => Object.values(r.zones))
+      .find(z => z.id === zoneId);
+    if (zone && newName.trim()) {
+      zone.name = newName.trim();
+      updateGameState();
+    }
+  }, [gameState, updateGameState]);
+
+
   const handleEditDeviceSettings = useCallback(() => {
     if (!modalState.itemToEdit || !gameState) return;
     const { blueprintId, context } = modalState.itemToEdit;
@@ -400,6 +424,21 @@ const App = () => {
     }
   }, [gameState, updateGameState]);
 
+  const handleNavigateToZone = useCallback((direction: 'next' | 'prev') => {
+    if (!selectedRoom || !selectedZoneId) return;
+
+    const zoneIds = Object.keys(selectedRoom.zones);
+    const currentIndex = zoneIds.indexOf(selectedZoneId);
+
+    if (currentIndex === -1) return;
+
+    let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+    if (nextIndex >= 0 && nextIndex < zoneIds.length) {
+        setSelectedZoneId(zoneIds[nextIndex]);
+    }
+  }, [selectedRoom, selectedZoneId, setSelectedZoneId]);
+
 
   //--- Render ---//
 
@@ -460,6 +499,9 @@ const App = () => {
                 onHarvest={handleHarvest}
                 onDuplicateRoom={handleDuplicateRoom}
                 onDuplicateZone={handleDuplicateZone}
+                onRenameRoom={handleRenameRoom}
+                onRenameZone={handleRenameZone}
+                onNavigateToZone={handleNavigateToZone}
             />
           </main>
         </>

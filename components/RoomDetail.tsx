@@ -1,5 +1,5 @@
-import React from 'react';
-import { Company, Room, Structure } from '../game/types';
+import React, { useState } from 'react';
+import { Company, Room, Structure, Zone } from '../game/types';
 import { roomPurposes } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import BreedingStation from './BreedingStation';
@@ -14,6 +14,7 @@ interface RoomDetailProps {
   onZoneClick: (zoneId: string) => void;
   onOpenModal: (type: any, context?: any) => void;
   onDuplicateZone: (roomId: string, zoneId: string) => void;
+  onRenameZone: (zoneId: string, newName: string) => void;
 }
 
 const getPurposeName = (purposeId: string) => {
@@ -21,16 +22,45 @@ const getPurposeName = (purposeId: string) => {
     return purpose ? purpose.name : purposeId;
 };
 
-const DefaultRoomContent: React.FC<RoomDetailProps> = ({ room, onZoneClick, company, onDuplicateZone }) => {
+const DefaultRoomContent: React.FC<RoomDetailProps> = ({ room, onZoneClick, company, onDuplicateZone, onRenameZone }) => {
+  const [renamingZoneId, setRenamingZoneId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  
   const zones = Object.values(room.zones);
   const allStrains = getAvailableStrains(company);
   const usedArea = Object.values(room.zones).reduce((sum, zone) => sum + zone.area_m2, 0);
   const availableArea = room.area_m2 - usedArea;
 
+  const handleStartRename = (zone: Zone) => {
+    setRenamingZoneId(zone.id);
+    setRenameValue(zone.name);
+  };
+
+  const handleCancelRename = () => {
+    setRenamingZoneId(null);
+    setRenameValue('');
+  };
+
+  const handleConfirmRename = () => {
+    if (renamingZoneId && renameValue.trim()) {
+      onRenameZone(renamingZoneId, renameValue.trim());
+    }
+    handleCancelRename();
+  };
+
+  const handleRenameInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleConfirmRename();
+    } else if (event.key === 'Escape') {
+      handleCancelRename();
+    }
+  };
+
   return (
     <>
        <div className="card-container">
         {zones.map(zone => {
+          const isRenaming = renamingZoneId === zone.id;
           const cultivationMethod = getBlueprints().cultivationMethods[zone.cultivationMethodId];
           const plantCapacity = zone.getPlantCapacity();
           const plantCount = zone.getTotalPlantedCount();
@@ -44,20 +74,40 @@ const DefaultRoomContent: React.FC<RoomDetailProps> = ({ room, onZoneClick, comp
           }
 
           return (
-            <div key={zone.id} className="card" data-clickable="true" onClick={() => onZoneClick(zone.id)}>
+            <div key={zone.id} className="card" data-clickable={!isRenaming} onClick={() => !isRenaming && onZoneClick(zone.id)}>
               <div className="card__header">
-                  <h3>{zone.name}</h3>
-                  <div className="card__actions">
-                    <button 
-                        className="btn-action-icon" 
-                        onClick={(e) => { e.stopPropagation(); onDuplicateZone(room.id, zone.id); }} 
-                        title={availableArea < zone.area_m2 ? "Not enough space to duplicate" : "Duplicate Zone"} 
-                        aria-label="Duplicate Zone" 
-                        disabled={availableArea < zone.area_m2}
-                      >
-                        <span className="material-symbols-outlined">content_copy</span>
-                    </button>
-                  </div>
+                  {isRenaming ? (
+                    <div className="form-group-inline" style={{ width: '100%', gap: '0.25rem' }}>
+                        <input
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={handleRenameInputKeyDown}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button className="btn-action-icon" onClick={(e) => { e.stopPropagation(); handleConfirmRename(); }} title="Confirm Rename" aria-label="Confirm Rename"><span className="material-symbols-outlined">check</span></button>
+                        <button className="btn-action-icon" onClick={(e) => { e.stopPropagation(); handleCancelRename(); }} title="Cancel Rename" aria-label="Cancel Rename"><span className="material-symbols-outlined">close</span></button>
+                    </div>
+                  ) : (
+                    <>
+                      <h3>{zone.name}</h3>
+                      <div className="card__actions">
+                        <button className="btn-action-icon" onClick={(e) => { e.stopPropagation(); handleStartRename(zone); }} title="Rename Zone" aria-label="Rename Zone">
+                          <span className="material-symbols-outlined">edit</span>
+                        </button>
+                        <button 
+                            className="btn-action-icon" 
+                            onClick={(e) => { e.stopPropagation(); onDuplicateZone(room.id, zone.id); }} 
+                            title={availableArea < zone.area_m2 ? "Not enough space to duplicate" : "Duplicate Zone"} 
+                            aria-label="Duplicate Zone" 
+                            disabled={availableArea < zone.area_m2}
+                          >
+                            <span className="material-symbols-outlined">content_copy</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
               </div>
               <p>Area: {zone.area_m2} m²</p>
               <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>

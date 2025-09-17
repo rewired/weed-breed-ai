@@ -21,6 +21,9 @@ interface MainViewProps {
     onHarvest: (plantId?: string) => void;
     onDuplicateRoom: (structureId: string, roomId: string) => void;
     onDuplicateZone: (roomId: string, zoneId: string) => void;
+    onRenameRoom: (roomId: string, newName: string) => void;
+    onRenameZone: (zoneId: string, newName: string) => void;
+    onNavigateToZone: (direction: 'next' | 'prev') => void;
     ticks: number;
 }
 
@@ -39,6 +42,9 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onHarvest,
         onDuplicateRoom,
         onDuplicateZone,
+        onRenameRoom,
+        onRenameZone,
+        onNavigateToZone,
         ticks,
     } = props;
 
@@ -52,12 +58,14 @@ const MainView: React.FC<MainViewProps> = (props) => {
             zone={selectedZone}
             company={company}
             structure={selectedStructure}
+            room={selectedRoom}
             onRenameZoneClick={(id, name) => onOpenModal('rename', { itemToRename: { type: 'zone', id, currentName: name }})}
             onDeleteZoneClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'zone', id, name }})}
             onAddDeviceClick={(zoneId) => onOpenModal('addDevice', { activeZoneId: zoneId })}
             onToggleDeviceGroupStatus={onToggleDeviceGroupStatus}
             onOpenModal={onOpenModal}
             onHarvest={onHarvest}
+            onNavigateToZone={onNavigateToZone}
         />
     }
     
@@ -72,6 +80,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
             onZoneClick={onZoneClick}
             onOpenModal={onOpenModal}
             onDuplicateZone={onDuplicateZone}
+            onRenameZone={onRenameZone}
         />;
     } 
     
@@ -85,6 +94,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
             onDeleteStructureClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'structure', id, name }})}
             onDeleteRoomClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'room', id, name }})}
             onDuplicateRoom={onDuplicateRoom}
+            onRenameRoom={onRenameRoom}
         />;
     }
     
