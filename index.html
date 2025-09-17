@@ -406,10 +406,7 @@
       .btn-action-icon:disabled {
         color: #555;
         cursor: not-allowed;
-      }
-      .btn-action-icon:disabled:hover {
-        background-color: transparent;
-        color: #555;
+        background-color: transparent !important;
       }
       .btn-action-icon.delete {
         color: var(--danger-color);
@@ -959,6 +956,77 @@
         color: var(--warning-color);
         font-size: 0.9rem;
       }
+
+      /* Alerts System */
+      .notifications-container {
+        position: relative;
+        display: inline-flex;
+      }
+
+      .notifications-badge {
+        position: absolute;
+        top: -5px;
+        right: -8px;
+        background-color: var(--danger-color);
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--surface-color);
+      }
+
+      .alerts-popover {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 10px;
+        width: 350px;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        z-index: 1001;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .alerts-popover-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: bold;
+      }
+      .alert-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .alert-item:last-child {
+        border-bottom: none;
+      }
+      .alert-item-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+      .alert-item-icon.warning { color: var(--warning-color); }
+      .alert-item-icon.danger { color: var(--danger-color); }
+      .alert-item-icon.success { color: var(--primary-color); }
+      
+      .alert-item-message {
+        flex-grow: 1;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .alert-item-action .btn {
+        padding: 0.3rem 0.8rem;
+        font-size: 0.9rem;
+      }
+
 
     </style>
   <script type="importmap">

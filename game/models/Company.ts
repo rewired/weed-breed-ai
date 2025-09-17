@@ -1,4 +1,4 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory } from '../types';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType } from '../types';
 import { getBlueprints } from '../blueprints';
 
 export class Company {
@@ -9,6 +9,7 @@ export class Company {
   customStrains: Record<string, StrainBlueprint>;
   ledger: FinancialLedger;
   cumulativeYield_g: number;
+  alerts: Alert[];
 
   constructor(data: any) {
     this.id = data.id;
@@ -28,6 +29,7 @@ export class Company {
     this.customStrains = data.customStrains || {};
     this.ledger = data.ledger || { revenue: { harvests: 0, other: 0 }, expenses: { rent: 0, maintenance: 0, power: 0, structures: 0, devices: 0, supplies: 0, seeds: 0 } };
     this.cumulativeYield_g = data.cumulativeYield_g || 0;
+    this.alerts = data.alerts || [];
 
     // --- MIGRATION: Handle old save format where revenue was a single number ---
     if (data.ledger && typeof data.ledger.revenue === 'number') {
@@ -218,8 +220,69 @@ export class Company {
     
     return { totalRevenue, totalYield, count: plantsToHarvest.length };
   }
+  
+  checkForAlerts(ticks: number) {
+    const newAlerts: Alert[] = [];
+    const alertKeys = new Set<string>(); // Prevents duplicate alerts for same condition in same zone
+
+    const createAlert = (zoneId: string, type: AlertType, message: string, location: { structureId: string, roomId: string, zoneId: string }) => {
+        const key = `${zoneId}-${type}`;
+        if (!alertKeys.has(key)) {
+            newAlerts.push({
+                id: `alert-${key}-${ticks}`,
+                type,
+                message,
+                location,
+                tickGenerated: ticks,
+            });
+            alertKeys.add(key);
+        }
+    };
+
+    for (const structureId in this.structures) {
+        const structure = this.structures[structureId];
+        for (const roomId in structure.rooms) {
+            const room = structure.rooms[roomId];
+            for (const zoneId in room.zones) {
+                const zone = room.zones[zoneId];
+                const location = { structureId, roomId, zoneId };
+                const consumption = zone.getSupplyConsumptionRates(this);
+                const ticksOfWaterLeft = consumption.waterPerDay > 0 ? (zone.waterLevel_L / (consumption.waterPerDay / 24)) : Infinity;
+                const ticksOfNutrientsLeft = consumption.nutrientsPerDay > 0 ? (zone.nutrientLevel_g / (consumption.nutrientsPerDay / 24)) : Infinity;
+                
+                // --- Check for Low Supplies ---
+                if (ticksOfWaterLeft < 24 && zone.getTotalPlantedCount() > 0) {
+                    createAlert(zone.id, 'low_supply', `Low water in Zone '${zone.name}'.`, location);
+                }
+                if (ticksOfNutrientsLeft < 24 && zone.getTotalPlantedCount() > 0) {
+                    createAlert(zone.id, 'low_supply', `Low nutrients in Zone '${zone.name}'.`, location);
+                }
+
+                // --- Check for Harvestable Plants ---
+                if (zone.getHarvestablePlants().length > 0) {
+                    createAlert(zone.id, 'harvest_ready', `Plants are ready for harvest in Zone '${zone.name}'.`, location);
+                }
+                
+                // --- Check for Sick Plants ---
+                for(const planting of Object.values(zone.plantings)) {
+                    for(const plant of planting.plants) {
+                        if (plant.health < 0.6) {
+                            createAlert(zone.id, 'sick_plant', `Sick plants detected in Zone '${zone.name}'.`, location);
+                            break; // Only need one sick plant alert per zone
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    this.alerts = newAlerts;
+  }
 
   update(rng: () => number, ticks: number) {
+    // 0. Check for alerts BEFORE updates, so we see the state that needs action
+    this.checkForAlerts(ticks);
+
     // 1. Run simulation updates first
     for (const structureId in this.structures) {
         this.structures[structureId].update(this, rng, ticks);
@@ -295,6 +358,7 @@ export class Company {
       customStrains: this.customStrains,
       ledger: this.ledger,
       cumulativeYield_g: this.cumulativeYield_g,
+      alerts: this.alerts,
     };
   }
 }

@@ -10,7 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
-import { Planting, Plant } from './game/types';
+import { Planting, Plant, AlertLocation } from './game/types';
 
 const App = () => {
   const { 
@@ -439,6 +439,12 @@ const App = () => {
     }
   }, [selectedRoom, selectedZoneId, setSelectedZoneId]);
 
+  const handleNavigateToAlert = useCallback((location: AlertLocation) => {
+    setSelectedStructureId(location.structureId);
+    setSelectedRoomId(location.roomId);
+    setSelectedZoneId(location.zoneId);
+  }, [setSelectedStructureId, setSelectedRoomId, setSelectedZoneId]);
+
 
   //--- Render ---//
 
@@ -472,6 +478,8 @@ const App = () => {
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
             currentView={currentView}
+            alerts={gameState.company.alerts}
+            onNavigateToAlert={handleNavigateToAlert}
           />
           <main>
             <Navigation

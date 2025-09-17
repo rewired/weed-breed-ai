@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameSpeed } from '../game/types';
+import { GameSpeed, Alert, AlertLocation } from '../game/types';
 
 interface DashboardProps {
   capital: number;
@@ -16,24 +16,48 @@ interface DashboardProps {
   gameSpeed: GameSpeed;
   onSetGameSpeed: (speed: GameSpeed) => void;
   currentView: 'structures' | 'finances';
+  alerts: Alert[];
+  onNavigateToAlert: (location: AlertLocation) => void;
 }
 
 const speedOptions: { label: string; speed: GameSpeed }[] = [
   { label: 'Slow', speed: 0.5 },
   { label: 'Normal', speed: 1 },
-  { label: 'Swift', speed: 4 },
   { label: 'Fast', speed: 10 },
-  { label: 'Ultra', speed: 20 },
-  { label: 'Lighting', speed: 50 },
+  { label: 'Rapid', speed: 25 },
+  { label: 'Ultra', speed: 50 },
+  { label: 'Ludicrous', speed: 100 },
 ];
 
 const TICK_INTERVAL_MS = 5000;
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView }) => {
+const AlertIcon = ({ type }: { type: string }) => {
+    let iconName = 'info';
+    let className = '';
+    switch(type) {
+        case 'low_supply':
+            iconName = 'water_drop';
+            className = 'warning';
+            break;
+        case 'sick_plant':
+            iconName = 'sick';
+            className = 'danger';
+            break;
+        case 'harvest_ready':
+            iconName = 'eco';
+            className = 'success';
+            break;
+    }
+    return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert }) => {
   const [progress, setProgress] = useState(0);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const tickStartTimeRef = useRef(Date.now());
-  // FIX: Initialize useRef with null to provide an initial value, resolving the "Expected 1 arguments, but got 0" error.
   const animationFrameRef = useRef<number | null>(null);
+  const alertsContainerRef = useRef<HTMLDivElement>(null);
+
 
   // --- Date and Time Calculation ---
   const year = Math.floor(ticks / (24 * 365)) + 1;
@@ -69,6 +93,22 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
       }
     };
   }, [ticks, isSimRunning, gameSpeed]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (alertsContainerRef.current && !alertsContainerRef.current.contains(event.target as Node)) {
+            setIsAlertsOpen(false);
+        }
+    };
+
+    if (isAlertsOpen) {
+        document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAlertsOpen]);
 
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
@@ -137,6 +177,29 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
         <button className={`btn btn-secondary btn-icon ${currentView === 'finances' ? 'active' : ''}`} onClick={onFinancesClick} title="Finances" aria-label="Finances">
           <span className="material-symbols-outlined">monitoring</span>
         </button>
+
+        <div className="notifications-container" ref={alertsContainerRef}>
+            <button className="btn btn-secondary btn-icon" onClick={() => setIsAlertsOpen(prev => !prev)} title="Alerts" aria-label="Alerts">
+              <span className="material-symbols-outlined">notifications</span>
+              {alerts.length > 0 && <span className="notifications-badge">{alerts.length}</span>}
+            </button>
+            {isAlertsOpen && (
+                <div className="alerts-popover">
+                    <div className="alerts-popover-header">
+                        {alerts.length > 0 ? `Active Alerts (${alerts.length})` : 'No Active Alerts'}
+                    </div>
+                    {alerts.map(alert => (
+                        <div key={alert.id} className="alert-item">
+                            <AlertIcon type={alert.type} />
+                            <span className="alert-item-message">{alert.message}</span>
+                            <div className="alert-item-action">
+                                <button className="btn" onClick={() => { onNavigateToAlert(alert.location); setIsAlertsOpen(false); }}>Go</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
 
         <button className="btn btn-secondary btn-icon" onClick={onSaveClick} title="Save Game" aria-label="Save Game">
           <span className="material-symbols-outlined">save</span>

@@ -153,6 +153,23 @@ export interface FinancialLedger {
   expenses: Record<ExpenseCategory, number>;
 }
 
+export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready';
+
+export interface AlertLocation {
+    structureId: string;
+    roomId: string;
+    zoneId: string;
+}
+
+export interface Alert {
+    id: string;
+    type: AlertType;
+    message: string;
+    location: AlertLocation;
+    tickGenerated: number;
+}
+
+
 export interface GameState {
   ticks: number;
   seed: number;
@@ -176,7 +193,7 @@ export interface Device {
   maintenanceCostPerTick: number;
 }
 
-export type GameSpeed = 0.5 | 1 | 4 | 10 | 20 | 50;
+export type GameSpeed = 0.5 | 1 | 10 | 25 | 50 | 100;
 
 export interface GroupedDeviceInfo {
   blueprintId: string;
