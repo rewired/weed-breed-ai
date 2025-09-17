@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
-import { GameState, StrainBlueprint, Room, CultivationMethodBlueprint, Structure } from '../../game/types';
+import { GameState, StrainBlueprint, Room, CultivationMethodBlueprint, Structure, Employee } from '../../game/types';
 import { getAvailableStrains, getBlueprints } from '../../game/blueprints';
 import { roomPurposes, RoomPurpose } from '../../game/roomPurposes';
 
@@ -557,6 +557,34 @@ const LoadGameModalContent = ({ handlers, closeModal, dynamicData }) => {
     );
 };
 
+const HireEmployeeModalContent = ({ gameState, modalState, formState, updateForm, handlers, closeModal }) => {
+    const employeeToHire: Employee | null = modalState.itemToHire;
+    if (!employeeToHire) return null;
+
+    const structures = Object.values(gameState.company.structures);
+
+    return (
+      <>
+        <h2>Hire {employeeToHire.firstName} {employeeToHire.lastName}</h2>
+        <p>Assign this employee to a structure. Their daily salary of ${employeeToHire.salaryPerDay.toFixed(2)} will be deducted from your capital.</p>
+        <div className="form-group">
+            <label htmlFor="structureAssignment">Assign to Structure</label>
+            <select id="structureAssignment" value={formState.hireStructureId || ''} onChange={(e) => updateForm('hireStructureId', e.target.value)}>
+                {structures.length > 0 ? (
+                    structures.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                ) : (
+                    <option value="" disabled>No structures available</option>
+                )}
+            </select>
+        </div>
+        <div className="modal-actions">
+            <button className="btn btn-secondary" onClick={() => closeModal('hireEmployee')}>Cancel</button>
+            <button className="btn" onClick={handlers.handleHireEmployee} disabled={structures.length === 0}>Confirm & Hire</button>
+        </div>
+      </>
+    )
+};
+
 
 interface ModalsProps {
     gameState: GameState;
@@ -588,6 +616,10 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
             
             <Modal isOpen={modalState.load} onClose={() => closeModal('load')}>
                 <LoadGameModalContent {...{ handlers, closeModal, dynamicData }} />
+            </Modal>
+            
+            <Modal isOpen={modalState.hireEmployee} onClose={() => closeModal('hireEmployee')}>
+                <HireEmployeeModalContent {...{ gameState, modalState, formState, updateForm, handlers, closeModal }} />
             </Modal>
 
             <Modal isOpen={modalState.addRoom} onClose={() => closeModal('addRoom')}>
@@ -645,7 +677,9 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
                 <div className="form-group">
                     <label htmlFor="cultivationMethod">Cultivation Method</label>
                     <select id="cultivationMethod" value={formState.newZoneCultivationMethodId || ''} onChange={(e) => updateForm('newZoneCultivationMethodId', e.target.value)}>
-                        {Object.values(getBlueprints().cultivationMethods).map((method: CultivationMethodBlueprint) => {
+                        {/* FIX: Cast method to 'any' to resolve 'unknown' type error. This might indicate a deeper
+                            issue with TypeScript's type inference in this context, but 'any' is a direct fix. */}
+                        {Object.values(getBlueprints().cultivationMethods).map((method: any) => {
                             const area = formState.newItemArea || 0;
                             const capacity = (method.areaPerPlant && method.areaPerPlant > 0) ? Math.floor(area / method.areaPerPlant) : 0;
                             const totalCost = (method.setupCost || 0) * area;

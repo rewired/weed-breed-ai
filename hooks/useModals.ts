@@ -1,14 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
-import { Structure, Room, Company, GameState } from '../game/types';
+import { Structure, Room, Company, GameState, Employee } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle' | 'hireEmployee';
 
 const PAUSING_MODALS: ModalType[] = [
   'rent', 'addRoom', 'addZone', 'addDevice', 'addSupply', 'reset', 'rename',
   'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'load',
-  'editDevice', 'editLightCycle'
+  'editDevice', 'editLightCycle', 'hireEmployee'
 ];
 
 
@@ -28,11 +28,12 @@ interface ModalState {
   load: boolean;
   editDevice: boolean;
   editLightCycle: boolean;
+  hireEmployee: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
   itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant' | 'planting', id: string, name: string, context?: any } | null;
   itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
+  itemToHire: Employee | null;
   activeZoneId: string | null;
-  // FIX: Add optional supplyType property to ModalState to match context passed when opening the 'addSupply' modal.
   supplyType?: 'water' | 'nutrients';
 }
 
@@ -49,21 +50,17 @@ interface FormState {
   deviceTargetHumidity: number | null;
   deviceTargetCO2: number | null;
   lightCycleOnHours: number;
-  // For supplies modal
   supplyType: 'water' | 'nutrients' | null;
   supplyQuantity: number;
-  // For breeding modal
   parentAId: string | null;
   parentBId: string | null;
   newStrainName: string;
-  // For planting modal
   plantStrainId: string | null;
   plantQuantity: number;
-  // For New Game modal
   newCompanyName: string;
   seed: string;
-  // For Save Game modal
   saveGameName: string;
+  hireStructureId: string | null;
 }
 
 const initialModalState: ModalState = {
@@ -82,9 +79,11 @@ const initialModalState: ModalState = {
   load: false,
   editDevice: false,
   editLightCycle: false,
+  hireEmployee: false,
   itemToRename: null,
   itemToDelete: null,
   itemToEdit: null,
+  itemToHire: null,
   activeZoneId: null,
 };
 
@@ -111,6 +110,7 @@ const initialFormState: FormState = {
   newCompanyName: 'My Company',
   seed: '',
   saveGameName: '',
+  hireStructureId: null,
 };
 
 interface UseModalsProps {
@@ -128,8 +128,6 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
   
   const openModal = useCallback((type: ModalType, context?: any) => {
     if (PAUSING_MODALS.includes(type)) {
-      // Use the pre-pause state from context if available (from the game menu),
-      // otherwise use the current simulation state.
       wasRunningBeforeModal.current = context?.prePauseState ?? isSimRunning;
       if (isSimRunning) {
         setIsSimRunning(false);
@@ -150,7 +148,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
       }
     }
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle'].includes(type)) {
+    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee'].includes(type)) {
         resetForm();
     }
   }, [resetForm, setIsSimRunning]);
@@ -159,7 +157,6 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
     setFormState(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  // Set initial form values when modals are opened
   useEffect(() => {
     if (modalState.rent) {
       const blueprints = getBlueprints().structures;
@@ -194,6 +191,12 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
         const firstId = Object.keys(strains)[0];
         updateForm('plantStrainId', firstId || null);
         updateForm('plantQuantity', 1);
+    }
+    if (modalState.hireEmployee && gameState) {
+        const structureIds = Object.keys(gameState.company.structures);
+        if (structureIds.length > 0) {
+          updateForm('hireStructureId', structureIds[0]);
+        }
     }
     if(modalState.rename && modalState.itemToRename) {
         updateForm('renameValue', modalState.itemToRename.currentName);

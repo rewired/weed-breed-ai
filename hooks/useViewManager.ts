@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-export type View = 'structures' | 'finances';
+export type View = 'structures' | 'finances' | 'personnel';
 
 export const useViewManager = () => {
   const [currentView, setCurrentView] = useState<View>('structures');
@@ -15,7 +15,7 @@ export const useViewManager = () => {
       setSelectedRoomId(null);
     } else if (selectedStructureId) {
       setSelectedStructureId(null);
-    } else if (currentView === 'finances') {
+    } else if (currentView === 'finances' || currentView === 'personnel') {
       setCurrentView('structures');
     }
   }, [selectedZoneId, selectedRoomId, selectedStructureId, currentView]);

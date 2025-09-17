@@ -10,7 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
-import { Planting, Plant, AlertLocation, Alert } from './game/types';
+import { Planting, Plant, AlertLocation, Alert, Employee } from './game/types';
 
 const App = () => {
   const { 
@@ -83,7 +83,7 @@ const App = () => {
 
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
-  const selectedZone = selectedRoom && selectedZoneId ? selectedRoom.zones[selectedZoneId] : null;
+  const selectedZone = selectedRoom && selectedRoomId ? selectedRoom.zones[selectedZoneId] : null;
   
   const { modalState, formState, openModal, closeModal, updateForm, resetForm } = useModals({
     selectedStructure,
@@ -97,6 +97,10 @@ const App = () => {
   
   const handleFinancesClick = useCallback(() => {
     setCurrentView(prev => prev === 'finances' ? 'structures' : 'finances');
+  }, [setCurrentView]);
+  
+  const handlePersonnelClick = useCallback(() => {
+    setCurrentView(prev => prev === 'personnel' ? 'structures' : 'personnel');
   }, [setCurrentView]);
 
   const handleImportClick = useCallback(() => {
@@ -264,6 +268,17 @@ const App = () => {
       closeModal('breedStrain');
     }
   }, [gameState, formState, updateGameState, closeModal]);
+
+  const handleHireEmployee = useCallback(() => {
+    if (!gameState || !modalState.itemToHire || !formState.hireStructureId) return;
+    
+    const success = gameState.company.hireEmployee(modalState.itemToHire, formState.hireStructureId);
+    
+    if (success) {
+      updateGameState();
+      closeModal('hireEmployee');
+    }
+  }, [gameState, modalState.itemToHire, formState.hireStructureId, updateGameState, closeModal]);
 
   const handleRenameItem = useCallback(() => {
     if (!gameState || !modalState.itemToRename) return;
@@ -524,6 +539,7 @@ const App = () => {
             onLoadClick={(context) => openModal('load', context)}
             onExportClick={exportGame}
             onFinancesClick={handleFinancesClick}
+            onPersonnelClick={handlePersonnelClick}
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
             currentView={currentView}
@@ -556,7 +572,6 @@ const App = () => {
                   onRoomClick={setSelectedRoomId}
                   onZoneClick={setSelectedZoneId}
                   onOpenModal={openModal}
-                  // FIX: Corrected typo from onToggleDeviceGroupStatus to handleToggleDeviceGroupStatus.
                   onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
                   onHarvest={handleHarvest}
                   onDuplicateRoom={handleDuplicateRoom}
@@ -593,6 +608,7 @@ const App = () => {
           handleAddSupply,
           handlePlantStrain,
           handleBreedStrain,
+          handleHireEmployee,
           handleRenameItem,
           handleDeleteItem,
           handleResetConfirm,

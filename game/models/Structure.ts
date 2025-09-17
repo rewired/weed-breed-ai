@@ -13,6 +13,7 @@ export class Structure {
   area_m2: number;
   height_m: number;
   rooms: Record<string, Room>;
+  employeeIds: string[];
 
   constructor(data: any) {
     this.id = data.id;
@@ -20,10 +21,10 @@ export class Structure {
     this.name = data.name;
     this.area_m2 = data.area_m2;
     this.height_m = data.height_m;
+    this.employeeIds = data.employeeIds || [];
     this.rooms = {};
     if (data.rooms) {
       for (const roomId in data.rooms) {
-        // FIX: Check if the data is already an instance to prevent re-hydration issues.
         if (data.rooms[roomId] instanceof Room) {
             this.rooms[roomId] = data.rooms[roomId];
         } else {
@@ -77,7 +78,6 @@ export class Structure {
       return null;
     }
     
-    // Calculate total cost
     let totalDeviceCost = 0;
     let totalSetupCost = 0;
     for (const zoneId in originalRoom.zones) {
@@ -89,32 +89,26 @@ export class Structure {
     const totalCost = totalDeviceCost + totalSetupCost;
     
     if (!company.spendCapital(totalCost)) {
-      // spendCapital already shows an alert
       return null;
     }
     
-    // Log expenses
     company.logExpense('devices', totalDeviceCost);
     company.logExpense('supplies', totalSetupCost);
 
-    // Create a copy of the room
     const newRoomData = originalRoom.toJSON();
     newRoomData.id = `room-${Date.now()}`;
     newRoomData.name = `${originalRoom.name} (Copy)`;
-    newRoomData.zones = {}; // Start with empty zones, we'll populate it
+    newRoomData.zones = {}; 
     const newRoom = new Room(newRoomData);
 
-    // Duplicate each zone from the original room into the new room
     for (const zoneId in originalRoom.zones) {
       const originalZone = originalRoom.zones[zoneId];
       const newZoneData = originalZone.toJSON();
       newZoneData.id = `zone-${Date.now()}-${Math.random()}`;
-      // Name doesn't need to change as it's scoped to the new room
       newZoneData.plantings = {};
       newZoneData.waterLevel_L = 0;
       newZoneData.nutrientLevel_g = 0;
 
-      // Create new unique IDs for devices
       const newDevices: Record<string, any> = {};
       for (const deviceId in newZoneData.devices) {
         const oldDevice = newZoneData.devices[deviceId];
@@ -219,6 +213,7 @@ export class Structure {
       area_m2: this.area_m2,
       height_m: this.height_m,
       rooms: Object.fromEntries(Object.entries(this.rooms).map(([id, room]) => [id, room.toJSON()])),
+      employeeIds: this.employeeIds,
     };
   }
 }

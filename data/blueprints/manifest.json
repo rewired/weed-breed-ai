@@ -24,5 +24,10 @@
     "basic_soil_pot.json",
     "scrog.json",
     "sog.json"
+  ],
+  "personnel": [
+    "firstNames.json",
+    "lastNames.json",
+    "traits.json"
   ]
 }

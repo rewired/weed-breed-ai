@@ -1104,6 +1104,121 @@
         font-size: 20px;
       }
 
+      /* Personnel View */
+      .personnel-view .card-container {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      }
+      .personnel-view h3 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .personnel-view h3:first-of-type {
+        margin-top: 0;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+      }
+      .tab {
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        background: none;
+        border: none;
+        color: var(--text-secondary-color);
+        font-size: 1rem;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+      }
+      .tab:hover {
+        background-color: var(--border-color);
+        color: var(--text-color);
+      }
+      .tab.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: bold;
+      }
+
+      .employee-card {
+        padding: 1rem 1.5rem;
+      }
+
+      .employee-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .employee-card__name {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0 0 0.25rem 0;
+        color: var(--text-color);
+      }
+      .employee-card__salary {
+        font-size: 1rem;
+        color: var(--primary-color);
+        font-weight: bold;
+      }
+
+      .employee-card__skills {
+        margin: 1rem 0;
+      }
+      .skill {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+      }
+      .skill__name {
+        width: 120px;
+        text-align: right;
+        color: var(--text-secondary-color);
+        font-size: 0.9rem;
+      }
+      .skill__bar-container {
+        flex-grow: 1;
+        height: 12px;
+        background-color: var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .skill__bar {
+        height: 100%;
+        background-color: var(--primary-color);
+        border-radius: 6px;
+        transition: width 0.3s ease;
+      }
+      .skill__level {
+        width: 40px;
+        text-align: right;
+        font-weight: bold;
+      }
+      
+      .employee-card__traits {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+      }
+      .trait-tag {
+        padding: 0.25rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+      }
+      .trait-tag.positive {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: var(--primary-light-color);
+      }
+       .trait-tag.negative {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: var(--danger-color);
+      }
+
 
     </style>
   <script type="importmap">

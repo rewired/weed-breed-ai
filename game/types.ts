@@ -135,6 +135,12 @@ export interface UtilityPrices {
   pricePerGramNutrients: number;
 }
 
+export interface PersonnelData {
+  firstNames: string[];
+  lastNames: string[];
+  traits: Trait[];
+}
+
 export interface BlueprintDB {
   structures: Record<string, StructureBlueprint>;
   strains: Record<string, StrainBlueprint>;
@@ -143,9 +149,10 @@ export interface BlueprintDB {
   devicePrices: Record<string, DevicePrice>;
   strainPrices: Record<string, StrainPrice>;
   utilityPrices: UtilityPrices;
+  personnelData: PersonnelData;
 }
 
-export type ExpenseCategory = 'rent' | 'maintenance' | 'power' | 'structures' | 'devices' | 'supplies' | 'seeds';
+export type ExpenseCategory = 'rent' | 'maintenance' | 'power' | 'structures' | 'devices' | 'supplies' | 'seeds' | 'salaries';
 export type RevenueCategory = 'harvests' | 'other';
 
 export interface FinancialLedger {
@@ -177,13 +184,36 @@ export interface GameState {
   company: Company;
 }
 
-export interface Employee {
-  id:string;
-  name: string;
-  salaryPerTick: number;
-  role: string;
-  skills: Record<string, any>; // Simplified
+export type SkillName = 'Gardening' | 'Maintenance' | 'Technical' | 'Botanical' | 'Cleanliness' | 'Negotiation';
+
+export interface Skill {
+  name: SkillName;
+  level: number; // 0-10 float
+  xp: number;
 }
+
+export interface Trait {
+  id: string;
+  name: string;
+  description: string;
+  type: 'positive' | 'negative';
+  effects?: Record<string, any>; // For future programmatic effects
+}
+
+export interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  salaryPerDay: number;
+  skills: Record<SkillName, Skill>;
+  traits: Trait[];
+  energy: number; // 0-100
+  morale: number; // 0-100
+  structureId: string | null;
+  // For job market
+  timeOnMarket?: number;
+}
+
 
 export interface Device {
   id: string;

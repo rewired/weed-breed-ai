@@ -1,6 +1,7 @@
-import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice, UtilityPrices } from './types';
+import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice, UtilityPrices, PersonnelData, Trait } from './types';
 
 const BLUEPRINT_BASE_PATH = '/data/blueprints/';
+const PERSONNEL_BASE_PATH = '/data/personnel/';
 
 type BlueprintWithId = { id: string };
 
@@ -73,6 +74,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
     const strainFiles = manifest.strains || [];
     const deviceFiles = manifest.devices || [];
     const cultivationMethodFiles = manifest.cultivationMethods || [];
+    const personnelFiles = manifest.personnel || {};
 
     const db: BlueprintDB = {
       structures: {},
@@ -81,8 +83,12 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       cultivationMethods: {},
       devicePrices: {},
       strainPrices: {},
-      // FIX: Added missing properties to the default utilityPrices object to match the UtilityPrices type.
-      utilityPrices: { pricePerKwh: 0.15, pricePerLiterWater: 0.01, pricePerGramNutrients: 0.10 }, // Default value
+      utilityPrices: { pricePerKwh: 0.15, pricePerLiterWater: 0.01, pricePerGramNutrients: 0.10 },
+      personnelData: {
+        firstNames: [],
+        lastNames: [],
+        traits: [],
+      },
     };
     
     const devicePricesPromise = fetch('/data/prices/devicePrices.json')
@@ -112,6 +118,21 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
         throw e;
       });
 
+    // Load personnel data
+    const personnelPromises = Object.entries(personnelFiles).map(async ([key, fileName]) => {
+        try {
+            const response = await fetch(`${PERSONNEL_BASE_PATH}${fileName}`);
+            const data = await response.json();
+            const dataKey = (fileName as string).replace('.json', ''); // e.g., 'firstNames'
+            if (db.personnelData[dataKey as keyof PersonnelData]) {
+                (db.personnelData[dataKey as keyof PersonnelData] as any) = data;
+            }
+        } catch(e) {
+            console.error(`Failed to load personnel data: ${fileName}`, e);
+            throw e;
+        }
+    });
+
     // Load all blueprints based on the manifest
     await Promise.all([
       fetchAndStore<StructureBlueprint>(`${BLUEPRINT_BASE_PATH}structures/`, structureFiles, db.structures),
@@ -121,6 +142,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       devicePricesPromise,
       strainPricesPromise,
       utilityPricesPromise,
+      ...personnelPromises,
     ]);
     
     blueprintDB = db;

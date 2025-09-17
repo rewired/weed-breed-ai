@@ -13,9 +13,10 @@ interface DashboardProps {
   onLoadClick: (context?: any) => void;
   onExportClick: () => void;
   onFinancesClick: () => void;
+  onPersonnelClick: () => void;
   gameSpeed: GameSpeed;
   onSetGameSpeed: (speed: GameSpeed) => void;
-  currentView: 'structures' | 'finances';
+  currentView: 'structures' | 'finances' | 'personnel';
   alerts: Alert[];
   onNavigateToAlert: (location: AlertLocation) => void;
   onAcknowledgeAlert: (alertId: string) => void;
@@ -57,7 +58,7 @@ const AlertIcon = ({ type }: { type: string }) => {
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert, onGameMenuToggle }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, onPersonnelClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert, onGameMenuToggle }) => {
   const [progress, setProgress] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isGameMenuOpen, setGameMenuOpen] = useState(false);
@@ -238,6 +239,10 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
         
         <button className={`btn btn-secondary btn-icon ${currentView === 'finances' ? 'active' : ''}`} onClick={onFinancesClick} title="Finances" aria-label="Finances">
           <span className="material-symbols-outlined">monitoring</span>
+        </button>
+
+        <button className={`btn btn-secondary btn-icon ${currentView === 'personnel' ? 'active' : ''}`} onClick={onPersonnelClick} title="Personnel" aria-label="Personnel">
+          <span className="material-symbols-outlined">groups</span>
         </button>
 
         <div className="notifications-container" ref={alertsContainerRef}>

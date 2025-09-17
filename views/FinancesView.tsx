@@ -14,6 +14,7 @@ const categoryNames: Record<ExpenseCategory, string> = {
   devices: 'Devices',
   supplies: 'Supplies',
   seeds: 'Seeds',
+  salaries: 'Salaries',
 };
 
 const revenueCategoryNames: Record<RevenueCategory, string> = {
@@ -32,7 +33,7 @@ const FinancesView: React.FC<FinancesViewProps> = ({ company, ticks }) => {
   const netProfit = totalRevenue - totalExpenses;
   const daysElapsed = Math.max(1, ticks / 24);
 
-  const operatingExpenses = (ledger.expenses.rent || 0) + (ledger.expenses.maintenance || 0) + (ledger.expenses.power || 0);
+  const operatingExpenses = (ledger.expenses.rent || 0) + (ledger.expenses.maintenance || 0) + (ledger.expenses.power || 0) + (ledger.expenses.salaries || 0);
   const capitalExpenses = (ledger.expenses.structures || 0) + (ledger.expenses.devices || 0) + (ledger.expenses.supplies || 0) + (ledger.expenses.seeds || 0);
 
   return (
@@ -111,7 +112,7 @@ const FinancesView: React.FC<FinancesViewProps> = ({ company, ticks }) => {
                 <tr>
                     <td colSpan={3}><strong>Operating Expenses</strong></td>
                 </tr>
-                {['rent', 'maintenance', 'power'].map(cat => (
+                {['rent', 'maintenance', 'power', 'salaries'].map(cat => (
                     <tr key={cat}>
                         <td>&nbsp;&nbsp;&nbsp;{categoryNames[cat as ExpenseCategory]}</td>
                         <td>{formatCurrency(ledger.expenses[cat as ExpenseCategory] || 0)}</td>

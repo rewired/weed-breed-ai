@@ -5,6 +5,7 @@ import StructureDetail from '../components/StructureDetail';
 import RoomDetail from '../components/RoomDetail';
 import ZoneDetail from './ZoneDetail';
 import FinancesView from './FinancesView';
+import PersonnelView from './PersonnelView';
 import { View } from '../hooks/useViewManager';
 
 interface MainViewProps {
@@ -49,8 +50,11 @@ const MainView: React.FC<MainViewProps> = (props) => {
     } = props;
 
     if (currentView === 'finances') {
-        // FIX: Pass ticks to FinancesView.
         return <FinancesView company={company} ticks={ticks} />;
+    }
+    
+    if (currentView === 'personnel') {
+        return <PersonnelView company={company} onOpenModal={onOpenModal} />;
     }
 
     if (selectedStructure && selectedRoom && selectedZone) {

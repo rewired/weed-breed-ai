@@ -27,6 +27,7 @@ export function initialGameState(companyName: string = 'Weedbreed', seed?: numbe
           devices: 0,
           supplies: 0,
           seeds: 0,
+          salaries: 0,
         },
       },
     }),
