@@ -69,7 +69,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
     }
     
     return <Structures 
-        structures={Object.values(company.structures)} 
+        company={company}
         onStructureClick={onStructureClick} 
         onRentClick={() => onOpenModal('rent')} 
     />;
