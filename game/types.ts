@@ -112,6 +112,7 @@ export interface CultivationMethodBlueprint {
   kind: string;
   areaPerPlant: number;
   setupCost: number;
+  maxCycles: number;
   strainTraitCompatibility?: {
     preferred?: Record<string, { min?: number; max?: number }>;
     conflicting?: Record<string, { min?: number; max?: number }>;
@@ -202,6 +203,8 @@ export interface Trait {
   effects?: Record<string, any>; // For future programmatic effects
 }
 
+export type EmployeeStatus = 'Idle' | 'Working' | 'Resting';
+
 export interface Employee {
   id: string;
   firstName: string;
@@ -213,8 +216,31 @@ export interface Employee {
   energy: number; // 0-100
   morale: number; // 0-100
   structureId: string | null;
+  status: EmployeeStatus;
+  currentTaskId: string | null;
+  currentTaskDescription?: string;
   // For job market
   timeOnMarket?: number;
+}
+
+export type TaskType = 'repair_device' | 'maintain_device' | 'harvest_plants' | 'refill_supplies_water' | 'refill_supplies_nutrients' | 'overhaul_zone';
+
+export interface TaskLocation {
+  structureId: string;
+  roomId: string;
+  zoneId: string;
+  itemId: string; // e.g., deviceId, zoneId for harvest
+}
+
+export interface Task {
+  id: string;
+  type: TaskType;
+  location: TaskLocation;
+  priority: number; // Higher is more important
+  requiredRole: JobRole;
+  minSkillLevel: number;
+  requiredSkill: SkillName;
+  description: string;
 }
 
 

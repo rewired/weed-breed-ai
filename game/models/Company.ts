@@ -1,4 +1,4 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole } from '../types';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation } from '../types';
 import { getBlueprints } from '../blueprints';
 import { mulberry32 } from '../utils';
 
@@ -12,6 +12,10 @@ const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
     Negotiation: 'Salesperson',
 };
 const XP_PER_LEVEL = 100;
+const TASK_XP_REWARD = 10;
+const ENERGY_COST_PER_TASK = 15;
+const ENERGY_REGEN_PER_TICK = 0.5;
+
 
 export class Company {
   id: string;
@@ -331,6 +335,7 @@ export class Company {
     }
     
     employee.structureId = structureId;
+    employee.status = 'Idle';
     this.employees[employee.id] = employee;
     this.structures[structureId].employeeIds.push(employee.id);
 
@@ -406,10 +411,121 @@ export class Company {
               energy: 100,
               morale: 75,
               structureId: null,
+              status: 'Idle',
+              currentTaskId: null,
           };
       });
 
       this.jobMarketCandidates = newCandidates;
+  }
+
+  resolveTask(employee: Employee, task: Task) {
+    const structure = this.structures[task.location.structureId];
+    if (!structure) return;
+    const room = structure.rooms[task.location.roomId];
+    if (!room) return;
+    const zone = room.zones[task.location.zoneId];
+    if (!zone) return;
+
+    switch (task.type) {
+        case 'repair_device':
+        case 'maintain_device':
+            const device = zone.devices[task.location.itemId];
+            if (device) {
+                device.durability = 1.0;
+                if (device.status === 'broken') device.status = 'on';
+            }
+            break;
+        case 'harvest_plants':
+            const plantsToHarvest = zone.getHarvestablePlants();
+            if (plantsToHarvest.length > 0) {
+                const negotiationSkill = structure.getMaxSkill(this, 'Negotiation', 'Salesperson');
+                const negotiationBonus = (negotiationSkill / 10) * 0.10;
+                this.harvestPlants(plantsToHarvest, negotiationBonus);
+                zone.cleanupEmptyPlantings();
+                if (zone.getTotalPlantedCount() === 0) {
+                    zone.cyclesUsed = (zone.cyclesUsed || 0) + 1;
+                }
+            }
+            break;
+        case 'refill_supplies_water':
+            this.purchaseSuppliesForZone(zone, 'water', 1000); // Refill 1000L
+            break;
+        case 'refill_supplies_nutrients':
+            this.purchaseSuppliesForZone(zone, 'nutrients', 1000); // Refill 1000g
+            break;
+        case 'overhaul_zone':
+            const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
+            if (method) {
+                const cost = (method.setupCost || 0) * zone.area_m2;
+                if (this.spendCapital(cost)) {
+                    this.logExpense('supplies', cost);
+                    zone.cyclesUsed = 0;
+                }
+            }
+            break;
+    }
+    
+    // Grant XP for completing task
+    const skill = employee.skills[task.requiredSkill];
+    if (skill && skill.level < 10) {
+        skill.xp += TASK_XP_REWARD;
+        if (skill.xp >= XP_PER_LEVEL) {
+            skill.level = Math.min(10, skill.level + 1);
+            skill.xp = 0;
+        }
+    }
+  }
+
+  updateEmployeesAI() {
+      for(const employee of Object.values(this.employees)) {
+          switch(employee.status) {
+              case 'Working':
+                  // In this tick, the employee is "working". Next tick, the task will be resolved.
+                  const structure = this.structures[employee.structureId!];
+                  const task = structure?.tasks.find(t => t.id === employee.currentTaskId);
+
+                  if (task) {
+                      this.resolveTask(employee, task);
+                      employee.energy -= ENERGY_COST_PER_TASK;
+                  }
+                  
+                  // Reset state for next tick
+                  employee.currentTaskId = null;
+                  employee.currentTaskDescription = undefined;
+                  employee.status = employee.energy <= 0 ? 'Resting' : 'Idle';
+                  break;
+
+              case 'Resting':
+                  employee.energy += ENERGY_REGEN_PER_TICK;
+                  if (employee.energy >= 100) {
+                      employee.energy = 100;
+                      employee.status = 'Idle';
+                  }
+                  break;
+
+              case 'Idle':
+                  if (!employee.structureId) continue;
+                  const assignedStructure = this.structures[employee.structureId];
+                  if (!assignedStructure) continue;
+
+                  // Find a suitable task
+                  const tasks = [...assignedStructure.tasks].sort((a, b) => b.priority - a.priority);
+                  const suitableTask = tasks.find(task => 
+                      task.requiredRole === employee.role &&
+                      employee.skills[task.requiredSkill].level >= task.minSkillLevel
+                  );
+
+                  if (suitableTask) {
+                      employee.status = 'Working';
+                      employee.currentTaskId = suitableTask.id;
+                      employee.currentTaskDescription = suitableTask.description;
+                      // Remove task from queue so no one else picks it
+                      assignedStructure.tasks = assignedStructure.tasks.filter(t => t.id !== suitableTask.id);
+                  }
+                  break;
+          }
+      }
   }
 
   update(rng: () => number, ticks: number) {
@@ -423,23 +539,22 @@ export class Company {
     if (ticks > 0 && ticks % 24 === 0) {
         let totalSalaries = 0;
         Object.values(this.employees).forEach(emp => {
-            // Pay salary
             totalSalaries += emp.salaryPerDay;
 
-            // Learning by Doing
+            // Learning by Doing (Role-based general XP)
             const roleToSkillMap: Record<JobRole, SkillName> = {
                 'Gardener': 'Gardening',
                 'Technician': 'Maintenance',
                 'Janitor': 'Cleanliness',
                 'Botanist': 'Botanical',
                 'Salesperson': 'Negotiation',
-                'Generalist': 'Gardening', // Generalists can default to a common skill
+                'Generalist': 'Gardening',
             };
             const skillToLevel = roleToSkillMap[emp.role];
             if (skillToLevel) {
                 const skill = emp.skills[skillToLevel];
                 if (skill.level < 10) {
-                    skill.xp += 5; // Base XP per day
+                    skill.xp += 2; // Reduced base XP per day
                     if (skill.xp >= XP_PER_LEVEL) {
                         skill.level = Math.min(10, skill.level + 1);
                         skill.xp = 0;
@@ -451,6 +566,12 @@ export class Company {
         this.logExpense('salaries', totalSalaries);
         this.capital -= totalSalaries;
     }
+
+    // Generate tasks and run AI before structure updates
+    for (const structure of Object.values(this.structures)) {
+        structure.generateTasks(this);
+    }
+    this.updateEmployeesAI();
 
     for (const structureId in this.structures) {
         this.structures[structureId].update(this, rng, ticks);

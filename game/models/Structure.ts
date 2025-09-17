@@ -1,8 +1,9 @@
 import { Room } from './Room';
 import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
-import { StructureBlueprint, Company, StrainBlueprint, Device, Employee, SkillName, JobRole } from '../types';
+import { StructureBlueprint, Company, StrainBlueprint, Device, Employee, SkillName, JobRole, Task, TaskType } from '../types';
 import { GrowthStage } from './Plant';
+import { getBlueprints } from '../blueprints';
 
 const TICKS_PER_MONTH = 30;
 
@@ -14,6 +15,7 @@ export class Structure {
   height_m: number;
   rooms: Record<string, Room>;
   employeeIds: string[];
+  tasks: Task[];
 
   constructor(data: any) {
     this.id = data.id;
@@ -22,6 +24,7 @@ export class Structure {
     this.area_m2 = data.area_m2;
     this.height_m = data.height_m;
     this.employeeIds = data.employeeIds || [];
+    this.tasks = data.tasks || [];
     this.rooms = {};
     if (data.rooms) {
       for (const roomId in data.rooms) {
@@ -210,8 +213,6 @@ export class Structure {
   getAverageSkill(company: Company, skillName: SkillName, role?: JobRole): number {
       const employees = this.getEmployees(company, role);
       if (employees.length === 0) {
-          // If no employees with that role, there's no skill bonus.
-          // Return a baseline neutral value.
           return 1;
       }
       const totalSkill = employees.reduce((sum, emp) => sum + emp.skills[skillName].level, 0);
@@ -224,6 +225,66 @@ export class Structure {
           return 0;
       }
       return Math.max(...employees.map(emp => emp.skills[skillName].level));
+  }
+  
+  generateTasks(company: Company) {
+      const newTasks: Task[] = [];
+      const existingTaskKeys = new Set(this.tasks.map(t => `${t.type}-${t.location.itemId}`));
+
+      const createTask = (type: TaskType, priority: number, requiredRole: JobRole, requiredSkill: SkillName, minSkillLevel: number, location: { roomId: string; zoneId: string; itemId: string; }, description: string) => {
+          const key = `${type}-${location.itemId}`;
+          if (existingTaskKeys.has(key)) return;
+
+          newTasks.push({
+              id: `task-${key}-${Date.now()}`,
+              type,
+              priority,
+              requiredRole,
+              requiredSkill,
+              minSkillLevel,
+              location: { structureId: this.id, ...location },
+              description
+          });
+      };
+
+      for(const room of Object.values(this.rooms)) {
+          for(const zone of Object.values(room.zones)) {
+              const location = { roomId: room.id, zoneId: zone.id, itemId: '' };
+
+              // Device tasks
+              for(const device of Object.values(zone.devices)) {
+                  const deviceLocation = { ...location, itemId: device.id };
+                  if (device.status === 'broken') {
+                      createTask('repair_device', 10, 'Technician', 'Maintenance', 0, deviceLocation, `Repair ${device.name} in ${zone.name}`);
+                  } else if (device.durability < 0.8) {
+                      createTask('maintain_device', 3, 'Technician', 'Maintenance', 4, deviceLocation, `Maintain ${device.name} in ${zone.name}`);
+                  }
+              }
+
+              // Harvest task
+              if (zone.getHarvestablePlants().length > 0) {
+                  createTask('harvest_plants', 9, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Harvest plants in ${zone.name}`);
+              }
+              
+              // Supply tasks
+              const consumption = zone.getSupplyConsumptionRates(company);
+              const waterDaysLeft = consumption.waterPerDay > 0 ? (zone.waterLevel_L / consumption.waterPerDay) : Infinity;
+              const nutrientDaysLeft = consumption.nutrientsPerDay > 0 ? (zone.nutrientLevel_g / consumption.nutrientsPerDay) : Infinity;
+              if (waterDaysLeft < 1.0) {
+                  createTask('refill_supplies_water', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-water'}, `Refill water in ${zone.name}`);
+              }
+              if (nutrientDaysLeft < 1.0) {
+                  createTask('refill_supplies_nutrients', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-nutrients'}, `Refill nutrients in ${zone.name}`);
+              }
+              
+              // Overhaul task
+              const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
+              if (method && (zone.cyclesUsed || 0) >= method.maxCycles && zone.getTotalPlantedCount() === 0) {
+                   createTask('overhaul_zone', 7, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Overhaul substrate in ${zone.name}`);
+              }
+          }
+      }
+      this.tasks = newTasks;
   }
 
   update(company: Company, rng: () => number, ticks: number) {
@@ -241,6 +302,7 @@ export class Structure {
       height_m: this.height_m,
       rooms: Object.fromEntries(Object.entries(this.rooms).map(([id, room]) => [id, room.toJSON()])),
       employeeIds: this.employeeIds,
+      tasks: this.tasks,
     };
   }
 }

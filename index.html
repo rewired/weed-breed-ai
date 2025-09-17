@@ -1238,6 +1238,43 @@
         color: var(--danger-color);
       }
 
+      .employee-card__status-bar {
+        height: 8px;
+        background-color: var(--border-color);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.25rem 0;
+      }
+      .employee-card__status-bar > div {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+      .employee-card__status-bar .energy { background-color: var(--primary-color); }
+      .employee-card__status-bar .morale { background-color: var(--warning-color); }
+
+      .employee-card__status-grid {
+        display: grid;
+        grid-template-columns: 60px 1fr;
+        gap: 0 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary-color);
+      }
+
+      .employee-card__current-task {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border-color);
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+        font-style: italic;
+        height: 2.5em; /* Reserve space to prevent layout shift */
+        line-height: 1.4;
+      }
+      .employee-card__current-task strong {
+        color: var(--text-color);
+        font-style: normal;
+      }
 
     </style>
   <script type="importmap">

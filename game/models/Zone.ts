@@ -39,6 +39,7 @@ export class Zone {
   lightCycle: { on: number; off: number };
   waterLevel_L: number;
   nutrientLevel_g: number;
+  cyclesUsed: number;
   currentEnvironment: {
     temperature_C: number;
     humidity_rh: number; // 0-1
@@ -58,6 +59,7 @@ export class Zone {
     this.lightCycle = data.lightCycle || { on: 18, off: 6 };
     this.waterLevel_L = data.waterLevel_L || 0;
     this.nutrientLevel_g = data.nutrientLevel_g || 0;
+    this.cyclesUsed = data.cyclesUsed || 0;
     
     // --- MIGRATION & INITIALIZATION LOGIC ---
     const blueprints = getBlueprints();
@@ -616,6 +618,7 @@ export class Zone {
       lightCycle: this.lightCycle,
       waterLevel_L: this.waterLevel_L,
       nutrientLevel_g: this.nutrientLevel_g,
+      cyclesUsed: this.cyclesUsed,
     };
   }
 

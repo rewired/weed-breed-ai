@@ -27,6 +27,20 @@ const TraitTag = ({ trait }: { trait: Trait }) => (
 
 
 const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, onHire?: (employee: Employee) => void, onAssignRole?: (employeeId: string, role: JobRole) => void }) => {
+    
+    let statusText;
+    switch(employee.status) {
+        case 'Working':
+            statusText = <strong>Working</strong>;
+            break;
+        case 'Resting':
+            statusText = <span style={{color: 'var(--warning-color)'}}>Resting</span>;
+            break;
+        default:
+            statusText = <span style={{color: 'var(--text-secondary-color)'}}>Idle</span>;
+            break;
+    }
+
     return (
         <div className="card employee-card">
             <div className="employee-card__header">
@@ -38,7 +52,7 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
                 </div>
             </div>
             
-            {onAssignRole && (
+            {onAssignRole ? (
                 <div className="employee-card__role">
                     <label htmlFor={`role-${employee.id}`} style={{ marginRight: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary-color)'}}>Role:</label>
                     <select
@@ -49,7 +63,27 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
                       {ALL_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                     </select>
                 </div>
+            ) : (
+                 <p className="employee-card__role" style={{fontSize: '0.9rem', color: 'var(--text-secondary-color)'}}>
+                    Role: <strong>{employee.role}</strong>
+                </p>
             )}
+
+            <div className="employee-card__status-grid">
+                <span>Energy</span>
+                <div className="employee-card__status-bar">
+                    <div className="energy" style={{ width: `${employee.energy}%` }}></div>
+                </div>
+                 <span>Morale</span>
+                <div className="employee-card__status-bar">
+                    <div className="morale" style={{ width: `${employee.morale}%` }}></div>
+                </div>
+            </div>
+
+            <div className="employee-card__current-task">
+                Status: {statusText} <br />
+                {employee.status === 'Working' && employee.currentTaskDescription}
+            </div>
             
             <div className="employee-card__skills">
                 {Object.values(employee.skills).map(skill => (
