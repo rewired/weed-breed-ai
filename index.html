@@ -405,6 +405,13 @@
         background-color: var(--danger-color);
         color: white;
       }
+      .btn-action-icon.harvest {
+        color: var(--primary-color);
+      }
+      .btn-action-icon.harvest:hover {
+        background-color: var(--primary-color);
+        color: white;
+      }
 
 
       /* Modal */
@@ -666,6 +673,36 @@
         color: #555;
       }
 
+      .btn-harvest-all {
+        width: 100%;
+        padding: 0.4rem;
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: var(--background-color);
+        background-color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      .btn-harvest-all .material-symbols-outlined {
+        font-size: inherit;
+      }
+      .btn-harvest-all:hover {
+          background-color: var(--primary-hover-color);
+      }
+      .btn-harvest-all:disabled {
+          border-color: #555;
+          background-color: #555;
+          color: #999;
+          cursor: not-allowed;
+      }
+
       .sufficiency-preview {
         margin-top: 1rem;
         padding: 1rem;
@@ -840,6 +877,63 @@
         flex-direction: column;
         gap: 1.5rem;
       }
+
+      /* Finances View */
+      .finances-view {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+      .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+      }
+      .summary-card {
+        background-color: var(--background-color);
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+      }
+      .summary-card h4 {
+        margin: 0 0 0.5rem 0;
+        color: var(--text-secondary-color);
+        font-size: 1rem;
+        font-weight: normal;
+      }
+      .summary-card p {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: bold;
+      }
+      .summary-card p.positive {
+        color: var(--primary-color);
+      }
+      .summary-card p.negative {
+        color: var(--danger-color);
+      }
+      .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 1rem;
+      }
+      .breakdown-table th, .breakdown-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        text-align: left;
+      }
+      .breakdown-table th {
+        color: var(--text-secondary-color);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        font-weight: bold;
+      }
+      .breakdown-table td:nth-child(2), .breakdown-table td:nth-child(3) {
+        text-align: right;
+        font-family: monospace;
+        letter-spacing: 0.5px;
+      }
+
     </style>
   <script type="importmap">
 {

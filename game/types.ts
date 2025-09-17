@@ -138,6 +138,13 @@ export interface BlueprintDB {
   utilityPrices: UtilityPrices;
 }
 
+export type ExpenseCategory = 'rent' | 'maintenance' | 'power' | 'structures' | 'devices' | 'supplies' | 'seeds';
+
+export interface FinancialLedger {
+  revenue: number;
+  expenses: Record<ExpenseCategory, number>;
+}
+
 export interface GameState {
   ticks: number;
   seed: number;
@@ -161,7 +168,7 @@ export interface Device {
   maintenanceCostPerTick: number;
 }
 
-export type GameSpeed = 0.5 | 1 | 4 | 10 | 20;
+export type GameSpeed = 0.5 | 1 | 4 | 10 | 20 | 50;
 
 export interface GroupedDeviceInfo {
   blueprintId: string;

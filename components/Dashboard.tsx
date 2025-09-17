@@ -11,6 +11,7 @@ interface DashboardProps {
   onSaveClick: () => void;
   onLoadClick: () => void;
   onExportClick: () => void;
+  onFinancesClick: () => void;
   gameSpeed: GameSpeed;
   onSetGameSpeed: (speed: GameSpeed) => void;
 }
@@ -21,11 +22,12 @@ const speedOptions: { label: string; speed: GameSpeed }[] = [
   { label: 'Swift', speed: 4 },
   { label: 'Fast', speed: 10 },
   { label: 'Ultra', speed: 20 },
+  { label: 'Lighting', speed: 50 },
 ];
 
 const TICK_INTERVAL_MS = 5000;
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, gameSpeed, onSetGameSpeed }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed }) => {
   const [progress, setProgress] = useState(0);
   const tickStartTimeRef = useRef(Date.now());
   // FIX: Initialize useRef with null to provide an initial value, resolving the "Expected 1 arguments, but got 0" error.
@@ -123,6 +125,10 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onS
             </button>
           ))}
         </div>
+        
+        <button className="btn btn-secondary btn-icon" onClick={onFinancesClick} title="Finances" aria-label="Finances">
+          <span className="material-symbols-outlined">monitoring</span>
+        </button>
 
         <button className="btn btn-secondary btn-icon" onClick={onSaveClick} title="Save Game" aria-label="Save Game">
           <span className="material-symbols-outlined">save</span>

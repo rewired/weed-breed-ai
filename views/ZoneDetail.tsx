@@ -13,9 +13,10 @@ interface ZoneDetailProps {
   onAddDeviceClick: (zoneId: string) => void;
   onToggleDeviceGroupStatus: (zoneId: string, blueprintId: string) => void;
   onOpenModal: (type: any, context?: any) => void;
+  onHarvest: (plantId?: string) => void;
 }
 
-const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, onRenameZoneClick, onDeleteZoneClick, onAddDeviceClick, onOpenModal, onToggleDeviceGroupStatus }) => {
+const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, onRenameZoneClick, onDeleteZoneClick, onAddDeviceClick, onOpenModal, onToggleDeviceGroupStatus, onHarvest }) => {
   if (!zone) {
     return <div className="content-panel">Zone not found.</div>;
   }
@@ -55,6 +56,7 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, onRen
                     zone={zone}
                     company={company}
                     onOpenModal={onOpenModal}
+                    onHarvest={onHarvest}
                 />
             </div>
        </div>

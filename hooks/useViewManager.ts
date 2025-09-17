@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 
+export type View = 'structures' | 'finances';
+
 export const useViewManager = () => {
+  const [currentView, setCurrentView] = useState<View>('structures');
   const [selectedStructureId, setSelectedStructureId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
@@ -12,13 +15,16 @@ export const useViewManager = () => {
       setSelectedRoomId(null);
     } else if (selectedStructureId) {
       setSelectedStructureId(null);
+    } else if (currentView === 'finances') {
+      setCurrentView('structures');
     }
-  }, [selectedZoneId, selectedRoomId, selectedStructureId]);
+  }, [selectedZoneId, selectedRoomId, selectedStructureId, currentView]);
 
   const goToRoot = useCallback(() => {
     setSelectedStructureId(null);
     setSelectedRoomId(null);
     setSelectedZoneId(null);
+    setCurrentView('structures');
   }, []);
 
   const goToStructureView = useCallback(() => {
@@ -31,6 +37,8 @@ export const useViewManager = () => {
   }, []);
 
   return {
+    currentView,
+    setCurrentView,
     selectedStructureId,
     selectedRoomId,
     selectedZoneId,

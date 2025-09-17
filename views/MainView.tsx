@@ -4,9 +4,12 @@ import Structures from '../components/Structures';
 import StructureDetail from '../components/StructureDetail';
 import RoomDetail from '../components/RoomDetail';
 import ZoneDetail from './ZoneDetail';
+import FinancesView from './FinancesView';
+import { View } from '../hooks/useViewManager';
 
 interface MainViewProps {
     company: Company;
+    currentView: View;
     selectedStructure: Structure | null;
     selectedRoom: Room | null;
     selectedZone: Zone | null;
@@ -15,11 +18,14 @@ interface MainViewProps {
     onZoneClick: (id: string) => void;
     onOpenModal: (type: any, context?: any) => void;
     onToggleDeviceGroupStatus: (zoneId: string, blueprintId: string) => void;
+    onHarvest: (plantId?: string) => void;
+    ticks: number;
 }
 
 const MainView: React.FC<MainViewProps> = (props) => {
     const { 
         company, 
+        currentView,
         selectedStructure, 
         selectedRoom, 
         selectedZone, 
@@ -27,8 +33,15 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onRoomClick,
         onZoneClick,
         onOpenModal,
-        onToggleDeviceGroupStatus 
+        onToggleDeviceGroupStatus,
+        onHarvest,
+        ticks,
     } = props;
+
+    if (currentView === 'finances') {
+        // FIX: Pass ticks to FinancesView.
+        return <FinancesView company={company} ticks={ticks} />;
+    }
 
     if (selectedStructure && selectedRoom && selectedZone) {
         return <ZoneDetail
@@ -40,6 +53,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
             onAddDeviceClick={(zoneId) => onOpenModal('addDevice', { activeZoneId: zoneId })}
             onToggleDeviceGroupStatus={onToggleDeviceGroupStatus}
             onOpenModal={onOpenModal}
+            onHarvest={onHarvest}
         />
     }
     

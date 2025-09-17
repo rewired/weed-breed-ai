@@ -10,6 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
+import { Planting, Plant } from './game/types';
 
 const App = () => {
   const { 
@@ -41,6 +42,8 @@ const App = () => {
     goToRoot, 
     goToStructureView,
     goToRoomView,
+    currentView,
+    setCurrentView,
   } = useViewManager();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,15 +200,17 @@ const App = () => {
         return;
     }
 
-    // Create a deterministic but unique RNG for this specific action
+    // 1. Handle financial transaction first
+    const seedsPurchased = gameState.company.purchaseSeeds(formState.plantStrainId, formState.plantQuantity);
+    if (!seedsPurchased) return; // Purchase failed (not enough money), alert already shown
+
+    // 2. Then perform the simulation action
     const rng = mulberry32(gameState.seed + gameState.ticks);
     const result = zone.plantStrain(formState.plantStrainId, formState.plantQuantity, gameState.company, rng);
     
-    if (result.success) {
-        updateGameState();
-        closeModal('plantStrain');
-        alert(`Successfully planted. ${result.germinatedCount} of ${formState.plantQuantity} seeds germinated.`);
-    }
+    updateGameState();
+    closeModal('plantStrain');
+    alert(`Successfully planted. ${result.germinatedCount} of ${formState.plantQuantity} seeds germinated.`);
 }, [gameState, modalState.activeZoneId, formState.plantStrainId, formState.plantQuantity, updateGameState, closeModal]);
 
   const handleBreedStrain = useCallback(() => {
@@ -312,6 +317,12 @@ const App = () => {
               zone.removePlanting(context.plantingId);
           }
       }
+    } else if (type === 'planting' && context?.zoneId) {
+      const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[context.zoneId]);
+      const zone = room?.zones[context.zoneId];
+      if (zone) {
+          zone.removePlanting(id);
+      }
     }
 
     updateGameState();
@@ -327,6 +338,32 @@ const App = () => {
         updateGameState();
     }
   }, [gameState, updateGameState]);
+
+  const handleHarvest = useCallback((plantId?: string) => {
+    if (!gameState || !selectedZone) return;
+
+    let plantsToHarvest: {plant: Plant, planting: Planting}[];
+
+    if (plantId) {
+        const allPlantsInZone = Object.values(selectedZone.plantings).flatMap(p => p.plants.map(plt => ({ plant: plt, planting: p })));
+        plantsToHarvest = allPlantsInZone.filter(({ plant }) => plant.id === plantId);
+    } else {
+        plantsToHarvest = selectedZone.getHarvestablePlants();
+    }
+
+    if (plantsToHarvest.length === 0) {
+        console.warn("Attempted to harvest but no harvestable plants were found.");
+        return;
+    }
+    
+    const result = gameState.company.harvestPlants(plantsToHarvest);
+    selectedZone.cleanupEmptyPlantings();
+    updateGameState();
+
+    if (result.count > 0) {
+      alert(`Harvested ${result.count} plant(s) for a total yield of ${result.totalYield.toFixed(2)}g, earning ${result.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}.`);
+    }
+  }, [gameState, selectedZone, updateGameState]);
 
   const handleResetConfirm = useCallback(() => {
     resetGame();
@@ -362,6 +399,7 @@ const App = () => {
             onSaveClick={() => openModal('save')}
             onLoadClick={() => openModal('load')}
             onExportClick={exportGame}
+            onFinancesClick={() => setCurrentView('finances')}
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
           />
@@ -377,6 +415,9 @@ const App = () => {
             />
             <MainView 
                 company={gameState.company}
+                // FIX: Pass ticks down to MainView so it's available for child components like FinancesView.
+                ticks={gameState.ticks}
+                currentView={currentView}
                 selectedStructure={selectedStructure}
                 selectedRoom={selectedRoom}
                 selectedZone={selectedZone}
@@ -385,6 +426,7 @@ const App = () => {
                 onZoneClick={setSelectedZoneId}
                 onOpenModal={openModal}
                 onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
+                onHarvest={handleHarvest}
             />
           </main>
         </>

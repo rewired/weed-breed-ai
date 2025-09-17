@@ -9,11 +9,23 @@ export function initialGameState(companyName: string = 'Weedbreed', seed?: numbe
     company: new Company({
       id: `company-${Date.now()}`,
       name: companyName,
-      capital: 100000,
+      capital: 1000000,
       structures: {},
       employees: {},
       inventory: {},
       history: [],
+      ledger: {
+        revenue: 0,
+        expenses: {
+          rent: 0,
+          maintenance: 0,
+          power: 0,
+          structures: 0,
+          devices: 0,
+          supplies: 0,
+          seeds: 0,
+        },
+      },
     }),
   };
 }

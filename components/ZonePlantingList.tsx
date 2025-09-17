@@ -7,9 +7,10 @@ interface ZonePlantingListProps {
   zone: Zone;
   company: Company;
   onOpenModal: (type: any, context?: any) => void;
+  onHarvest: (plantId?: string) => void;
 }
 
-const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOpenModal }) => {
+const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOpenModal, onHarvest }) => {
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
     const allStrains = getAvailableStrains(company);
 
@@ -20,6 +21,9 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
     const plantCapacity = zone.getPlantCapacity();
     const plantCount = zone.getTotalPlantedCount();
     const canPlantMore = plantCount < plantCapacity;
+
+    const harvestablePlants = zone.getHarvestablePlants();
+    const canMassHarvest = harvestablePlants.length > 0;
 
     return (
         <div className="card">
@@ -80,7 +84,20 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                                             )}
                                             {summaryText && <span className="planting-stage-summary">{summaryText}</span>}
                                         </span>
-                                        <span className="device-count">(x{planting.quantity})</span>
+                                        <div className="sub-list-item-actions">
+                                             <button
+                                                className="btn-action-icon delete"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onOpenModal('delete', { itemToDelete: { type: 'planting', id: planting.id, name: `all ${planting.quantity} '${strain.name}' plants`, context: { zoneId: zone.id } } })
+                                                }}
+                                                title={`Delete all ${strain.name} plants`}
+                                                aria-label={`Delete all ${strain.name} plants`}
+                                            >
+                                                <span className="material-symbols-outlined">delete_sweep</span>
+                                            </button>
+                                            <span className="device-count">(x{planting.quantity})</span>
+                                        </div>
                                     </div>
                                     {isExpanded && (
                                         <ul className="sub-list">
@@ -90,13 +107,25 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                                                 return (
                                                     <li key={plant.id} className="sub-list-item">
                                                         <span>Plant #{plant.id.slice(-4)} (Stage: {capitalizedStage} <span className="planting-progress">{progress.toFixed(0)}%</span>, Health: {(plant.health*100).toFixed(0)}%)</span>
-                                                        <button
-                                                            className="btn-action-icon delete"
-                                                            onClick={() => onOpenModal('delete', { itemToDelete: { type: 'plant', id: plant.id, name: `Plant #${plant.id.slice(-4)}`, context: { zoneId: zone.id, plantingId: planting.id } } })}
-                                                            title="Delete Plant" aria-label="Delete Plant"
-                                                        >
-                                                            <span className="material-symbols-outlined">delete</span>
-                                                        </button>
+                                                        <div className="sub-list-item-actions">
+                                                            {plant.growthStage === GrowthStage.Harvestable && (
+                                                                <button
+                                                                    className="btn-action-icon harvest"
+                                                                    onClick={(e) => { e.stopPropagation(); onHarvest(plant.id); }}
+                                                                    title="Harvest Plant"
+                                                                    aria-label="Harvest Plant"
+                                                                >
+                                                                    <span className="material-symbols-outlined">content_cut</span>
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                className="btn-action-icon delete"
+                                                                onClick={(e) => { e.stopPropagation(); onOpenModal('delete', { itemToDelete: { type: 'plant', id: plant.id, name: `Plant #${plant.id.slice(-4)}`, context: { zoneId: zone.id, plantingId: planting.id } } }); }}
+                                                                title="Delete Plant" aria-label="Delete Plant"
+                                                            >
+                                                                <span className="material-symbols-outlined">delete</span>
+                                                            </button>
+                                                        </div>
                                                     </li>
                                                 )
                                             })}
@@ -109,14 +138,27 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                 ) : (
                     <p className="placeholder-text-small">No plants in this zone.</p>
                 )}
-                <button 
-                  className="btn-add-item" 
-                  onClick={() => onOpenModal('plantStrain', { activeZoneId: zone.id })}
-                  disabled={!canPlantMore}
-                  title={canPlantMore ? "Plant a new strain" : "Zone is at maximum plant capacity"}
-                >
-                  + Plant Strain
-                </button>
+                <div style={{display: 'flex', gap: '0.5rem'}}>
+                    <button 
+                      className="btn-add-item" 
+                      onClick={() => onOpenModal('plantStrain', { activeZoneId: zone.id })}
+                      disabled={!canPlantMore}
+                      title={canPlantMore ? "Plant a new strain" : "Zone is at maximum plant capacity"}
+                      style={{ flex: 1 }}
+                    >
+                      + Plant Strain
+                    </button>
+                    {canMassHarvest && (
+                        <button
+                            className="btn-harvest-all"
+                            onClick={() => onHarvest()}
+                            style={{ flex: 1 }}
+                        >
+                            <span className="material-symbols-outlined">content_cut</span>
+                            Harvest All ({harvestablePlants.length})
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

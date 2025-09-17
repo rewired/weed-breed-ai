@@ -1,4 +1,4 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany } from '../types';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting } from '../types';
 import { getBlueprints } from '../blueprints';
 
 export class Company {
@@ -7,6 +7,7 @@ export class Company {
   capital: number;
   structures: Record<string, Structure>;
   customStrains: Record<string, StrainBlueprint>;
+  ledger: FinancialLedger;
 
   constructor(data: any) {
     this.id = data.id;
@@ -24,6 +25,20 @@ export class Company {
       }
     }
     this.customStrains = data.customStrains || {};
+    this.ledger = data.ledger || { revenue: 0, expenses: { rent: 0, maintenance: 0, power: 0, structures: 0, devices: 0, supplies: 0, seeds: 0 } };
+  }
+
+  logExpense(category: ExpenseCategory, amount: number) {
+    if (amount > 0) {
+      this.ledger.expenses[category] = (this.ledger.expenses[category] || 0) + amount;
+    }
+  }
+
+  logRevenue(amount: number) {
+    if (amount > 0) {
+      this.ledger.revenue = (this.ledger.revenue || 0) + amount;
+      this.capital += amount;
+    }
   }
 
   rentStructure(blueprint: StructureBlueprint): boolean {
@@ -33,6 +48,7 @@ export class Company {
     }
 
     this.capital -= blueprint.upfrontFee;
+    this.logExpense('structures', blueprint.upfrontFee);
 
     const newStructureId = `structure-${Date.now()}`;
     const newStructureData = {
@@ -72,6 +88,7 @@ export class Company {
 
     const totalCost = priceInfo.capitalExpenditure * quantity;
     if (this.spendCapital(totalCost)) {
+      this.logExpense('devices', totalCost);
       for (let i = 0; i < quantity; i++) {
         zone.addDevice(blueprintId);
       }
@@ -91,6 +108,7 @@ export class Company {
     }
 
     if (this.spendCapital(cost)) {
+        this.logExpense('supplies', cost);
         if (supplyType === 'water') {
             zone.waterLevel_L = (zone.waterLevel_L || 0) + quantity;
         } else {
@@ -99,7 +117,23 @@ export class Company {
         return true;
     }
     return false;
-}
+  }
+
+  purchaseSeeds(strainId: string, quantity: number): boolean {
+    const blueprints = getBlueprints();
+    const strainPriceInfo = blueprints.strainPrices[strainId];
+    if (!strainPriceInfo) {
+        console.error(`No price info for strain ${strainId}`);
+        alert('Could not purchase seeds: price info missing.');
+        return false;
+    }
+    const totalCost = strainPriceInfo.seedPrice * quantity;
+    if (this.spendCapital(totalCost)) {
+        this.logExpense('seeds', totalCost);
+        return true;
+    }
+    return false;
+  }
   
   breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string): StrainBlueprint | null {
       if (!parentA || !parentB) {
@@ -146,14 +180,46 @@ export class Company {
       return newStrain;
   }
 
+  harvestPlants(plantsToHarvest: {plant: Plant, planting: Planting}[]): { totalRevenue: number, totalYield: number, count: number } {
+    const blueprints = getBlueprints();
+    let totalRevenue = 0;
+    let totalYield = 0;
+
+    for (const { plant } of plantsToHarvest) {
+      const strainPriceInfo = blueprints.strainPrices[plant.strainId];
+      if (!strainPriceInfo) {
+        console.error(`No price info for strain ${plant.strainId}`);
+        continue;
+      }
+      // Yield is biomass multiplied by health (quality).
+      const plantYield = plant.biomass * plant.health;
+      const revenue = plantYield * strainPriceInfo.harvestPricePerGram;
+
+      totalYield += plantYield;
+      totalRevenue += revenue;
+    }
+
+    this.logRevenue(totalRevenue);
+
+    // Now remove the plants after all calculations are done.
+    for (const { plant, planting } of plantsToHarvest) {
+      planting.removePlant(plant.id);
+    }
+    
+    return { totalRevenue, totalYield, count: plantsToHarvest.length };
+  }
+
   update(rng: () => number, ticks: number) {
     // 1. Run simulation updates first
     for (const structureId in this.structures) {
         this.structures[structureId].update(this, rng, ticks);
     }
 
-    // 2. Then calculate tick-based expenses
-    let totalExpenses = 0;
+    // 2. Then calculate and log tick-based expenses
+    let totalRent = 0;
+    let totalMaintenance = 0;
+    let totalPower = 0;
+    
     const blueprints = getBlueprints();
     const pricePerKwh = blueprints.utilityPrices.pricePerKwh;
 
@@ -163,7 +229,7 @@ export class Company {
         
         // Rent
         if (structureBlueprint) {
-            totalExpenses += structure.getRentalCostPerTick(structureBlueprint);
+            totalRent += structure.getRentalCostPerTick(structureBlueprint);
         }
 
         // Device Costs (Maintenance & Electricity)
@@ -172,34 +238,29 @@ export class Company {
             for (const zoneId in room.zones) {
                 const zone = room.zones[zoneId];
                 
-                // Determine if lights should be on in this zone for this tick
                 const hourOfDay = ticks % 24;
                 const isLightOnInZone = hourOfDay < zone.lightCycle.on;
 
                 for (const deviceId in zone.devices) {
                     const device = zone.devices[deviceId];
                     
-                    // Maintenance Cost (applies to all devices)
                     const devicePrice = blueprints.devicePrices[device.blueprintId];
                     if (devicePrice) {
-                        totalExpenses += devicePrice.baseMaintenanceCostPerTick;
+                        totalMaintenance += devicePrice.baseMaintenanceCostPerTick;
                     }
                     
-                    // Electricity Cost (only for 'on' devices)
                     if (device.status === 'on') {
                         const deviceBlueprint = blueprints.devices[device.blueprintId];
                         const powerKw = deviceBlueprint?.settings?.power;
                         
                         if (powerKw) {
                             let shouldIncurPowerCost = true;
-                            // **FIX**: Lamps only incur cost if the light cycle says they are on.
                             if (deviceBlueprint.kind === 'Lamp') {
                                 shouldIncurPowerCost = isLightOnInZone;
                             }
                             
                             if (shouldIncurPowerCost) {
-                                // 1 tick = 1 hour, so kWh = kW * 1h
-                                totalExpenses += powerKw * pricePerKwh;
+                                totalPower += powerKw * pricePerKwh;
                             }
                         }
                     }
@@ -207,8 +268,12 @@ export class Company {
             }
         }
     }
-
-    this.capital -= totalExpenses;
+    
+    this.logExpense('rent', totalRent);
+    this.logExpense('maintenance', totalMaintenance);
+    this.logExpense('power', totalPower);
+    
+    this.capital -= (totalRent + totalMaintenance + totalPower);
   }
   
   toJSON() {
@@ -218,6 +283,7 @@ export class Company {
       capital: this.capital,
       structures: Object.fromEntries(Object.entries(this.structures).map(([id, struct]) => [id, struct.toJSON()])),
       customStrains: this.customStrains,
+      ledger: this.ledger,
     };
   }
 }

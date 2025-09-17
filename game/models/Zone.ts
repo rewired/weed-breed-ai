@@ -1,4 +1,4 @@
-import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure } from '../types';
+import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting } from '../types';
 import { getBlueprints } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
@@ -311,34 +311,21 @@ export class Zone {
     };
   }
 
-  plantStrain(strainId: string, quantity: number, company: Company, rng: () => number): { success: boolean, germinatedCount: number } {
+  plantStrain(strainId: string, quantity: number, company: Company, rng: () => number): { germinatedCount: number } {
     const capacity = this.getPlantCapacity();
     const currentCount = this.getTotalPlantedCount();
 
     if (currentCount + quantity > capacity) {
         alert(`Planting failed: Not enough space. This zone has ${capacity - currentCount} available plant slots, but you tried to plant ${quantity}.`);
-        return { success: false, germinatedCount: 0 };
+        return { germinatedCount: 0 };
     }
 
-    const blueprints = getBlueprints();
-    const allStrains = { ...blueprints.strains, ...company.customStrains };
+    const allStrains = { ...getBlueprints().strains, ...company.customStrains };
     const strainBlueprint = allStrains[strainId];
     if (!strainBlueprint) {
         console.error(`No strain blueprint found for id ${strainId}`);
         alert('Could not plant strain: blueprint missing.');
-        return { success: false, germinatedCount: 0 };
-    }
-
-    const strainPriceInfo = blueprints.strainPrices[strainId];
-    if (!strainPriceInfo) {
-        console.error(`No price info for strain ${strainId}`);
-        alert('Could not plant strain: price info missing.');
-        return { success: false, germinatedCount: 0 };
-    }
-    const totalCost = strainPriceInfo.seedPrice * quantity;
-    
-    if (!company.spendCapital(totalCost)) {
-        return { success: false, germinatedCount: 0 }; // spendCapital already shows an alert
+        return { germinatedCount: 0 };
     }
     
     const germinationRate = strainBlueprint.germinationRate ?? 1.0;
@@ -361,7 +348,7 @@ export class Zone {
         this.plantings[newPlantingId] = newPlanting;
     }
 
-    return { success: true, germinatedCount: germinatedPlants.length };
+    return { germinatedCount: germinatedPlants.length };
   }
 
   getDominantPlantingInfo(allStrains: Record<string, StrainBlueprint>): { stage: GrowthStage, progress: number } | null {
@@ -383,6 +370,27 @@ export class Zone {
     if (!strain) return null;
 
     return largestPlanting.getDominantStageInfo(strain);
+  }
+
+  getHarvestablePlants(): { plant: Plant, planting: Planting }[] {
+    const harvestable: { plant: Plant, planting: Planting }[] = [];
+    for (const plantingId in this.plantings) {
+        const planting = this.plantings[plantingId];
+        for (const plant of planting.plants) {
+            if (plant.growthStage === GrowthStage.Harvestable) {
+                harvestable.push({ plant, planting });
+            }
+        }
+    }
+    return harvestable;
+  }
+  
+  cleanupEmptyPlantings() {
+      for (const plantingId in this.plantings) {
+          if (this.plantings[plantingId].quantity <= 0) {
+              delete this.plantings[plantingId];
+          }
+      }
   }
 
   updateEnvironment(structure: Structure, isLightOn: boolean) {
@@ -516,7 +524,7 @@ export class Zone {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              planting.update(strain, environmentForPlants, rng, isLightOn, hasWater, hasNutrients);
+              planting.update(strain, environmentForPlants, rng, isLightOn, hasWater, hasNutrients, this.lightCycle.on);
           }
       }
   }

@@ -29,7 +29,7 @@ interface ModalState {
   editDevice: boolean;
   editLightCycle: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
-  itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant', id: string, name: string, context?: any } | null;
+  itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant' | 'planting', id: string, name: string, context?: any } | null;
   itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
   activeZoneId: string | null;
   // FIX: Add optional supplyType property to ModalState to match context passed when opening the 'addSupply' modal.

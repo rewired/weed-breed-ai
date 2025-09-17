@@ -1,7 +1,8 @@
 {
   "structures": [
     "small_warehouse.json",
-    "medium_warehouse.json"
+    "medium_warehouse.json",
+    "shed.json"
   ],
   "strains": [
     "ak-47.json",

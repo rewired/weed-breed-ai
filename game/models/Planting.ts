@@ -38,10 +38,10 @@ export class Planting {
         }
     }
 
-    update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean) {
+    update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number) {
         this.plants.forEach(plant => {
             if (plant.growthStage !== GrowthStage.Dead) {
-                plant.update(strain, environment, rng, isLightOn, hasWater, hasNutrients);
+                plant.update(strain, environment, rng, isLightOn, hasWater, hasNutrients, lightOnHours);
             }
         });
     }
