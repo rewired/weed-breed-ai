@@ -19,7 +19,9 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
     const cultivationMethod = getBlueprints().cultivationMethods[zone.cultivationMethodId];
     
     const lightingDetails = zone.getLightingDetails();
-    const isLightingSufficient = lightingDetails.coverage >= zone.area_m2;
+    // FIX: Round values before comparison to avoid floating-point inaccuracies.
+    // A sum of multiple `1.2` values can result in `29.999...` which is less than 30.
+    const isLightingSufficient = Math.round(lightingDetails.coverage * 100) >= Math.round(zone.area_m2 * 100);
     
     const climateDetails = zone.getClimateControlDetails(structure.height_m);
     const isClimateSufficient = climateDetails.isSufficient;

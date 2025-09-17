@@ -58,10 +58,22 @@ export class Planting {
     }
 
     getGrowthStage(): GrowthStage {
-        if (this.plants.length === 0) return GrowthStage.Seedling; // Default
-        // For simplicity, we'll return the stage of the first plant.
-        // A more complex model could show a distribution.
-        return this.plants[0].growthStage;
+        if (this.plants.length === 0) return GrowthStage.Seedling;
+        
+        const distribution = this.getStageDistribution();
+        
+        let dominantStage: GrowthStage | null = null;
+        let maxCount = 0;
+
+        // Find the stage with the most plants
+        for (const stage in distribution) {
+            if (distribution[stage] > maxCount) {
+                maxCount = distribution[stage];
+                dominantStage = stage as GrowthStage;
+            }
+        }
+        // Fallback to first plant only if something goes wrong, which it shouldn't.
+        return dominantStage || this.plants[0].growthStage;
     }
 
     getStageDistribution(): Record<string, number> {
@@ -106,25 +118,32 @@ export class Planting {
     public getTotalNutrientDemandPerTick(strain: StrainBlueprint): number {
         if (this.plants.length === 0) return 0;
 
-        // We can assume all plants in a planting are at the same stage
-        let stage = this.getGrowthStage();
-        // FIX: Harvestable plants should still consume resources at the flowering rate.
-        if (stage === GrowthStage.Harvestable) {
-            stage = GrowthStage.Flowering;
-        }
+        let totalTickDemand = 0;
         
-        const dailyDemandPerPlant = strain.nutrientDemand.dailyNutrientDemand[stage];
+        // Calculate demand for each plant individually based on its own stage
+        for (const plant of this.plants) {
+            let stage = plant.growthStage;
+            
+            if (stage === GrowthStage.Dead) {
+                continue; // Dead plants consume nothing
+            }
+            if (stage === GrowthStage.Harvestable) {
+                stage = GrowthStage.Flowering; // Harvestable plants consume at flowering rate
+            }
+            
+            const dailyDemandPerPlant = strain.nutrientDemand.dailyNutrientDemand[stage];
 
-        if (!dailyDemandPerPlant) return 0;
+            if (dailyDemandPerPlant) {
+                const totalDailyDemand =
+                    (dailyDemandPerPlant.nitrogen || 0) +
+                    (dailyDemandPerPlant.phosphorus || 0) +
+                    (dailyDemandPerPlant.potassium || 0);
+                
+                totalTickDemand += totalDailyDemand / 24;
+            }
+        }
 
-        const totalDailyDemandPerPlant =
-            (dailyDemandPerPlant.nitrogen || 0) +
-            (dailyDemandPerPlant.phosphorus || 0) +
-            (dailyDemandPerPlant.potassium || 0);
-
-        const totalTickDemandPerPlant = totalDailyDemandPerPlant / 24;
-
-        return totalTickDemandPerPlant * this.quantity;
+        return totalTickDemand;
     }
 
     toJSON() {

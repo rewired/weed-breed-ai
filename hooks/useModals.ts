@@ -5,7 +5,12 @@ import { Structure, Room, Company, GameState } from '../game/types';
 
 type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
 
-const PAUSING_MODALS: ModalType[] = ['editDevice', 'editLightCycle', 'addSupply'];
+const PAUSING_MODALS: ModalType[] = [
+  'rent', 'addRoom', 'addZone', 'addDevice', 'addSupply', 'reset', 'rename',
+  'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'load',
+  'editDevice', 'editLightCycle'
+];
+
 
 interface ModalState {
   rent: boolean;

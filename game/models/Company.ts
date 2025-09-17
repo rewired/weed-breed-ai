@@ -15,7 +15,12 @@ export class Company {
     this.structures = {};
     if (data.structures) {
       for (const structId in data.structures) {
-        this.structures[structId] = new Structure(data.structures[structId]);
+        // FIX: Check if the data is already an instance to prevent re-hydration issues.
+        if (data.structures[structId] instanceof Structure) {
+            this.structures[structId] = data.structures[structId];
+        } else {
+            this.structures[structId] = new Structure(data.structures[structId]);
+        }
       }
     }
     this.customStrains = data.customStrains || {};

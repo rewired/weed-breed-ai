@@ -380,6 +380,7 @@ const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formStat
     const strainOptions = Object.values(availableStrains);
     const strainPrices = getBlueprints().strainPrices;
     
+    const selectedStrain = formState.plantStrainId ? availableStrains[formState.plantStrainId] : null;
     const selectedStrainPrice = formState.plantStrainId ? strainPrices[formState.plantStrainId]?.seedPrice : 0;
     const totalCost = (selectedStrainPrice || 0) * formState.plantQuantity;
     const canAfford = gameState.company.capital >= totalCost;
@@ -414,6 +415,9 @@ const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formStat
             </div>
 
             <p><strong>Total Seed Cost:</strong> ${totalCost.toFixed(2)}</p>
+            {selectedStrain && typeof selectedStrain.germinationRate === 'number' && (
+              <p><strong>Expected Germination Rate:</strong> {(selectedStrain.germinationRate * 100).toFixed(0)}%</p>
+            )}
             <p><strong>Available Space:</strong> {availableSpace} plant slots</p>
             {!canAfford && <p style={{color: 'var(--danger-color)'}}>You do not have enough capital for this.</p>}
             {willExceedCapacity && <p style={{color: 'var(--danger-color)'}}>This quantity exceeds the zone's capacity.</p>}

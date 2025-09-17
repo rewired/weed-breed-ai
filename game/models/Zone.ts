@@ -89,7 +89,12 @@ export class Zone {
     this.plantings = {};
     if (data.plantings) {
         for (const plantingId in data.plantings) {
-            this.plantings[plantingId] = new Planting(data.plantings[plantingId]);
+            // FIX: Check if the data is already an instance to prevent re-hydration issues.
+            if (data.plantings[plantingId] instanceof Planting) {
+                this.plantings[plantingId] = data.plantings[plantingId];
+            } else {
+                this.plantings[plantingId] = new Planting(data.plantings[plantingId]);
+            }
         }
     }
     
@@ -306,37 +311,57 @@ export class Zone {
     };
   }
 
-  plantStrain(strainId: string, quantity: number, company: Company): boolean {
+  plantStrain(strainId: string, quantity: number, company: Company, rng: () => number): { success: boolean, germinatedCount: number } {
     const capacity = this.getPlantCapacity();
     const currentCount = this.getTotalPlantedCount();
 
     if (currentCount + quantity > capacity) {
         alert(`Planting failed: Not enough space. This zone has ${capacity - currentCount} available plant slots, but you tried to plant ${quantity}.`);
-        return false;
+        return { success: false, germinatedCount: 0 };
     }
 
-    const strainPriceInfo = getBlueprints().strainPrices[strainId] || getBlueprints().strainPrices[Object.values(getBlueprints().strains).find(s => s.id === strainId)?.id || ''];
+    const blueprints = getBlueprints();
+    const allStrains = { ...blueprints.strains, ...company.customStrains };
+    const strainBlueprint = allStrains[strainId];
+    if (!strainBlueprint) {
+        console.error(`No strain blueprint found for id ${strainId}`);
+        alert('Could not plant strain: blueprint missing.');
+        return { success: false, germinatedCount: 0 };
+    }
 
+    const strainPriceInfo = blueprints.strainPrices[strainId];
     if (!strainPriceInfo) {
         console.error(`No price info for strain ${strainId}`);
         alert('Could not plant strain: price info missing.');
-        return false;
+        return { success: false, germinatedCount: 0 };
     }
     const totalCost = strainPriceInfo.seedPrice * quantity;
     
     if (!company.spendCapital(totalCost)) {
-        return false; // spendCapital already shows an alert
+        return { success: false, germinatedCount: 0 }; // spendCapital already shows an alert
     }
     
-    const newPlantingId = `planting-${Date.now()}`;
-    const newPlanting = new Planting({
-        id: newPlantingId,
-        strainId,
-        quantity,
-    });
-    
-    this.plantings[newPlantingId] = newPlanting;
-    return true;
+    const germinationRate = strainBlueprint.germinationRate ?? 1.0;
+    const germinatedPlants: Plant[] = [];
+    for (let i = 0; i < quantity; i++) {
+        if (rng() <= germinationRate) {
+            germinatedPlants.push(new Plant(strainId));
+        }
+    }
+
+    if (germinatedPlants.length > 0) {
+        const newPlantingId = `planting-${Date.now()}`;
+        const newPlanting = new Planting({
+            id: newPlantingId,
+            strainId,
+            quantity: germinatedPlants.length,
+            plants: germinatedPlants,
+        });
+        
+        this.plantings[newPlantingId] = newPlanting;
+    }
+
+    return { success: true, germinatedCount: germinatedPlants.length };
   }
 
   getDominantPlantingInfo(allStrains: Record<string, StrainBlueprint>): { stage: GrowthStage, progress: number } | null {
@@ -453,18 +478,21 @@ export class Zone {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              let stage = planting.getGrowthStage();
-              // FIX: Harvestable plants should still consume resources at the flowering rate.
-              if (stage === GrowthStage.Harvestable) {
-                  stage = GrowthStage.Flowering;
+              let stage = planting.getGrowthStage(); // Now returns dominant stage
+
+              if (stage !== GrowthStage.Dead) {
+                  // Harvestable plants should still consume resources at the flowering rate.
+                  if (stage === GrowthStage.Harvestable) {
+                      stage = GrowthStage.Flowering;
+                  }
+                  const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
+                  const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
+                  
+                  // Water demand is based on the area this specific planting occupies
+                  const plantingArea = areaPerPlant * planting.quantity;
+                  const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
+                  totalWaterDemandL += (waterDemandPerM2PerDay * plantingArea) / 24;
               }
-              const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
-              const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
-              
-              // Water demand is based on the area this specific planting occupies
-              const plantingArea = areaPerPlant * planting.quantity;
-              const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
-              totalWaterDemandL += (waterDemandPerM2PerDay * plantingArea) / 24;
               
               // Nutrient demand is now correctly calculated for N, P, and K
               totalNutrientDemandG += planting.getTotalNutrientDemandPerTick(strain);
@@ -519,17 +547,20 @@ export class Zone {
         const planting = this.plantings[plantingId];
         const strain = allStrains[planting.strainId];
         if (strain) {
-            let stage = planting.getGrowthStage();
-            // FIX: Harvestable plants should still consume resources at the flowering rate.
-            if (stage === GrowthStage.Harvestable) {
-                stage = GrowthStage.Flowering;
-            }
-            const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
-            const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
+            let stage = planting.getGrowthStage(); // Now returns dominant stage
             
-            const plantingArea = areaPerPlant * planting.quantity;
-            const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
-            waterDemandPerTick += (waterDemandPerM2PerDay * plantingArea) / 24;
+            if (stage !== GrowthStage.Dead) {
+                // Harvestable plants should still consume resources at the flowering rate.
+                if (stage === GrowthStage.Harvestable) {
+                    stage = GrowthStage.Flowering;
+                }
+                const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
+                const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
+                
+                const plantingArea = areaPerPlant * planting.quantity;
+                const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
+                waterDemandPerTick += (waterDemandPerM2PerDay * plantingArea) / 24;
+            }
             
             nutrientDemandPerTick += planting.getTotalNutrientDemandPerTick(strain);
         }

@@ -2,7 +2,7 @@ import { StrainBlueprint } from '../types';
 
 export enum GrowthStage {
   Seedling = 'seedling',
-  Vegetative = 'vegetative',
+  Vegetative = 'vegetation',
   Flowering = 'flowering',
   Harvestable = 'harvestable',
   Dead = 'dead',
@@ -34,7 +34,7 @@ export class Plant {
     this.calculateStress(strain, environment, hasWater, hasNutrients);
     
     // 2. Update Health
-    this.updateHealth();
+    this.updateHealth(strain);
 
     // 3. Update Biomass (Growth)
     this.grow(strain, rng, isLightOn);
@@ -80,21 +80,28 @@ export class Plant {
       if (!hasNutrients) {
         currentStress += 0.2; // Significant stress from nutrient deficiency
       }
+      
+      // Resilience acts as a buffer against all environmental stress
+      const resilienceFactor = strain.generalResilience || 0;
+      currentStress *= (1 - (resilienceFactor * 0.5)); // e.g., 0.7 resilience reduces stress by 35%
 
       // Clamp stress between 0 and 1
       this.stress = Math.max(0, Math.min(1, currentStress));
   }
 
-  private updateHealth() {
+  private updateHealth(strain: StrainBlueprint) {
       const STRESS_IMPACT_FACTOR = 0.05;
       const RECOVERY_FACTOR = 0.02;
+      
+      const resilienceFactor = strain.generalResilience || 0;
+      const modifiedRecoveryFactor = RECOVERY_FACTOR * (1 + resilienceFactor * 0.5); // e.g., 0.7 resilience recovers 35% faster
 
       if (this.stress > 0.1) {
           // Health decreases based on stress level
           this.health -= this.stress * STRESS_IMPACT_FACTOR;
       } else {
           // Health recovers if stress is low
-          this.health += RECOVERY_FACTOR;
+          this.health += modifiedRecoveryFactor;
       }
       this.health = Math.max(0, Math.min(1, this.health));
   }

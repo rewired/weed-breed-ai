@@ -11,6 +11,7 @@
     "ruderalis": 0.0
   },
   "generalResilience": 0.75,
+  "germinationRate": 0.97,
   "chemotype": {
     "thcContent": 0.18,
     "cbdContent": 0.02

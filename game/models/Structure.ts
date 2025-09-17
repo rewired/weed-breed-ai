@@ -21,7 +21,12 @@ export class Structure {
     this.rooms = {};
     if (data.rooms) {
       for (const roomId in data.rooms) {
-        this.rooms[roomId] = new Room(data.rooms[roomId]);
+        // FIX: Check if the data is already an instance to prevent re-hydration issues.
+        if (data.rooms[roomId] instanceof Room) {
+            this.rooms[roomId] = data.rooms[roomId];
+        } else {
+            this.rooms[roomId] = new Room(data.rooms[roomId]);
+        }
       }
     }
   }

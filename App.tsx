@@ -9,6 +9,7 @@ import MainView from './views/MainView';
 import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
+import { mulberry32 } from './game/utils';
 
 const App = () => {
   const { 
@@ -196,11 +197,14 @@ const App = () => {
         return;
     }
 
-    const success = zone.plantStrain(formState.plantStrainId, formState.plantQuantity, gameState.company);
+    // Create a deterministic but unique RNG for this specific action
+    const rng = mulberry32(gameState.seed + gameState.ticks);
+    const result = zone.plantStrain(formState.plantStrainId, formState.plantQuantity, gameState.company, rng);
     
-    if (success) {
+    if (result.success) {
         updateGameState();
         closeModal('plantStrain');
+        alert(`Successfully planted. ${result.germinatedCount} of ${formState.plantQuantity} seeds germinated.`);
     }
 }, [gameState, modalState.activeZoneId, formState.plantStrainId, formState.plantQuantity, updateGameState, closeModal]);
 

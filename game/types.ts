@@ -33,6 +33,7 @@ export interface StrainBlueprint {
     ruderalis: number;
   };
   generalResilience: number;
+  germinationRate?: number;
   chemotype: {
     thcContent: number;
     cbdContent: number;
