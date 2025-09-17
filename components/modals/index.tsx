@@ -682,7 +682,7 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
                 <div className="form-group">
                     <label htmlFor="cultivationMethod">Cultivation Method</label>
                     <select id="cultivationMethod" value={formState.newZoneCultivationMethodId || ''} onChange={(e) => updateForm('newZoneCultivationMethodId', e.target.value)}>
-                        {/* FIX: Add explicit type annotation to `method` to resolve type inference issue. */}
+                        {/* FIX: Corrected invalid comment syntax and added an explicit type to the map parameter to prevent type inference failures. */}
                         {Object.values(getBlueprints().cultivationMethods).map((method: CultivationMethodBlueprint) => {
                             const area = formState.newItemArea || 0;
                             const capacity = (method.areaPerPlant && method.areaPerPlant > 0) ? Math.floor(area / method.areaPerPlant) : 0;

@@ -48,8 +48,10 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
     return (
         <div className="card employee-card">
             <div className="employee-card__header">
-                <h4 className="employee-card__name" title={`${employee.firstName} ${employee.lastName}`}>{employee.firstName} {employee.lastName}</h4>
-                <div className="employee-card__salary">${employee.salaryPerDay.toFixed(2)} / day</div>
+                <div className="employee-card__name-wrapper">
+                    <h4 className="employee-card__name" title={`${employee.firstName} ${employee.lastName}`}>{employee.firstName} {employee.lastName}</h4>
+                    <div className="employee-card__salary">${employee.salaryPerDay.toFixed(2)} / day</div>
+                </div>
             </div>
             
             {onAssignRole ? (
@@ -99,7 +101,7 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
             )}
             
             {onHire && (
-                <div className="modal-actions" style={{justifyContent: 'center', marginTop: '1rem'}}>
+                <div className="employee-card__hire-action">
                     <button className="btn" onClick={() => onHire(employee)}>Hire</button>
                 </div>
             )}

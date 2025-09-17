@@ -1156,7 +1156,14 @@
       }
 
       .employee-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
         margin-bottom: 0.5rem;
+      }
+      .employee-card__name-wrapper {
+          display: flex;
+          flex-direction: column;
       }
       .employee-card__name {
         font-size: 1.5rem;
@@ -1276,6 +1283,13 @@
       .employee-card__current-task strong {
         color: var(--text-color);
         font-style: normal;
+      }
+      
+      .employee-card__hire-action {
+        margin-top: auto;
+        padding-top: 1rem;
+        display: flex;
+        justify-content: center;
       }
 
     </style>
