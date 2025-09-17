@@ -36,8 +36,12 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
         case 'Resting':
             statusText = <span style={{color: 'var(--warning-color)'}}>Resting</span>;
             break;
-        default:
-            statusText = <span style={{color: 'var(--text-secondary-color)'}}>Idle</span>;
+        default: // Idle
+            if (employee.energy < 20) {
+                statusText = <span style={{color: 'var(--danger-color)'}}>Idle (Low Energy)</span>;
+            } else {
+                statusText = <span style={{color: 'var(--text-secondary-color)'}}>Idle</span>;
+            }
             break;
     }
 
@@ -83,6 +87,7 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
             <div className="employee-card__current-task">
                 Status: {statusText} <br />
                 {employee.status === 'Working' && employee.currentTask?.description}
+                {employee.status === 'Idle' && employee.energy < 20 && 'Needs rest, no breakroom available.'}
             </div>
             
             <div className="employee-card__skills">

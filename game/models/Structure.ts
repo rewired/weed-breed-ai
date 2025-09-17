@@ -227,6 +227,20 @@ export class Structure {
       return Math.max(...employees.map(emp => emp.skills[skillName].level));
   }
   
+  getBreakroomCapacity(): number {
+    return Object.values(this.rooms).reduce((capacity, room) => {
+        if (room.purpose === 'breakroom') {
+            // 1 employee per 4 sqm
+            return capacity + Math.floor(room.area_m2 / 4);
+        }
+        return capacity;
+    }, 0);
+  }
+
+  getRestingEmployeeCount(company: Company): number {
+      return this.getEmployees(company).filter(emp => emp.status === 'Resting').length;
+  }
+
   generateTasks(company: Company) {
       const newTasks: Task[] = [];
       const allStrains = getAvailableStrains(company);

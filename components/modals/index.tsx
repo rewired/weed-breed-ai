@@ -648,6 +648,11 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
                         {roomPurposes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                 </div>
+                {formState.newRoomPurpose === 'breakroom' && (
+                    <div className="sufficiency-preview" style={{marginTop: 0, marginBottom: '1rem'}}>
+                        <p>Capacity: <strong>{Math.floor(formState.newItemArea / 4)} employees</strong> (1 per 4m²)</p>
+                    </div>
+                )}
                 <div className="modal-actions">
                     <button className="btn btn-secondary" onClick={() => closeModal('addRoom')}>Cancel</button>
                     <button className="btn" onClick={handlers.handleAddRoom}>Create Room</button>
@@ -677,8 +682,8 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
                 <div className="form-group">
                     <label htmlFor="cultivationMethod">Cultivation Method</label>
                     <select id="cultivationMethod" value={formState.newZoneCultivationMethodId || ''} onChange={(e) => updateForm('newZoneCultivationMethodId', e.target.value)}>
-                        {/* FIX: Cast the result of Object.values to ensure correct type inference for 'method'. */}
-                        {(Object.values(getBlueprints().cultivationMethods) as CultivationMethodBlueprint[]).map((method) => {
+                        {/* FIX: Use Object.values to ensure `method` is correctly typed as CultivationMethodBlueprint. */}
+                        {Object.values(getBlueprints().cultivationMethods).map((method: CultivationMethodBlueprint) => {
                             const area = formState.newItemArea || 0;
                             const capacity = (method.areaPerPlant && method.areaPerPlant > 0) ? Math.floor(area / method.areaPerPlant) : 0;
                             const totalCost = (method.setupCost || 0) * area;

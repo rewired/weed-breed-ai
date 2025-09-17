@@ -14,8 +14,9 @@ const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
 };
 const XP_PER_LEVEL = 100;
 const TASK_XP_REWARD = 10;
-const ENERGY_COST_PER_TASK = 15;
+const ENERGY_COST_PER_TASK = 25;
 const ENERGY_REGEN_PER_TICK = 0.5;
+const ENERGY_REST_THRESHOLD = 20;
 
 
 export class Company {
@@ -297,8 +298,13 @@ export class Company {
                     createAlert(zone.id, 'low_supply', `Low nutrients in Zone '${zone.name}'.`, location);
                 }
 
-                if (zone.getHarvestablePlants().length > 0) {
-                    createAlert(zone.id, 'harvest_ready', `Plants are ready for harvest in Zone '${zone.name}'.`, location);
+                const harvestablePlants = zone.getHarvestablePlants();
+                if (harvestablePlants.length > 0) {
+                    // Only trigger alert if plants have been waiting for 12 hours
+                    const isOverdue = harvestablePlants.some(({ plant }) => (ticks - plant.stageStartTick) > 12);
+                    if (isOverdue) {
+                        createAlert(zone.id, 'harvest_ready', `Plants are ready for harvest in Zone '${zone.name}'.`, location);
+                    }
                 }
                 
                 for(const planting of Object.values(zone.plantings)) {
@@ -505,6 +511,10 @@ export class Company {
       });
 
       for(const employee of Object.values(this.employees)) {
+          if (!employee.structureId) continue;
+          const structure = this.structures[employee.structureId];
+          if (!structure) continue;
+
           switch(employee.status) {
               case 'Working':
                   const task = employee.currentTask;
@@ -514,7 +524,7 @@ export class Company {
                   }
                   
                   employee.currentTask = null;
-                  employee.status = employee.energy <= 0 ? 'Resting' : 'Idle';
+                  employee.status = 'Idle'; // Always go to idle to decide next action
                   break;
 
               case 'Resting':
@@ -526,21 +536,29 @@ export class Company {
                   break;
 
               case 'Idle':
-                  if (!employee.structureId) continue;
-                  const assignedStructure = this.structures[employee.structureId];
-                  if (!assignedStructure) continue;
+                  // First, check if employee needs to rest
+                  if (employee.energy < ENERGY_REST_THRESHOLD) {
+                      if (structure.getRestingEmployeeCount(this) < structure.getBreakroomCapacity()) {
+                          employee.status = 'Resting';
+                          continue; // Skip task search for this tick
+                      }
+                      // If no spot, they remain Idle (Low Energy), and can't take tasks
+                  }
+                  
+                  // An employee can only take a task if they have enough energy
+                  if (employee.energy >= ENERGY_REST_THRESHOLD) {
+                      const tasks = [...structure.tasks].sort((a, b) => b.priority - a.priority);
+                      const suitableTask = tasks.find(task => 
+                          !tasksInProgress.has(task.id) &&
+                          task.requiredRole === employee.role &&
+                          employee.skills[task.requiredSkill].level >= task.minSkillLevel
+                      );
 
-                  const tasks = [...assignedStructure.tasks].sort((a, b) => b.priority - a.priority);
-                  const suitableTask = tasks.find(task => 
-                      !tasksInProgress.has(task.id) &&
-                      task.requiredRole === employee.role &&
-                      employee.skills[task.requiredSkill].level >= task.minSkillLevel
-                  );
-
-                  if (suitableTask) {
-                      employee.status = 'Working';
-                      employee.currentTask = suitableTask;
-                      tasksInProgress.add(suitableTask.id);
+                      if (suitableTask) {
+                          employee.status = 'Working';
+                          employee.currentTask = suitableTask;
+                          tasksInProgress.add(suitableTask.id);
+                      }
                   }
                   break;
           }
