@@ -18,7 +18,7 @@ interface DashboardProps {
   onSetGameSpeed: (speed: GameSpeed) => void;
   currentView: 'structures' | 'finances' | 'personnel';
   alerts: Alert[];
-  onNavigateToAlert: (location: AlertLocation) => void;
+  onNavigateToAlert: (alert: Alert) => void;
   onAcknowledgeAlert: (alertId: string) => void;
   onGameMenuToggle: (isOpen: boolean) => void;
 }
@@ -53,6 +53,14 @@ const AlertIcon = ({ type }: { type: string }) => {
         case 'plant_stress':
             iconName = 'priority_high';
             className = 'warning';
+            break;
+        case 'raise_request':
+            iconName = 'request_quote';
+            className = 'warning';
+            break;
+        case 'employee_quit':
+            iconName = 'person_remove';
+            className = 'danger';
             break;
     }
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
@@ -264,7 +272,7 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
                             )}
                             <span className="alert-item-message">{alert.message}</span>
                             <div className="alert-item-action">
-                                <button className="btn" onClick={() => { onAcknowledgeAlert(alert.id); onNavigateToAlert(alert.location); setIsAlertsOpen(false); }}>Go</button>
+                                <button className="btn" onClick={() => { onNavigateToAlert(alert); setIsAlertsOpen(false); }}>Go</button>
                             </div>
                         </div>
                     ))}

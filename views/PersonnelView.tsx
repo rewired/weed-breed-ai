@@ -5,7 +5,7 @@ const ALL_ROLES: JobRole[] = ['Gardener', 'Technician', 'Janitor', 'Botanist', '
 
 interface PersonnelViewProps {
   company: Company;
-  onOpenModal: (type: 'hireEmployee', context: { itemToHire: Employee }) => void;
+  onOpenModal: (type: any, context?: any) => void;
   onAssignEmployeeRole: (employeeId: string, role: JobRole) => void;
 }
 
@@ -26,7 +26,7 @@ const TraitTag = ({ trait }: { trait: Trait }) => (
 );
 
 
-const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, onHire?: (employee: Employee) => void, onAssignRole?: (employeeId: string, role: JobRole) => void }) => {
+const EmployeeCard = ({ employee, onHire, onAssignRole, onFire }: { employee: Employee, onHire?: (employee: Employee) => void, onAssignRole?: (employeeId: string, role: JobRole) => void, onFire?: (employee: Employee) => void }) => {
     
     let statusText;
     switch(employee.status) {
@@ -52,6 +52,18 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
                     <h4 className="employee-card__name" title={`${employee.firstName} ${employee.lastName}`}>{employee.firstName} {employee.lastName}</h4>
                     <div className="employee-card__salary">${employee.salaryPerDay.toFixed(2)} / day</div>
                 </div>
+                {onFire && (
+                    <div className="card__actions">
+                        <button 
+                            className="btn-action-icon delete" 
+                            onClick={() => onFire(employee)} 
+                            title="Fire Employee" 
+                            aria-label="Fire Employee"
+                        >
+                            <span className="material-symbols-outlined">person_remove</span>
+                        </button>
+                    </div>
+                )}
             </div>
             
             {onAssignRole ? (
@@ -133,6 +145,10 @@ const PersonnelView: React.FC<PersonnelViewProps> = ({ company, onOpenModal, onA
   const handleHire = (employee: Employee) => {
     onOpenModal('hireEmployee', { itemToHire: employee });
   };
+  
+  const handleFire = (employee: Employee) => {
+    onOpenModal('delete', { itemToDelete: { type: 'employee', id: employee.id, name: `${employee.firstName} ${employee.lastName}`, context: { employee: employee } } });
+  };
 
   return (
     <div className="content-panel personnel-view">
@@ -153,7 +169,7 @@ const PersonnelView: React.FC<PersonnelViewProps> = ({ company, onOpenModal, onA
                   <div key={structureId}>
                       <h3>{structure ? structure.name : 'Unassigned'}</h3>
                       <div className="card-container">
-                          {employees.map(emp => <EmployeeCard key={emp.id} employee={emp} onAssignRole={onAssignEmployeeRole} />)}
+                          {employees.map(emp => <EmployeeCard key={emp.id} employee={emp} onAssignRole={onAssignEmployeeRole} onFire={handleFire} />)}
                       </div>
                   </div>
               )

@@ -161,7 +161,7 @@ export interface FinancialLedger {
   expenses: Record<ExpenseCategory, number>;
 }
 
-export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready' | 'plant_stress';
+export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready' | 'plant_stress' | 'raise_request' | 'employee_quit';
 
 export interface AlertLocation {
     structureId: string;
@@ -176,6 +176,7 @@ export interface Alert {
     location: AlertLocation;
     tickGenerated: number;
     isAcknowledged?: boolean;
+    context?: any;
 }
 
 
@@ -218,6 +219,7 @@ export interface Employee {
   structureId: string | null;
   status: EmployeeStatus;
   currentTask: Task | null;
+  lastRaiseTick?: number;
   // For job market
   timeOnMarket?: number;
 }

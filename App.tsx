@@ -59,7 +59,7 @@ const App = () => {
     }
 
     const currentAlertKeys = new Set(
-        gameState.company.alerts.map(a => `${a.location.zoneId}-${a.type}`)
+        gameState.company.alerts.map(a => `${a.location.zoneId || a.context?.employeeId}-${a.type}`)
     );
 
     const previousAlertKeys = previousAlertsRef.current;
@@ -272,7 +272,7 @@ const App = () => {
   const handleHireEmployee = useCallback(() => {
     if (!gameState || !modalState.itemToHire || !formState.hireStructureId) return;
     
-    const success = gameState.company.hireEmployee(modalState.itemToHire, formState.hireStructureId);
+    const success = gameState.company.hireEmployee(modalState.itemToHire, formState.hireStructureId, gameState.ticks);
     
     if (success) {
       updateGameState();
@@ -289,6 +289,29 @@ const App = () => {
     }
   }, [gameState, updateGameState]);
 
+    const handleAcceptRaise = useCallback(() => {
+        if (!gameState || !modalState.itemToNegotiate) return;
+        const { employee, newSalary } = modalState.itemToNegotiate;
+        gameState.company.acceptRaise(employee.id, newSalary, gameState.ticks);
+        updateGameState();
+        closeModal('negotiateSalary');
+    }, [gameState, modalState.itemToNegotiate, updateGameState, closeModal]);
+
+    const handleOfferBonus = useCallback(() => {
+        if (!gameState || !modalState.itemToNegotiate) return;
+        const { employee, bonus } = modalState.itemToNegotiate;
+        gameState.company.offerBonus(employee.id, bonus, gameState.ticks);
+        updateGameState();
+        closeModal('negotiateSalary');
+    }, [gameState, modalState.itemToNegotiate, updateGameState, closeModal]);
+
+    const handleDeclineRaise = useCallback(() => {
+        if (!gameState || !modalState.itemToNegotiate) return;
+        const { employee } = modalState.itemToNegotiate;
+        gameState.company.declineRaise(employee.id);
+        updateGameState();
+        closeModal('negotiateSalary');
+    }, [gameState, modalState.itemToNegotiate, updateGameState, closeModal]);
 
   const handleRenameItem = useCallback(() => {
     if (!gameState || !modalState.itemToRename) return;
@@ -409,6 +432,13 @@ const App = () => {
       if (zone) {
           zone.removePlanting(id);
       }
+    } else if (type === 'employee') {
+        const fired = gameState.company.fireEmployee(id);
+        if (fired) {
+            updateGameState();
+            closeModal('delete');
+        }
+        return; // Early return to prevent double-closing modal
     }
 
     updateGameState();
@@ -507,11 +537,25 @@ const App = () => {
     }
   }, [selectedRoom, selectedZoneId, setSelectedZoneId]);
 
-  const handleNavigateToAlert = useCallback((location: AlertLocation) => {
-    setSelectedStructureId(location.structureId);
-    setSelectedRoomId(location.roomId);
-    setSelectedZoneId(location.zoneId);
-  }, [setSelectedStructureId, setSelectedRoomId, setSelectedZoneId]);
+  const handleNavigateToAlert = useCallback((alert: Alert) => {
+    if (!gameState) return;
+
+    if (alert.type === 'raise_request' && alert.context) {
+        const { employeeId, newSalary } = alert.context;
+        const employee = gameState.company.employees[employeeId];
+        if (employee) {
+            const bonus = (newSalary - employee.salaryPerDay) * 45;
+            openModal('negotiateSalary', { itemToNegotiate: { employee, newSalary, bonus } });
+        }
+    } else if (alert.type === 'employee_quit') {
+        handleAcknowledgeAlert(alert.id);
+        setCurrentView('personnel');
+    } else {
+        setSelectedStructureId(alert.location.structureId);
+        setSelectedRoomId(alert.location.roomId);
+        setSelectedZoneId(alert.location.zoneId);
+    }
+  }, [gameState, openModal, setSelectedStructureId, setSelectedRoomId, setSelectedZoneId, setCurrentView]);
 
   const handleAcknowledgeAlert = useCallback((alertId: string) => {
     if (!gameState) return;
@@ -639,6 +683,9 @@ const App = () => {
           handleDeleteGame,
           handleEditDeviceSettings,
           handleEditLightCycle,
+          handleAcceptRaise,
+          handleOfferBonus,
+          handleDeclineRaise,
         }}
         dynamicData={{
             saveGames: getSaveGames()

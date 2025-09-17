@@ -3,12 +3,12 @@ import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import { Structure, Room, Company, GameState, Employee } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle' | 'hireEmployee';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle' | 'hireEmployee' | 'negotiateSalary';
 
 const PAUSING_MODALS: ModalType[] = [
   'rent', 'addRoom', 'addZone', 'addDevice', 'addSupply', 'reset', 'rename',
   'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'load',
-  'editDevice', 'editLightCycle', 'hireEmployee'
+  'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary'
 ];
 
 
@@ -29,10 +29,12 @@ interface ModalState {
   editDevice: boolean;
   editLightCycle: boolean;
   hireEmployee: boolean;
+  negotiateSalary: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
-  itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant' | 'planting', id: string, name: string, context?: any } | null;
+  itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant' | 'planting' | 'employee', id: string, name: string, context?: any } | null;
   itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
   itemToHire: Employee | null;
+  itemToNegotiate: { employee: Employee, newSalary: number, bonus: number } | null;
   activeZoneId: string | null;
   supplyType?: 'water' | 'nutrients';
 }
@@ -80,10 +82,12 @@ const initialModalState: ModalState = {
   editDevice: false,
   editLightCycle: false,
   hireEmployee: false,
+  negotiateSalary: false,
   itemToRename: null,
   itemToDelete: null,
   itemToEdit: null,
   itemToHire: null,
+  itemToNegotiate: null,
   activeZoneId: null,
 };
 
@@ -148,7 +152,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
       }
     }
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee'].includes(type)) {
+    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary'].includes(type)) {
         resetForm();
     }
   }, [resetForm, setIsSimRunning]);

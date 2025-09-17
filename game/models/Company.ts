@@ -251,7 +251,7 @@ export class Company {
     const newAlertKeys = new Set<string>();
     const COOLDOWN_TICKS = 2 * 24; 
 
-    const previousAlertsMap = new Map(this.alerts.map(a => [`${a.location.zoneId}-${a.type}`, a]));
+    const previousAlertsMap = new Map(this.alerts.map(a => [`${a.location.zoneId || a.context?.employeeId}-${a.type}`, a]));
 
     for (const key in this.alertCooldowns) {
         if (ticks >= this.alertCooldowns[key]) {
@@ -259,9 +259,7 @@ export class Company {
         }
     }
 
-    const createAlert = (zoneId: string, type: AlertType, message: string, location: { structureId: string, roomId: string, zoneId: string }) => {
-        const key = `${zoneId}-${type}`;
-
+    const createAlert = (key: string, type: AlertType, message: string, location: any, context?: any) => {
         if (this.alertCooldowns[key] && ticks < this.alertCooldowns[key]) {
             return;
         }
@@ -275,11 +273,20 @@ export class Company {
                 location,
                 tickGenerated: ticks,
                 isAcknowledged: existingAlert?.isAcknowledged || false,
+                context,
             });
             newAlertKeys.add(key);
         }
     };
 
+    // --- Employee Alerts ---
+    Object.values(this.employees).forEach(emp => {
+        // Employee Quit Alert (handled in daily update)
+        // Raise Request Alert (handled in daily update)
+    });
+
+
+    // --- Zone-based Alerts ---
     for (const structureId in this.structures) {
         const structure = this.structures[structureId];
         for (const roomId in structure.rooms) {
@@ -292,10 +299,10 @@ export class Company {
                 const ticksOfNutrientsLeft = consumption.nutrientsPerDay > 0 ? (zone.nutrientLevel_g / (consumption.nutrientsPerDay / 24)) : Infinity;
                 
                 if (ticksOfWaterLeft < 24 && zone.getTotalPlantedCount() > 0) {
-                    createAlert(zone.id, 'low_supply', `Low water in Zone '${zone.name}'.`, location);
+                    createAlert(`${zone.id}-low_supply`, 'low_supply', `Low water in Zone '${zone.name}'.`, location);
                 }
                 if (ticksOfNutrientsLeft < 24 && zone.getTotalPlantedCount() > 0) {
-                    createAlert(zone.id, 'low_supply', `Low nutrients in Zone '${zone.name}'.`, location);
+                    createAlert(`${zone.id}-low_supply`, 'low_supply', `Low nutrients in Zone '${zone.name}'.`, location);
                 }
 
                 const harvestablePlants = zone.getHarvestablePlants();
@@ -303,17 +310,17 @@ export class Company {
                     // Only trigger alert if plants have been waiting for 12 hours
                     const isOverdue = harvestablePlants.some(({ plant }) => (ticks - plant.stageStartTick) > 12);
                     if (isOverdue) {
-                        createAlert(zone.id, 'harvest_ready', `Plants are ready for harvest in Zone '${zone.name}'.`, location);
+                        createAlert(`${zone.id}-harvest_ready`, 'harvest_ready', `Plants are ready for harvest in Zone '${zone.name}'.`, location);
                     }
                 }
                 
                 for(const planting of Object.values(zone.plantings)) {
                     for(const plant of planting.plants) {
                         if (plant.health < 0.6) {
-                            createAlert(zone.id, 'sick_plant', `Sick plants detected in Zone '${zone.name}'.`, location);
+                            createAlert(`${zone.id}-sick_plant`, 'sick_plant', `Sick plants detected in Zone '${zone.name}'.`, location);
                         }
                         if (plant.stress > 0.4) {
-                            createAlert(zone.id, 'plant_stress', `Stressed plants detected in Zone '${zone.name}'.`, location);
+                            createAlert(`${zone.id}-plant_stress`, 'plant_stress', `Stressed plants detected in Zone '${zone.name}'.`, location);
                         }
                     }
                 }
@@ -321,16 +328,35 @@ export class Company {
         }
     }
 
+    // Combine existing non-zone alerts
+    this.alerts.forEach(alert => {
+        if (alert.type === 'raise_request' || alert.type === 'employee_quit') {
+            const key = `${alert.context?.employeeId}-${alert.type}`;
+            if(!newAlertKeys.has(key)) {
+                newAlerts.push(alert);
+                newAlertKeys.add(key);
+            }
+        }
+    });
+
+
     for (const [prevKey] of previousAlertsMap) {
         if (!newAlertKeys.has(prevKey)) {
             this.alertCooldowns[prevKey] = ticks + COOLDOWN_TICKS;
         }
     }
-
-    this.alerts = newAlerts;
+    
+    // Filter out acknowledged old alerts that are no longer active
+    this.alerts = newAlerts.filter(a => {
+        const key = `${a.location.zoneId || a.context?.employeeId}-${a.type}`;
+        if (!newAlertKeys.has(key) && a.isAcknowledged) {
+            return false;
+        }
+        return true;
+    });
   }
   
-  hireEmployee(employee: Employee, structureId: string): boolean {
+  hireEmployee(employee: Employee, structureId: string, ticks: number): boolean {
     if (this.employees[employee.id]) {
         alert("This employee is already hired.");
         return false;
@@ -343,12 +369,81 @@ export class Company {
     
     employee.structureId = structureId;
     employee.status = 'Idle';
+    employee.lastRaiseTick = ticks;
     this.employees[employee.id] = employee;
     this.structures[structureId].employeeIds.push(employee.id);
 
     this.jobMarketCandidates = this.jobMarketCandidates.filter(c => c.id !== employee.id);
     return true;
   }
+  
+    fireEmployee(employeeId: string): Employee | null {
+        const employee = this.employees[employeeId];
+        if (!employee) return null;
+
+        const severance = employee.salaryPerDay * 7;
+        if (this.capital < severance) {
+            alert("Not enough capital to pay severance.");
+            return null;
+        }
+
+        this.capital -= severance;
+        this.logExpense('salaries', severance);
+
+        // Morale penalty
+        if (employee.structureId) {
+            const structure = this.structures[employee.structureId];
+            if (structure) {
+                structure.employeeIds
+                    .filter(id => id !== employeeId)
+                    .forEach(id => {
+                        const otherEmployee = this.employees[id];
+                        if (otherEmployee) {
+                            otherEmployee.morale = Math.max(0, otherEmployee.morale - 10);
+                        }
+                    });
+                structure.employeeIds = structure.employeeIds.filter(id => id !== employeeId);
+            }
+        }
+
+        delete this.employees[employeeId];
+        
+        // Return to job market
+        employee.structureId = null;
+        employee.status = 'Idle';
+        this.jobMarketCandidates.unshift(employee);
+
+        return employee;
+    }
+
+    acceptRaise(employeeId: string, newSalary: number, ticks: number) {
+        const employee = this.employees[employeeId];
+        if (employee) {
+            employee.salaryPerDay = newSalary;
+            employee.morale = Math.min(100, employee.morale + 25);
+            employee.lastRaiseTick = ticks;
+            this.alerts = this.alerts.filter(a => !(a.type === 'raise_request' && a.context?.employeeId === employeeId));
+        }
+    }
+
+    offerBonus(employeeId: string, bonus: number, ticks: number) {
+        const employee = this.employees[employeeId];
+        if (employee && this.capital >= bonus) {
+            this.capital -= bonus;
+            this.logExpense('salaries', bonus);
+            employee.morale = Math.min(100, employee.morale + 15);
+            employee.lastRaiseTick = ticks;
+            this.alerts = this.alerts.filter(a => !(a.type === 'raise_request' && a.context?.employeeId === employeeId));
+        }
+    }
+
+    declineRaise(employeeId: string) {
+        const employee = this.employees[employeeId];
+        if (employee) {
+            employee.morale = Math.max(0, employee.morale - 20);
+            this.alerts = this.alerts.filter(a => !(a.type === 'raise_request' && a.context?.employeeId === employeeId));
+        }
+    }
 
   async updateJobMarket(rng: () => number, ticks: number, seed: number) {
       const { personnelData } = getBlueprints();
@@ -407,7 +502,7 @@ export class Company {
           
           const baseSalary = 50;
           const salaryPerSkillPoint = 8;
-          const baseSalaryValue = baseSalary + (totalSkillPoints * salaryPerSkillPoint);
+          let salary = baseSalary + (totalSkillPoints * salaryPerSkillPoint);
 
           let salaryModifier = 1.0;
           if (assignedTraits.some(t => t.id === 'trait_frugal')) {
@@ -417,7 +512,7 @@ export class Company {
               salaryModifier += 0.20; // 20% more for demanding
           }
 
-          const salary = baseSalaryValue * salaryModifier;
+          salary *= salaryModifier;
 
           return {
               id: `emp-${Date.now()}-${rng()}`,
@@ -584,11 +679,44 @@ export class Company {
       this.updateJobMarket(rng, ticks, seed);
     }
 
-    // Daily updates (Salaries, Learning by Doing)
+    // Daily updates
     if (ticks > 0 && ticks % 24 === 0) {
         let totalSalaries = 0;
+        const employeesToQuit: string[] = [];
+
         Object.values(this.employees).forEach(emp => {
             totalSalaries += emp.salaryPerDay;
+            
+            // Check for quitting
+            if (emp.morale < 20 && rng() < 0.05) { // 5% chance to quit each day if morale is low
+                employeesToQuit.push(emp.id);
+            }
+
+            // Check for raise request
+            const ticksSinceRaise = ticks - (emp.lastRaiseTick || emp.timeOnMarket || 0);
+            const hasExistingRequest = this.alerts.some(a => a.type === 'raise_request' && a.context?.employeeId === emp.id);
+
+            if (!hasExistingRequest && ticksSinceRaise > 365 * 24) { // 1 year cooldown
+                // Simple trigger: at least 1 full skill point gained since last raise
+                const totalSkillPoints = Object.values(emp.skills).reduce((sum, s) => sum + s.level, 0);
+                const baseSalary = 50 + (totalSkillPoints * 8);
+                
+                if (baseSalary > emp.salaryPerDay * 1.05) { // Only ask if new salary is at least 5% higher
+                    const newSalary = baseSalary * (1 + (rng() - 0.5) * 0.1); // +/- 5% negotiation margin
+                    const alertKey = `${emp.id}-raise_request`;
+                    const existingAlert = this.alerts.find(a => a.id.startsWith(`alert-${alertKey}`));
+                    if (!existingAlert) {
+                        this.alerts.push({
+                            id: `alert-${alertKey}-${ticks}`,
+                            type: 'raise_request',
+                            message: `${emp.firstName} ${emp.lastName} is requesting a salary review.`,
+                            location: { structureId: emp.structureId || '', roomId: '', zoneId: '' },
+                            tickGenerated: ticks,
+                            context: { employeeId: emp.id, newSalary: newSalary }
+                        });
+                    }
+                }
+            }
 
             // Learning by Doing (Role-based general XP)
             const roleToSkillMap: Record<JobRole, SkillName> = {
@@ -612,6 +740,26 @@ export class Company {
             }
         });
         
+        employeesToQuit.forEach(empId => {
+            const emp = this.employees[empId];
+            if (emp) {
+                delete this.employees[empId];
+                if (emp.structureId) {
+                    this.structures[emp.structureId].employeeIds = this.structures[emp.structureId].employeeIds.filter(id => id !== empId);
+                }
+                emp.structureId = null;
+                this.jobMarketCandidates.unshift(emp);
+                this.alerts.push({
+                    id: `alert-${emp.id}-employee_quit-${ticks}`,
+                    type: 'employee_quit',
+                    message: `${emp.firstName} ${emp.lastName} has quit due to low morale.`,
+                    location: { structureId: '', roomId: '', zoneId: ''},
+                    tickGenerated: ticks,
+                    context: { employeeId: emp.id }
+                });
+            }
+        });
+
         this.logExpense('salaries', totalSalaries);
         this.capital -= totalSalaries;
     }

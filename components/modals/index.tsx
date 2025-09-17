@@ -585,6 +585,44 @@ const HireEmployeeModalContent = ({ gameState, modalState, formState, updateForm
     )
 };
 
+const NegotiateSalaryModalContent = ({ gameState, modalState, handlers, closeModal }) => {
+    const negotiation = modalState.itemToNegotiate;
+    if (!negotiation) return null;
+    const { employee, newSalary, bonus } = negotiation;
+    
+    return (
+        <>
+            <h2>Salary Negotiation</h2>
+            <p><strong>{employee.firstName} {employee.lastName}</strong> ({employee.role}) has requested a salary review based on their performance and skill improvements.</p>
+            
+            <div className="summary-cards" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '1.5rem'}}>
+                <div className="summary-card">
+                    <h4>Current Salary</h4>
+                    <p>${employee.salaryPerDay.toFixed(2)}/day</p>
+                </div>
+                 <div className="summary-card">
+                    <h4>Requested Salary</h4>
+                    <p className="positive">${newSalary.toFixed(2)}/day</p>
+                </div>
+            </div>
+
+            <p>You have three options:</p>
+            <div className="modal-actions" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+                <button className="btn btn-start" onClick={handlers.handleAcceptRaise}>
+                    Accept Raise (+25 Morale)
+                </button>
+                <button className="btn btn-pause" onClick={handlers.handleOfferBonus} disabled={gameState.company.capital < bonus}>
+                    Offer ${bonus.toFixed(2)} Bonus (+15 Morale)
+                </button>
+                <button className="btn btn-danger" onClick={handlers.handleDeclineRaise}>
+                    Decline Request (-20 Morale)
+                </button>
+            </div>
+        </>
+    );
+};
+
+
 
 interface ModalsProps {
     gameState: GameState;
@@ -600,6 +638,32 @@ interface ModalsProps {
 }
 
 export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selectedStructure, modalState, formState, closeModal, updateForm, resetForm, handlers, dynamicData }) => {
+    
+    const renderDeleteModalContent = () => {
+        if (!modalState.itemToDelete) return <p>Error: No item specified for deletion.</p>;
+        
+        const { type, name, context } = modalState.itemToDelete;
+
+        if (type === 'employee' && context?.employee) {
+            const employee = context.employee;
+            const severance = employee.salaryPerDay * 7;
+            return (
+                <>
+                    <h2>Confirm Firing</h2>
+                    <p>Are you sure you want to fire <strong>{name}</strong>? This action cannot be undone.</p>
+                    <p>This will cost <strong>${severance.toFixed(2)}</strong> in severance pay and will lower the morale of other staff in the same structure by 10 points.</p>
+                </>
+            );
+        }
+        
+        return (
+             <>
+                <h2>Confirm Deletion</h2>
+                <p>Are you sure you want to delete <strong>{name}</strong>? This action cannot be undone.</p>
+            </>
+        );
+    };
+    
     return (
         <>
             <Modal isOpen={modalState.rent} onClose={() => closeModal('rent')}>
@@ -620,6 +684,10 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
             
             <Modal isOpen={modalState.hireEmployee} onClose={() => closeModal('hireEmployee')}>
                 <HireEmployeeModalContent {...{ gameState, modalState, formState, updateForm, handlers, closeModal }} />
+            </Modal>
+
+            <Modal isOpen={modalState.negotiateSalary} onClose={() => closeModal('negotiateSalary')}>
+                <NegotiateSalaryModalContent {...{ gameState, modalState, handlers, closeModal }} />
             </Modal>
 
             <Modal isOpen={modalState.addRoom} onClose={() => closeModal('addRoom')}>
@@ -744,8 +812,7 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
             </Modal>
 
             <Modal isOpen={modalState.delete} onClose={() => closeModal('delete')}>
-                <h2>Confirm Deletion</h2>
-                <p>Are you sure you want to delete <strong>{modalState.itemToDelete?.name}</strong>? This action cannot be undone.</p>
+                {renderDeleteModalContent()}
                 <div className="modal-actions">
                     <button className="btn btn-secondary" onClick={() => closeModal('delete')}>Cancel</button>
                     <button className="btn btn-danger" onClick={handlers.handleDeleteItem}>Delete</button>
