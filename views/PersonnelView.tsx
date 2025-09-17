@@ -82,7 +82,7 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
 
             <div className="employee-card__current-task">
                 Status: {statusText} <br />
-                {employee.status === 'Working' && employee.currentTaskDescription}
+                {employee.status === 'Working' && employee.currentTask?.description}
             </div>
             
             <div className="employee-card__skills">

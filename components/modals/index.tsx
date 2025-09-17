@@ -677,8 +677,8 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
                 <div className="form-group">
                     <label htmlFor="cultivationMethod">Cultivation Method</label>
                     <select id="cultivationMethod" value={formState.newZoneCultivationMethodId || ''} onChange={(e) => updateForm('newZoneCultivationMethodId', e.target.value)}>
-                        {/* FIX: Reverted the explicit type to 'any' to resolve a stubborn 'unknown' type error, likely caused by the project's TypeScript configuration. */}
-                        {Object.values(getBlueprints().cultivationMethods).map((method: any) => {
+                        {/* FIX: Explicitly type 'method' as CultivationMethodBlueprint to resolve type inference issue. */}
+                        {Object.values(getBlueprints().cultivationMethods).map((method: CultivationMethodBlueprint) => {
                             const area = formState.newItemArea || 0;
                             const capacity = (method.areaPerPlant && method.areaPerPlant > 0) ? Math.floor(area / method.areaPerPlant) : 0;
                             const totalCost = (method.setupCost || 0) * area;

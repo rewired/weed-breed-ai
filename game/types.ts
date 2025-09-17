@@ -217,8 +217,7 @@ export interface Employee {
   morale: number; // 0-100
   structureId: string | null;
   status: EmployeeStatus;
-  currentTaskId: string | null;
-  currentTaskDescription?: string;
+  currentTask: Task | null;
   // For job market
   timeOnMarket?: number;
 }

@@ -412,7 +412,7 @@ export class Company {
               morale: 75,
               structureId: null,
               status: 'Idle',
-              currentTaskId: null,
+              currentTask: null,
           };
       });
 
@@ -478,21 +478,23 @@ export class Company {
   }
 
   updateEmployeesAI() {
+      const tasksInProgress = new Set<string>();
+      Object.values(this.employees).forEach(emp => {
+          if (emp.status === 'Working' && emp.currentTask) {
+              tasksInProgress.add(emp.currentTask.id);
+          }
+      });
+
       for(const employee of Object.values(this.employees)) {
           switch(employee.status) {
               case 'Working':
-                  // In this tick, the employee is "working". Next tick, the task will be resolved.
-                  const structure = this.structures[employee.structureId!];
-                  const task = structure?.tasks.find(t => t.id === employee.currentTaskId);
-
+                  const task = employee.currentTask;
                   if (task) {
                       this.resolveTask(employee, task);
                       employee.energy -= ENERGY_COST_PER_TASK;
                   }
                   
-                  // Reset state for next tick
-                  employee.currentTaskId = null;
-                  employee.currentTaskDescription = undefined;
+                  employee.currentTask = null;
                   employee.status = employee.energy <= 0 ? 'Resting' : 'Idle';
                   break;
 
@@ -509,19 +511,17 @@ export class Company {
                   const assignedStructure = this.structures[employee.structureId];
                   if (!assignedStructure) continue;
 
-                  // Find a suitable task
                   const tasks = [...assignedStructure.tasks].sort((a, b) => b.priority - a.priority);
                   const suitableTask = tasks.find(task => 
+                      !tasksInProgress.has(task.id) &&
                       task.requiredRole === employee.role &&
                       employee.skills[task.requiredSkill].level >= task.minSkillLevel
                   );
 
                   if (suitableTask) {
                       employee.status = 'Working';
-                      employee.currentTaskId = suitableTask.id;
-                      employee.currentTaskDescription = suitableTask.description;
-                      // Remove task from queue so no one else picks it
-                      assignedStructure.tasks = assignedStructure.tasks.filter(t => t.id !== suitableTask.id);
+                      employee.currentTask = suitableTask;
+                      tasksInProgress.add(suitableTask.id);
                   }
                   break;
           }

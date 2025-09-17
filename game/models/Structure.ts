@@ -229,14 +229,11 @@ export class Structure {
   
   generateTasks(company: Company) {
       const newTasks: Task[] = [];
-      const existingTaskKeys = new Set(this.tasks.map(t => `${t.type}-${t.location.itemId}`));
-
+      
       const createTask = (type: TaskType, priority: number, requiredRole: JobRole, requiredSkill: SkillName, minSkillLevel: number, location: { roomId: string; zoneId: string; itemId: string; }, description: string) => {
           const key = `${type}-${location.itemId}`;
-          if (existingTaskKeys.has(key)) return;
-
           newTasks.push({
-              id: `task-${key}-${Date.now()}`,
+              id: `task-${this.id}-${key}`,
               type,
               priority,
               requiredRole,
