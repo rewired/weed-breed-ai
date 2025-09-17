@@ -3,6 +3,7 @@ import { StrainBlueprint } from '../types';
 
 interface Environment {
     temperature_C: number;
+    averagePPFD: number;
 }
 
 export class Planting {
@@ -106,7 +107,12 @@ export class Planting {
         if (this.plants.length === 0) return 0;
 
         // We can assume all plants in a planting are at the same stage
-        const stage = this.getGrowthStage();
+        let stage = this.getGrowthStage();
+        // FIX: Harvestable plants should still consume resources at the flowering rate.
+        if (stage === GrowthStage.Harvestable) {
+            stage = GrowthStage.Flowering;
+        }
+        
         const dailyDemandPerPlant = strain.nutrientDemand.dailyNutrientDemand[stage];
 
         if (!dailyDemandPerPlant) return 0;

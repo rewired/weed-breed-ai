@@ -287,7 +287,7 @@ export class Zone {
             continue;
         }
 
-        const blueprint = blueprints.devices[deviceId] as DeviceBlueprint;
+        const blueprint = blueprints.devices[device.blueprintId] as DeviceBlueprint;
         if (blueprint?.kind === 'Lamp' && blueprint.settings?.coverageArea && blueprint.settings?.ppfd) {
             const coverage = blueprint.settings.coverageArea;
             const ppfd = blueprint.settings.ppfd;
@@ -453,7 +453,11 @@ export class Zone {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              const stage = planting.getGrowthStage();
+              let stage = planting.getGrowthStage();
+              // FIX: Harvestable plants should still consume resources at the flowering rate.
+              if (stage === GrowthStage.Harvestable) {
+                  stage = GrowthStage.Flowering;
+              }
               const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
               const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
               
@@ -472,13 +476,19 @@ export class Zone {
 
       if(hasWater) this.waterLevel_L -= totalWaterDemandL;
       if(hasNutrients) this.nutrientLevel_g -= totalNutrientDemandG;
+      
+      const { averagePPFD } = this.getLightingDetails();
+      const environmentForPlants = {
+          ...this.currentEnvironment,
+          averagePPFD,
+      };
 
 
       for (const plantingId in this.plantings) {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              planting.update(strain, this.currentEnvironment, rng, isLightOn, hasWater, hasNutrients);
+              planting.update(strain, environmentForPlants, rng, isLightOn, hasWater, hasNutrients);
           }
       }
   }
@@ -509,7 +519,11 @@ export class Zone {
         const planting = this.plantings[plantingId];
         const strain = allStrains[planting.strainId];
         if (strain) {
-            const stage = planting.getGrowthStage();
+            let stage = planting.getGrowthStage();
+            // FIX: Harvestable plants should still consume resources at the flowering rate.
+            if (stage === GrowthStage.Harvestable) {
+                stage = GrowthStage.Flowering;
+            }
             const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
             const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
             

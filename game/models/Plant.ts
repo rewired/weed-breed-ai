@@ -10,6 +10,7 @@ export enum GrowthStage {
 
 interface Environment {
     temperature_C: number;
+    averagePPFD: number;
 }
 
 export class Plant {
@@ -39,7 +40,7 @@ export class Plant {
     this.grow(strain, rng, isLightOn);
 
     // 4. Update Growth Stage
-    this.updateStage(strain);
+    this.updateStage(strain, rng);
 
     if (this.health <= 0) {
         this.growthStage = GrowthStage.Dead;
@@ -48,18 +49,31 @@ export class Plant {
 
   private calculateStress(strain: StrainBlueprint, environment: Environment, hasWater: boolean, hasNutrients: boolean) {
       let currentStress = 0;
+      
+      // Temperature Stress
       const idealTempRange = this.growthStage === GrowthStage.Flowering
         ? strain.environmentalPreferences.idealTemperature.flowering
         : strain.environmentalPreferences.idealTemperature.vegetation;
       
       const tempDelta = Math.max(0, idealTempRange[0] - environment.temperature_C, environment.temperature_C - idealTempRange[1]);
       
-      // Simple stress model: stress increases quadratically with temperature deviation
       if (tempDelta > 0) {
-          currentStress += Math.pow(tempDelta / 5, 2) * 0.1; // /5 means 5 degrees off is significant
+          currentStress += Math.pow(tempDelta / 5, 2) * 0.1;
+      }
+
+      // Light Stress
+      const idealLightRange = this.growthStage === GrowthStage.Flowering
+        ? strain.environmentalPreferences.lightIntensity.flowering
+        : strain.environmentalPreferences.lightIntensity.vegetation;
+
+      if (environment.averagePPFD < idealLightRange[0]) {
+          const lightDeficit = idealLightRange[0] - environment.averagePPFD;
+          // Add stress based on how far below the minimum it is.
+          // e.g., if deficit is half the minimum, stress is 0.15
+          currentStress += (lightDeficit / idealLightRange[0]) * 0.3; 
       }
       
-      // Add stress for lack of supplies
+      // Supply Stress
       if (!hasWater) {
         currentStress += 0.3; // Significant stress from dehydration
       }
@@ -104,23 +118,52 @@ export class Plant {
       this.biomass += potentialGrowth * noiseModifier;
   }
 
-  private updateStage(strain: StrainBlueprint) {
-      // 1 tick = 1 hour, so 24 ticks = 1 day.
-      const ageInDays = this.ageInTicks / 24;
-      
-      const vegDays = strain.photoperiod.vegetationDays;
-      const flowerDays = strain.photoperiod.floweringDays;
-      const seedlingDays = 3; // First 3 days are seedling stage.
-      
-      if (ageInDays > vegDays + flowerDays) {
-          this.growthStage = GrowthStage.Harvestable;
-      } else if (ageInDays > vegDays) {
-          this.growthStage = GrowthStage.Flowering;
-      } else if (ageInDays > seedlingDays) { 
-          this.growthStage = GrowthStage.Vegetative;
-      } else {
-          this.growthStage = GrowthStage.Seedling;
-      }
+  private updateStage(strain: StrainBlueprint, rng: () => number) {
+    // Only check for stage changes once per "day" (every 24 ticks)
+    if (this.ageInTicks % 24 !== 0) {
+        return;
+    }
+
+    const ageInDays = Math.floor(this.ageInTicks / 24);
+    const vegDays = strain.photoperiod.vegetationDays;
+    const flowerDays = strain.photoperiod.floweringDays;
+    const seedlingDays = 3;
+
+    // The chance to transition to the next stage each day after the minimum time has been met.
+    const TRANSITION_PROBABILITY_PER_DAY = 0.25;
+
+    switch (this.growthStage) {
+        case GrowthStage.Seedling:
+            // Seedling to Veg is a hard transition based on age.
+            if (ageInDays >= seedlingDays) {
+                this.growthStage = GrowthStage.Vegetative;
+            }
+            break;
+
+        case GrowthStage.Vegetative:
+            // Check if minimum veg time is met
+            if (ageInDays >= vegDays) {
+                // After minimum time, check probabilistically each day
+                if (rng() < TRANSITION_PROBABILITY_PER_DAY) {
+                    this.growthStage = GrowthStage.Flowering;
+                }
+            }
+            break;
+
+        case GrowthStage.Flowering:
+            // Check if minimum total time is met for harvestability
+            if (ageInDays >= vegDays + flowerDays) {
+                if (rng() < TRANSITION_PROBABILITY_PER_DAY) {
+                    this.growthStage = GrowthStage.Harvestable;
+                }
+            }
+            break;
+
+        case GrowthStage.Harvestable:
+        case GrowthStage.Dead:
+            // No further transitions from these states
+            break;
+    }
   }
 
   getStageProgress(strain: StrainBlueprint): number {
