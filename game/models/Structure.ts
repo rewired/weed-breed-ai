@@ -1,7 +1,7 @@
 import { Room } from './Room';
 import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
-import { StructureBlueprint, Company, StrainBlueprint, Device } from '../types';
+import { StructureBlueprint, Company, StrainBlueprint, Device, Employee, SkillName, JobRole } from '../types';
 import { GrowthStage } from './Plant';
 
 const TICKS_PER_MONTH = 30;
@@ -197,6 +197,33 @@ export class Structure {
     return Object.values(this.rooms).reduce((total, room) => {
         return total + room.getTotalExpectedYield(allStrains);
     }, 0);
+  }
+
+  getEmployees(company: Company, role?: JobRole): Employee[] {
+    let employees = this.employeeIds.map(id => company.employees[id]).filter(Boolean);
+    if (role) {
+        employees = employees.filter(emp => emp.role === role);
+    }
+    return employees;
+  }
+  
+  getAverageSkill(company: Company, skillName: SkillName, role?: JobRole): number {
+      const employees = this.getEmployees(company, role);
+      if (employees.length === 0) {
+          // If no employees with that role, there's no skill bonus.
+          // Return a baseline neutral value.
+          return 1;
+      }
+      const totalSkill = employees.reduce((sum, emp) => sum + emp.skills[skillName].level, 0);
+      return totalSkill / employees.length;
+  }
+  
+  getMaxSkill(company: Company, skillName: SkillName, role?: JobRole): number {
+      const employees = this.getEmployees(company, role);
+      if (employees.length === 0) {
+          return 0;
+      }
+      return Math.max(...employees.map(emp => emp.skills[skillName].level));
   }
 
   update(company: Company, rng: () => number, ticks: number) {

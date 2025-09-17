@@ -38,10 +38,12 @@ export class Planting {
         }
     }
 
-    update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number) {
+    // FIX: Added diseaseChance parameter to match the number of arguments from the caller in Zone.ts.
+    update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
         this.plants.forEach(plant => {
             if (plant.growthStage !== GrowthStage.Dead) {
-                plant.update(strain, environment, rng, isLightOn, hasWater, hasNutrients, lightOnHours);
+                // FIX: Pass diseaseChance down to the individual plant update.
+                plant.update(strain, environment, rng, isLightOn, hasWater, hasNutrients, lightOnHours, diseaseChance);
             }
         });
     }

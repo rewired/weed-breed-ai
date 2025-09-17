@@ -185,6 +185,8 @@ export interface GameState {
 }
 
 export type SkillName = 'Gardening' | 'Maintenance' | 'Technical' | 'Botanical' | 'Cleanliness' | 'Negotiation';
+export type JobRole = 'Gardener' | 'Technician' | 'Janitor' | 'Botanist' | 'Salesperson' | 'Generalist';
+
 
 export interface Skill {
   name: SkillName;
@@ -205,6 +207,7 @@ export interface Employee {
   firstName: string;
   lastName: string;
   salaryPerDay: number;
+  role: JobRole;
   skills: Record<SkillName, Skill>;
   traits: Trait[];
   energy: number; // 0-100
@@ -230,5 +233,5 @@ export interface GroupedDeviceInfo {
   blueprintId: string;
   name: string;
   count: number;
-  status: 'on' | 'off' | 'mixed';
+  status: 'on' | 'off' | 'mixed' | 'broken';
 }

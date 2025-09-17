@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zone } from '../game/types';
+import { Zone, GroupedDeviceInfo } from '../game/types';
 import { getBlueprints } from '../game/blueprints';
 
 // Props for the new component
@@ -18,6 +18,16 @@ const ZoneDeviceList: React.FC<ZoneDeviceListProps> = ({ zone, onToggleDeviceGro
     };
 
     const groupedDevices = zone.getGroupedDevices();
+
+    const getStatusTooltip = (status: GroupedDeviceInfo['status']) => {
+        switch (status) {
+            case 'on': return 'All devices are on';
+            case 'off': return 'All devices are off';
+            case 'mixed': return 'Some devices are on, some are off';
+            case 'broken': return 'All devices of this type are broken';
+            default: return '';
+        }
+    };
 
     return (
         <div className="card">
@@ -48,7 +58,11 @@ const ZoneDeviceList: React.FC<ZoneDeviceListProps> = ({ zone, onToggleDeviceGro
                                 <li key={deviceGroup.blueprintId}>
                                     <div className="group-summary" onClick={() => toggleExpanded(`device-${deviceGroup.blueprintId}`)}>
                                         <span className="device-name-group">
-                                            <span className={`device-status-indicator status-${deviceGroup.status}`} onClick={(e) => { e.stopPropagation(); onToggleDeviceGroupStatus(zone.id, deviceGroup.blueprintId); }}></span>
+                                            <span 
+                                                className={`device-status-indicator status-${deviceGroup.status}`} 
+                                                onClick={(e) => { e.stopPropagation(); onToggleDeviceGroupStatus(zone.id, deviceGroup.blueprintId); }}
+                                                title={getStatusTooltip(deviceGroup.status)}
+                                            ></span>
                                             {deviceGroup.name} <span className="device-setting-display">{currentSettingDisplay}</span>
                                         </span>
                                         <div className="sub-list-item-actions">
@@ -68,7 +82,12 @@ const ZoneDeviceList: React.FC<ZoneDeviceListProps> = ({ zone, onToggleDeviceGro
                                         <ul className="sub-list">
                                             {Object.values(zone.devices).filter(d => d.blueprintId === deviceGroup.blueprintId).map(device => (
                                                 <li key={device.id} className="sub-list-item">
-                                                    <span>{device.name} #{device.id.slice(-4)}</span>
+                                                    <span>
+                                                        {device.name} #{device.id.slice(-4)}
+                                                        <span className="device-durability-display">
+                                                          {device.status === 'broken' ? ' (Broken)' : ` (Dur: ${(device.durability * 100).toFixed(0)}%)`}
+                                                        </span>
+                                                    </span>
                                                     <div className="sub-list-item-actions">
                                                         <button
                                                             className="btn-action-icon delete"

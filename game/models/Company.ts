@@ -1,8 +1,17 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait } from '../types';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole } from '../types';
 import { getBlueprints } from '../blueprints';
 import { mulberry32 } from '../utils';
 
 const ALL_SKILLS: SkillName[] = ['Gardening', 'Maintenance', 'Technical', 'Botanical', 'Cleanliness', 'Negotiation'];
+const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
+    Gardening: 'Gardener',
+    Maintenance: 'Technician',
+    Technical: 'Technician',
+    Cleanliness: 'Janitor',
+    Botanical: 'Botanist',
+    Negotiation: 'Salesperson',
+};
+const XP_PER_LEVEL = 100;
 
 export class Company {
   id: string;
@@ -199,7 +208,7 @@ export class Company {
       return newStrain;
   }
 
-  harvestPlants(plantsToHarvest: {plant: Plant, planting: Planting}[]): { totalRevenue: number, totalYield: number, count: number } {
+  harvestPlants(plantsToHarvest: {plant: Plant, planting: Planting}[], negotiationBonus: number = 0): { totalRevenue: number, totalYield: number, count: number } {
     const blueprints = getBlueprints();
     let totalRevenue = 0;
     let totalYield = 0;
@@ -211,7 +220,11 @@ export class Company {
         continue;
       }
       const plantYield = plant.biomass * plant.health;
-      const revenue = plantYield * strainPriceInfo.harvestPricePerGram;
+      let revenue = plantYield * strainPriceInfo.harvestPricePerGram;
+      
+      if (negotiationBonus > 0) {
+        revenue *= (1 + negotiationBonus);
+      }
 
       totalYield += plantYield;
       totalRevenue += revenue;
@@ -354,11 +367,20 @@ export class Company {
       const newCandidates: Employee[] = names.map(name => {
           const skills: Record<SkillName, Skill> = {} as any;
           let totalSkillPoints = 0;
+          let highestSkill: SkillName = 'Gardening';
+          let highestLevel = -1;
+
           ALL_SKILLS.forEach(skillName => {
               const level = rng() * 5; // New candidates are not experts
               skills[skillName] = { name: skillName, level, xp: 0 };
               totalSkillPoints += level;
+              if (level > highestLevel) {
+                  highestLevel = level;
+                  highestSkill = skillName;
+              }
           });
+
+          const role = SKILL_TO_ROLE_MAP[highestSkill] || 'Generalist';
 
           const assignedTraits: Trait[] = [];
           const traitRoll = rng();
@@ -377,6 +399,7 @@ export class Company {
               id: `emp-${Date.now()}-${rng()}`,
               firstName: name.firstName,
               lastName: name.lastName,
+              role,
               skills,
               traits: assignedTraits,
               salaryPerDay: salary,
@@ -389,12 +412,44 @@ export class Company {
       this.jobMarketCandidates = newCandidates;
   }
 
-
   update(rng: () => number, ticks: number) {
     this.checkForAlerts(ticks);
 
-    if (ticks % (24 * 7) === 0) { // Every 7 days
+    if (ticks > 0 && ticks % (24 * 7) === 0) { // Every 7 days
       this.updateJobMarket(rng);
+    }
+
+    // Daily updates (Salaries, Learning by Doing)
+    if (ticks > 0 && ticks % 24 === 0) {
+        let totalSalaries = 0;
+        Object.values(this.employees).forEach(emp => {
+            // Pay salary
+            totalSalaries += emp.salaryPerDay;
+
+            // Learning by Doing
+            const roleToSkillMap: Record<JobRole, SkillName> = {
+                'Gardener': 'Gardening',
+                'Technician': 'Maintenance',
+                'Janitor': 'Cleanliness',
+                'Botanist': 'Botanical',
+                'Salesperson': 'Negotiation',
+                'Generalist': 'Gardening', // Generalists can default to a common skill
+            };
+            const skillToLevel = roleToSkillMap[emp.role];
+            if (skillToLevel) {
+                const skill = emp.skills[skillToLevel];
+                if (skill.level < 10) {
+                    skill.xp += 5; // Base XP per day
+                    if (skill.xp >= XP_PER_LEVEL) {
+                        skill.level = Math.min(10, skill.level + 1);
+                        skill.xp = 0;
+                    }
+                }
+            }
+        });
+        
+        this.logExpense('salaries', totalSalaries);
+        this.capital -= totalSalaries;
     }
 
     for (const structureId in this.structures) {
@@ -404,17 +459,9 @@ export class Company {
     let totalRent = 0;
     let totalMaintenance = 0;
     let totalPower = 0;
-    let totalSalaries = 0;
     
     const blueprints = getBlueprints();
     const pricePerKwh = blueprints.utilityPrices.pricePerKwh;
-
-    // Daily salary payment
-    if (ticks % 24 === 0) {
-        Object.values(this.employees).forEach(emp => {
-            totalSalaries += emp.salaryPerDay;
-        });
-    }
 
     for (const structureId in this.structures) {
         const structure = this.structures[structureId];
@@ -463,9 +510,8 @@ export class Company {
     this.logExpense('rent', totalRent);
     this.logExpense('maintenance', totalMaintenance);
     this.logExpense('power', totalPower);
-    this.logExpense('salaries', totalSalaries);
     
-    this.capital -= (totalRent + totalMaintenance + totalPower + totalSalaries);
+    this.capital -= (totalRent + totalMaintenance + totalPower);
   }
   
   toJSON() {

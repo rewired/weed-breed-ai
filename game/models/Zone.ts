@@ -1,5 +1,3 @@
-
-
 import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting } from '../types';
 import { getBlueprints } from '../blueprints';
 import { Planting } from './Planting';
@@ -26,6 +24,9 @@ const COOLING_CAPACITY_FACTOR = 0.8; // kW of cooling -> degrees C per tick
 const DEHUMIDIFIER_HEAT_FACTOR = 0.2; // kW of power -> degrees C per tick
 const PLANT_TRANSPIRATION_RH_PER_PLANT = 0.00005; // RH increase per plant per tick
 const PLANT_CO2_CONSUMPTION_PPM_PER_PLANT = 0.2;
+
+const BASE_DURABILITY_DECAY_PER_TICK = 0.00002; // Base wear per tick
+const BASE_DISEASE_CHANCE_PER_TICK = 0.0001; // Base chance of a plant getting sick
 
 export class Zone {
   id: string;
@@ -144,10 +145,13 @@ export class Zone {
 
     return Object.values(grouped).map(group => {
         const onCount = group.statuses.filter(s => s === 'on').length;
-        const offCount = group.statuses.filter(s => s === 'off' || s === 'broken').length;
+        const offCount = group.statuses.filter(s => s === 'off').length;
+        const brokenCount = group.statuses.filter(s => s === 'broken').length;
         
-        let status: 'on' | 'off' | 'mixed' = 'off';
-        if (onCount > 0 && offCount > 0) {
+        let status: 'on' | 'off' | 'mixed' | 'broken' = 'off';
+        if (brokenCount === group.statuses.length) {
+            status = 'broken';
+        } else if (onCount > 0 && offCount > 0) {
             status = 'mixed';
         } else if (onCount > 0) {
             status = 'on';
@@ -571,13 +575,30 @@ export class Zone {
           ...this.currentEnvironment,
           averagePPFD,
       };
-
+      
+      // --- Passive Employee Effects ---
+      const avgMaintenanceSkill = structure.getAverageSkill(company, 'Maintenance', 'Technician');
+      const maintenanceModifier = 1 - (avgMaintenanceSkill / 10) * 0.75; // Max 75% reduction
+      
+      for(const device of Object.values(this.devices)) {
+        if (device.status === 'on') {
+            device.durability -= BASE_DURABILITY_DECAY_PER_TICK * maintenanceModifier;
+            if (device.durability <= 0) {
+                device.durability = 0;
+                device.status = 'broken';
+            }
+        }
+      }
+      
+      const avgCleanlinessSkill = structure.getAverageSkill(company, 'Cleanliness', 'Janitor');
+      const cleanlinessModifier = 1 - (avgCleanlinessSkill / 10) * 0.9; // Max 90% reduction
+      const diseaseChance = BASE_DISEASE_CHANCE_PER_TICK * cleanlinessModifier;
 
       for (const plantingId in this.plantings) {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              planting.update(strain, environmentForPlants, rng, isLightOn, hasWater, hasNutrients, this.lightCycle.on);
+              planting.update(strain, environmentForPlants, rng, isLightOn, hasWater, hasNutrients, this.lightCycle.on, diseaseChance);
           }
       }
   }

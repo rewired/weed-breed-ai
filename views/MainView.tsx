@@ -1,5 +1,5 @@
 import React from 'react';
-import { Company, Structure, Room, Zone } from '../game/types';
+import { Company, Structure, Room, Zone, JobRole } from '../game/types';
 import Structures from '../components/Structures';
 import StructureDetail from '../components/StructureDetail';
 import RoomDetail from '../components/RoomDetail';
@@ -25,6 +25,7 @@ interface MainViewProps {
     onRenameRoom: (roomId: string, newName: string) => void;
     onRenameZone: (zoneId: string, newName: string) => void;
     onNavigateToZone: (direction: 'next' | 'prev') => void;
+    onAssignEmployeeRole: (employeeId: string, role: JobRole) => void;
     ticks: number;
 }
 
@@ -46,6 +47,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onRenameRoom,
         onRenameZone,
         onNavigateToZone,
+        onAssignEmployeeRole,
         ticks,
     } = props;
 
@@ -54,7 +56,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
     }
     
     if (currentView === 'personnel') {
-        return <PersonnelView company={company} onOpenModal={onOpenModal} />;
+        return <PersonnelView company={company} onOpenModal={onOpenModal} onAssignEmployeeRole={onAssignEmployeeRole} />;
     }
 
     if (selectedStructure && selectedRoom && selectedZone) {

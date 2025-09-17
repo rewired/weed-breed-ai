@@ -10,7 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
-import { Planting, Plant, AlertLocation, Alert, Employee } from './game/types';
+import { Planting, Plant, AlertLocation, Alert, Employee, JobRole } from './game/types';
 
 const App = () => {
   const { 
@@ -280,6 +280,16 @@ const App = () => {
     }
   }, [gameState, modalState.itemToHire, formState.hireStructureId, updateGameState, closeModal]);
 
+  const handleAssignEmployeeRole = useCallback((employeeId: string, role: JobRole) => {
+    if (!gameState) return;
+    const employee = gameState.company.employees[employeeId];
+    if (employee) {
+        employee.role = role;
+        updateGameState();
+    }
+  }, [gameState, updateGameState]);
+
+
   const handleRenameItem = useCallback(() => {
     if (!gameState || !modalState.itemToRename) return;
     const { type, id } = modalState.itemToRename;
@@ -416,7 +426,7 @@ const App = () => {
   }, [gameState, updateGameState]);
 
   const handleHarvest = useCallback((plantId?: string) => {
-    if (!gameState || !selectedZone) return;
+    if (!gameState || !selectedZone || !selectedStructure) return;
 
     let plantsToHarvest: {plant: Plant, planting: Planting}[];
 
@@ -432,14 +442,24 @@ const App = () => {
         return;
     }
     
-    const result = gameState.company.harvestPlants(plantsToHarvest);
+    // Calculate negotiation bonus
+    const negotiationSkill = selectedStructure.getMaxSkill(gameState.company, 'Negotiation', 'Salesperson');
+    const negotiationBonus = (negotiationSkill / 10) * 0.10; // Max 10% bonus
+
+    const result = gameState.company.harvestPlants(plantsToHarvest, negotiationBonus);
     selectedZone.cleanupEmptyPlantings();
     updateGameState();
 
     if (result.count > 0) {
-      alert(`Harvested ${result.count} plant(s) for a total yield of ${result.totalYield.toFixed(2)}g, earning ${result.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}.`);
+      let alertMessage = `Harvested ${result.count} plant(s) for a total yield of ${result.totalYield.toFixed(2)}g, earning ${result.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+      if (negotiationBonus > 0) {
+        alertMessage += ` (including a ${(negotiationBonus * 100).toFixed(1)}% sales bonus).`;
+      } else {
+        alertMessage += '.';
+      }
+      alert(alertMessage);
     }
-  }, [gameState, selectedZone, updateGameState]);
+  }, [gameState, selectedZone, selectedStructure, updateGameState]);
 
   const handleResetConfirm = useCallback(() => {
     resetGame();
@@ -579,6 +599,7 @@ const App = () => {
                   onRenameRoom={handleRenameRoom}
                   onRenameZone={handleRenameZone}
                   onNavigateToZone={handleNavigateToZone}
+                  onAssignEmployeeRole={handleAssignEmployeeRole}
               />
             </main>
           ) : (

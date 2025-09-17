@@ -825,6 +825,11 @@
         font-size: 0.9em;
         margin-left: 0.5rem;
       }
+      .device-durability-display {
+        color: var(--text-secondary-color);
+        font-size: 0.9em;
+      }
+
 
       /* Planting Info Tooltip */
       .planting-info-tooltip-container {
@@ -1105,6 +1110,11 @@
       }
 
       /* Personnel View */
+      .personnel-view-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
       .personnel-view .card-container {
         grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
       }
@@ -1161,6 +1171,15 @@
         color: var(--primary-color);
         font-weight: bold;
       }
+      .employee-card__role {
+        margin-bottom: 1rem;
+      }
+      .employee-card__role select {
+        width: auto;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.9rem;
+      }
+
 
       .employee-card__skills {
         margin: 1rem 0;
