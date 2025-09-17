@@ -153,7 +153,7 @@ export interface FinancialLedger {
   expenses: Record<ExpenseCategory, number>;
 }
 
-export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready';
+export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready' | 'plant_stress';
 
 export interface AlertLocation {
     structureId: string;

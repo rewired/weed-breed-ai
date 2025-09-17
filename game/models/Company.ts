@@ -10,6 +10,7 @@ export class Company {
   ledger: FinancialLedger;
   cumulativeYield_g: number;
   alerts: Alert[];
+  alertCooldowns: Record<string, number>; // Key: `${zoneId}-${type}`, Value: Expiry tick
 
   constructor(data: any) {
     this.id = data.id;
@@ -30,6 +31,7 @@ export class Company {
     this.ledger = data.ledger || { revenue: { harvests: 0, other: 0 }, expenses: { rent: 0, maintenance: 0, power: 0, structures: 0, devices: 0, supplies: 0, seeds: 0 } };
     this.cumulativeYield_g = data.cumulativeYield_g || 0;
     this.alerts = data.alerts || [];
+    this.alertCooldowns = data.alertCooldowns || {};
 
     // --- MIGRATION: Handle old save format where revenue was a single number ---
     if (data.ledger && typeof data.ledger.revenue === 'number') {
@@ -223,11 +225,27 @@ export class Company {
   
   checkForAlerts(ticks: number) {
     const newAlerts: Alert[] = [];
-    const alertKeys = new Set<string>(); // Prevents duplicate alerts for same condition in same zone
+    const newAlertKeys = new Set<string>();
+    const COOLDOWN_TICKS = 3 * 24; // 3 game days
+
+    // --- Clean up expired cooldowns for hygiene ---
+    for (const key in this.alertCooldowns) {
+        if (ticks >= this.alertCooldowns[key]) {
+            delete this.alertCooldowns[key];
+        }
+    }
+
+    const previousAlertKeys = new Set(this.alerts.map(a => `${a.location.zoneId}-${a.type}`));
 
     const createAlert = (zoneId: string, type: AlertType, message: string, location: { structureId: string, roomId: string, zoneId: string }) => {
         const key = `${zoneId}-${type}`;
-        if (!alertKeys.has(key)) {
+
+        // Check for active cooldown
+        if (this.alertCooldowns[key] && ticks < this.alertCooldowns[key]) {
+            return;
+        }
+
+        if (!newAlertKeys.has(key)) {
             newAlerts.push({
                 id: `alert-${key}-${ticks}`,
                 type,
@@ -235,7 +253,7 @@ export class Company {
                 location,
                 tickGenerated: ticks,
             });
-            alertKeys.add(key);
+            newAlertKeys.add(key);
         }
     };
 
@@ -263,16 +281,26 @@ export class Company {
                     createAlert(zone.id, 'harvest_ready', `Plants are ready for harvest in Zone '${zone.name}'.`, location);
                 }
                 
-                // --- Check for Sick Plants ---
+                // --- Check for Sick & Stressed Plants ---
                 for(const planting of Object.values(zone.plantings)) {
                     for(const plant of planting.plants) {
                         if (plant.health < 0.6) {
                             createAlert(zone.id, 'sick_plant', `Sick plants detected in Zone '${zone.name}'.`, location);
-                            break; // Only need one sick plant alert per zone
+                        }
+                        if (plant.stress > 0.4) {
+                            createAlert(zone.id, 'plant_stress', `Stressed plants detected in Zone '${zone.name}'.`, location);
                         }
                     }
                 }
             }
+        }
+    }
+
+    // --- Set cooldown for resolved alerts ---
+    for (const prevKey of previousAlertKeys) {
+        if (!newAlertKeys.has(prevKey)) {
+            // This alert was present last tick but not this tick, so it's resolved.
+            this.alertCooldowns[prevKey] = ticks + COOLDOWN_TICKS;
         }
     }
 
@@ -359,6 +387,7 @@ export class Company {
       ledger: this.ledger,
       cumulativeYield_g: this.cumulativeYield_g,
       alerts: this.alerts,
+      alertCooldowns: this.alertCooldowns,
     };
   }
 }

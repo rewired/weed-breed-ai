@@ -21,12 +21,12 @@ interface DashboardProps {
 }
 
 const speedOptions: { label: string; speed: GameSpeed }[] = [
-  { label: 'Slow', speed: 0.5 },
-  { label: 'Normal', speed: 1 },
-  { label: 'Fast', speed: 10 },
-  { label: 'Rapid', speed: 25 },
-  { label: 'Ultra', speed: 50 },
-  { label: 'Ludicrous', speed: 100 },
+  { label: '0.5x', speed: 0.5 },
+  { label: '1x', speed: 1 },
+  { label: '10x', speed: 10 },
+  { label: '25x', speed: 25 },
+  { label: '50x', speed: 50 },
+  { label: '100x', speed: 100 },
 ];
 
 const TICK_INTERVAL_MS = 5000;
@@ -46,6 +46,10 @@ const AlertIcon = ({ type }: { type: string }) => {
         case 'harvest_ready':
             iconName = 'eco';
             className = 'success';
+            break;
+        case 'plant_stress':
+            iconName = 'priority_high';
+            className = 'warning';
             break;
     }
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;

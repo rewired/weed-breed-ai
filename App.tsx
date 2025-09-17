@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useViewManager } from './hooks/useViewManager';
 import { useModals } from './hooks/useModals';
@@ -47,6 +47,37 @@ const App = () => {
   } = useViewManager();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousAlertsRef = useRef<Set<string>>(new Set());
+
+  // Auto-pause on new alerts
+  useEffect(() => {
+    if (!gameState) {
+        previousAlertsRef.current = new Set();
+        return;
+    }
+
+    const currentAlertKeys = new Set(
+        gameState.company.alerts.map(a => `${a.location.zoneId}-${a.type}`)
+    );
+
+    const previousAlertKeys = previousAlertsRef.current;
+    
+    let isNewAlertTriggered = false;
+    for (const key of currentAlertKeys) {
+        if (!previousAlertKeys.has(key)) {
+            isNewAlertTriggered = true;
+            break;
+        }
+    }
+
+    if (isNewAlertTriggered && isSimRunning) {
+        setIsSimRunning(false);
+    }
+
+    // Update the ref for the next tick
+    previousAlertsRef.current = currentAlertKeys;
+  }, [gameState, isSimRunning, setIsSimRunning]);
+
 
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
@@ -503,6 +534,7 @@ const App = () => {
                 onRoomClick={setSelectedRoomId}
                 onZoneClick={setSelectedZoneId}
                 onOpenModal={openModal}
+                // FIX: Corrected typo from `onToggleDeviceGroupStatus` to `handleToggleDeviceGroupStatus`.
                 onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
                 onHarvest={handleHarvest}
                 onDuplicateRoom={handleDuplicateRoom}
