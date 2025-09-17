@@ -1,3 +1,4 @@
+
 import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting } from '../types';
 import { getBlueprints } from '../blueprints';
 import { Planting } from './Planting';
@@ -408,6 +409,7 @@ export class Zone {
     let tempDelta = 0;
     let humidityDelta = 0;
     let co2Delta = 0;
+    let airExchangeMultiplier = 1.0; // Base multiplier is 1
 
     const blueprints = getBlueprints();
     const zoneVolume = this.area_m2 * structure.height_m;
@@ -422,6 +424,12 @@ export class Zone {
         if (!blueprint) continue;
         
         const settings = this.deviceGroupSettings[device.blueprintId] || blueprint.settings || {};
+
+        // Ventilation devices increase the rate of air exchange with the ambient environment.
+        if (blueprint.kind === 'Ventilation' && settings.airExchangeFactor) {
+            // Multiple fans are additive. A factor of 5 means it adds 4x the base exchange rate.
+            airExchangeMultiplier += settings.airExchangeFactor - 1;
+        }
 
         switch(blueprint.kind) {
             case 'Lamp':
@@ -466,10 +474,10 @@ export class Zone {
         co2Delta -= totalPlantCount * PLANT_CO2_CONSUMPTION_PPM_PER_PLANT;
     }
 
-    // 3. Normalization towards Ambient
-    tempDelta += (AMBIENT_TEMP_C - this.currentEnvironment.temperature_C) * TEMP_NORMALIZATION_FACTOR;
-    humidityDelta += (AMBIENT_HUMIDITY_RH - this.currentEnvironment.humidity_rh) * HUMIDITY_NORMALIZATION_FACTOR;
-    co2Delta += (AMBIENT_CO2_PPM - this.currentEnvironment.co2_ppm) * CO2_NORMALIZATION_FACTOR;
+    // 3. Normalization towards Ambient, modified by ventilation
+    tempDelta += (AMBIENT_TEMP_C - this.currentEnvironment.temperature_C) * TEMP_NORMALIZATION_FACTOR * airExchangeMultiplier;
+    humidityDelta += (AMBIENT_HUMIDITY_RH - this.currentEnvironment.humidity_rh) * HUMIDITY_NORMALIZATION_FACTOR * airExchangeMultiplier;
+    co2Delta += (AMBIENT_CO2_PPM - this.currentEnvironment.co2_ppm) * CO2_NORMALIZATION_FACTOR * airExchangeMultiplier;
 
     // 4. Apply Deltas
     this.currentEnvironment.temperature_C += tempDelta;

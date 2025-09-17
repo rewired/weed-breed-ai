@@ -1,3 +1,4 @@
+
 {
   "structures": [
     "small_warehouse.json",
@@ -16,7 +17,8 @@
     "co2injector-01.json",
     "dehumidifier-01.json",
     "humidity_control_unit_01.json",
-    "veg_light_01.json"
+    "veg_light_01.json",
+    "exhaust_fan_01.json"
   ],
   "cultivationMethods": [
     "basic_soil_pot.json",
