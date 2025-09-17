@@ -379,8 +379,8 @@ const App = () => {
     if (!gameState) return;
     const structure = gameState.company.structures[structureId];
     if (structure) {
-      const success = structure.duplicateRoom(roomId, gameState.company);
-      if (success) {
+      const newRoom = structure.duplicateRoom(roomId, gameState.company);
+      if (newRoom) {
         updateGameState();
       }
     }
@@ -393,8 +393,8 @@ const App = () => {
       .find(r => r.id === roomId);
     
     if (room) {
-      const success = room.duplicateZone(zoneId, gameState.company);
-      if (success) {
+      const newZone = room.duplicateZone(zoneId, gameState.company);
+      if (newZone) {
         updateGameState();
       }
     }

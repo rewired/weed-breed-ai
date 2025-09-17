@@ -88,7 +88,7 @@ const StructureDetail: React.FC<StructureDetailProps> = ({ structure, company, o
               </div>
               <p>Area: {room.area_m2} m²</p>
               <p>Purpose: {getPurposeName(room.purpose)}</p>
-              <p>Zones: {Object.keys(structure.rooms).length}</p>
+              <p>Zones: {Object.keys(room.zones).length}</p>
               {plantSummaryText !== null && <p>Plants: {plantSummaryText}</p>}
               {expectedYield > 0 && <p>Exp. Yield: {expectedYield.toFixed(1)}g</p>}
             </div>

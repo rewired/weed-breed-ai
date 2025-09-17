@@ -64,17 +64,17 @@ export class Structure {
     delete this.rooms[roomId];
   }
   
-  duplicateRoom(roomId: string, company: Company): boolean {
+  duplicateRoom(roomId: string, company: Company): Room | null {
     const originalRoom = this.rooms[roomId];
     if (!originalRoom) {
       console.error(`Room with id ${roomId} not found in structure ${this.id}`);
       alert("Error: Original room not found.");
-      return false;
+      return null;
     }
 
     if (originalRoom.area_m2 > this.getAvailableArea()) {
       alert("Not enough space in the structure to duplicate this room.");
-      return false;
+      return null;
     }
     
     // Calculate total cost
@@ -90,7 +90,7 @@ export class Structure {
     
     if (!company.spendCapital(totalCost)) {
       // spendCapital already shows an alert
-      return false;
+      return null;
     }
     
     // Log expenses
@@ -131,7 +131,7 @@ export class Structure {
     }
 
     this.rooms[newRoom.id] = newRoom;
-    return true;
+    return newRoom;
   }
 
   getRentalCostPerTick(blueprint: StructureBlueprint): number {

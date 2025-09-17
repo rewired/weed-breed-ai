@@ -60,23 +60,23 @@ export class Room {
     delete this.zones[zoneId];
   }
 
-  duplicateZone(zoneId: string, company: Company): boolean {
+  duplicateZone(zoneId: string, company: Company): Zone | null {
     const originalZone = this.zones[zoneId];
     if (!originalZone) {
       console.error(`Zone with id ${zoneId} not found in room ${this.id}`);
       alert("Error: Original zone not found.");
-      return false;
+      return null;
     }
 
     if (originalZone.area_m2 > this.getAvailableArea()) {
       alert("Not enough space in the room to duplicate this zone.");
-      return false;
+      return null;
     }
 
     const costDetails = originalZone.calculateDuplicationCost();
     if (!company.spendCapital(costDetails.total)) {
       // spendCapital already shows an alert
-      return false;
+      return null;
     }
     
     // Log expenses
@@ -107,7 +107,7 @@ export class Room {
     const newZone = new Zone(newZoneData);
     this.zones[newZone.id] = newZone;
 
-    return true;
+    return newZone;
   }
 
   getRoomPlantSummary(allStrains: Record<string, StrainBlueprint>): { count: number, capacity: number, dominantStage: GrowthStage | null, progress: number } {
