@@ -210,6 +210,13 @@ export class Plant {
         return 0;
     }
   }
+
+  getExpectedYield(strain: StrainBlueprint): number {
+    // Expected yield is the genetic potential modified by current health.
+    // Health acts as a quality/efficiency multiplier on the plant's ability to reach its max potential.
+    const maxBiomass = strain.growthModel.maxBiomassDry_g || 0;
+    return maxBiomass * this.health;
+  }
   
   toJSON() {
       return {

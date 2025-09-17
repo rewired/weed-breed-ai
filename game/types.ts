@@ -43,6 +43,9 @@ export interface StrainBlueprint {
     yieldFactor: number;
     leafAreaIndex: number;
   };
+  growthModel: {
+    maxBiomassDry_g: number;
+  };
   noise?: {
     enabled: boolean;
     pct: number;
@@ -139,9 +142,10 @@ export interface BlueprintDB {
 }
 
 export type ExpenseCategory = 'rent' | 'maintenance' | 'power' | 'structures' | 'devices' | 'supplies' | 'seeds';
+export type RevenueCategory = 'harvests' | 'other';
 
 export interface FinancialLedger {
-  revenue: number;
+  revenue: Record<RevenueCategory, number>;
   expenses: Record<ExpenseCategory, number>;
 }
 

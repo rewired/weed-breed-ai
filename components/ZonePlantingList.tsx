@@ -104,9 +104,10 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                                             {planting.plants.map(plant => {
                                                 const capitalizedStage = plant.growthStage.charAt(0).toUpperCase() + plant.growthStage.slice(1);
                                                 const progress = plant.getStageProgress(strain);
+                                                const expectedYield = plant.getExpectedYield(strain);
                                                 return (
                                                     <li key={plant.id} className="sub-list-item">
-                                                        <span>Plant #{plant.id.slice(-4)} (Stage: {capitalizedStage} <span className="planting-progress">{progress.toFixed(0)}%</span>, Health: {(plant.health*100).toFixed(0)}%)</span>
+                                                        <span>Plant #{plant.id.slice(-4)} (Stage: {capitalizedStage} <span className="planting-progress">{progress.toFixed(0)}%</span>, Health: {(plant.health*100).toFixed(0)}%, Exp. Yield: {expectedYield.toFixed(1)}g)</span>
                                                         <div className="sub-list-item-actions">
                                                             {plant.growthStage === GrowthStage.Harvestable && (
                                                                 <button

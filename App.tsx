@@ -391,6 +391,7 @@ const App = () => {
         <>
           <Dashboard 
             capital={gameState.company.capital}
+            cumulativeYield_g={gameState.company.cumulativeYield_g}
             ticks={gameState.ticks}
             isSimRunning={isSimRunning}
             onStart={() => setIsSimRunning(true)}

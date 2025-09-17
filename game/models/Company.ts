@@ -1,4 +1,4 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting } from '../types';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory } from '../types';
 import { getBlueprints } from '../blueprints';
 
 export class Company {
@@ -8,6 +8,7 @@ export class Company {
   structures: Record<string, Structure>;
   customStrains: Record<string, StrainBlueprint>;
   ledger: FinancialLedger;
+  cumulativeYield_g: number;
 
   constructor(data: any) {
     this.id = data.id;
@@ -25,7 +26,14 @@ export class Company {
       }
     }
     this.customStrains = data.customStrains || {};
-    this.ledger = data.ledger || { revenue: 0, expenses: { rent: 0, maintenance: 0, power: 0, structures: 0, devices: 0, supplies: 0, seeds: 0 } };
+    this.ledger = data.ledger || { revenue: { harvests: 0, other: 0 }, expenses: { rent: 0, maintenance: 0, power: 0, structures: 0, devices: 0, supplies: 0, seeds: 0 } };
+    this.cumulativeYield_g = data.cumulativeYield_g || 0;
+
+    // --- MIGRATION: Handle old save format where revenue was a single number ---
+    if (data.ledger && typeof data.ledger.revenue === 'number') {
+        const oldRevenue = data.ledger.revenue as number;
+        this.ledger.revenue = { harvests: oldRevenue, other: 0 };
+    }
   }
 
   logExpense(category: ExpenseCategory, amount: number) {
@@ -34,9 +42,9 @@ export class Company {
     }
   }
 
-  logRevenue(amount: number) {
+  logRevenue(category: RevenueCategory, amount: number) {
     if (amount > 0) {
-      this.ledger.revenue = (this.ledger.revenue || 0) + amount;
+      this.ledger.revenue[category] = (this.ledger.revenue[category] || 0) + amount;
       this.capital += amount;
     }
   }
@@ -199,7 +207,9 @@ export class Company {
       totalRevenue += revenue;
     }
 
-    this.logRevenue(totalRevenue);
+    this.logRevenue('harvests', totalRevenue);
+    this.cumulativeYield_g = (this.cumulativeYield_g || 0) + totalYield;
+
 
     // Now remove the plants after all calculations are done.
     for (const { plant, planting } of plantsToHarvest) {
@@ -284,6 +294,7 @@ export class Company {
       structures: Object.fromEntries(Object.entries(this.structures).map(([id, struct]) => [id, struct.toJSON()])),
       customStrains: this.customStrains,
       ledger: this.ledger,
+      cumulativeYield_g: this.cumulativeYield_g,
     };
   }
 }

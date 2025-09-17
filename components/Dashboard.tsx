@@ -3,6 +3,7 @@ import { GameSpeed } from '../game/types';
 
 interface DashboardProps {
   capital: number;
+  cumulativeYield_g: number;
   ticks: number;
   isSimRunning: boolean;
   onStart: () => void;
@@ -27,7 +28,7 @@ const speedOptions: { label: string; speed: GameSpeed }[] = [
 
 const TICK_INTERVAL_MS = 5000;
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed }) => {
   const [progress, setProgress] = useState(0);
   const tickStartTimeRef = useRef(Date.now());
   // FIX: Initialize useRef with null to provide an initial value, resolving the "Expected 1 arguments, but got 0" error.
@@ -79,6 +80,12 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onS
           <span className="dashboard-metric__label">Capital</span>
           <span className="dashboard-metric__value">
             {capital.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="dashboard-metric">
+          <span className="dashboard-metric__label">Cumulative Yield</span>
+          <span className="dashboard-metric__value">
+            {(cumulativeYield_g || 0).toFixed(2)}g
           </span>
         </div>
         <div className="dashboard-metric time-display">

@@ -15,7 +15,10 @@ export function initialGameState(companyName: string = 'Weedbreed', seed?: numbe
       inventory: {},
       history: [],
       ledger: {
-        revenue: 0,
+        revenue: {
+          harvests: 0,
+          other: 0,
+        },
         expenses: {
           rent: 0,
           maintenance: 0,
