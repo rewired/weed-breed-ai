@@ -10,7 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
-import { Planting, Plant, AlertLocation } from './game/types';
+import { Planting, Plant, AlertLocation, Alert } from './game/types';
 
 const App = () => {
   const { 
@@ -476,6 +476,15 @@ const App = () => {
     setSelectedZoneId(location.zoneId);
   }, [setSelectedStructureId, setSelectedRoomId, setSelectedZoneId]);
 
+  const handleAcknowledgeAlert = useCallback((alertId: string) => {
+    if (!gameState) return;
+    const alert = gameState.company.alerts.find((a: Alert) => a.id === alertId);
+    if (alert) {
+        alert.isAcknowledged = true;
+        updateGameState();
+    }
+  }, [gameState, updateGameState]);
+
 
   //--- Render ---//
 
@@ -511,6 +520,7 @@ const App = () => {
             currentView={currentView}
             alerts={gameState.company.alerts}
             onNavigateToAlert={handleNavigateToAlert}
+            onAcknowledgeAlert={handleAcknowledgeAlert}
           />
           <main>
             <Navigation
@@ -524,7 +534,6 @@ const App = () => {
             />
             <MainView 
                 company={gameState.company}
-                // FIX: Pass ticks down to MainView so it's available for child components like FinancesView.
                 ticks={gameState.ticks}
                 currentView={currentView}
                 selectedStructure={selectedStructure}
@@ -534,7 +543,6 @@ const App = () => {
                 onRoomClick={setSelectedRoomId}
                 onZoneClick={setSelectedZoneId}
                 onOpenModal={openModal}
-                // FIX: Corrected typo from `onToggleDeviceGroupStatus` to `handleToggleDeviceGroupStatus`.
                 onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
                 onHarvest={handleHarvest}
                 onDuplicateRoom={handleDuplicateRoom}

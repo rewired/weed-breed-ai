@@ -1005,6 +1005,7 @@
         gap: 1rem;
         padding: 0.75rem 1rem;
         border-bottom: 1px solid var(--border-color);
+        transition: opacity 0.3s ease;
       }
       .alert-item:last-child {
         border-bottom: none;
@@ -1021,10 +1022,23 @@
         flex-grow: 1;
         font-size: 0.9rem;
         line-height: 1.4;
+        transition: color 0.3s ease, text-decoration 0.3s ease;
       }
       .alert-item-action .btn {
         padding: 0.3rem 0.8rem;
         font-size: 0.9rem;
+      }
+
+      .alert-item.acknowledged {
+        opacity: 0.6;
+      }
+      .alert-item.acknowledged .alert-item-message {
+        color: var(--text-secondary-color);
+      }
+      .alert-item-ack-icon {
+        color: var(--primary-color);
+        font-size: 24px;
+        flex-shrink: 0;
       }
 
 

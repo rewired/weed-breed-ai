@@ -18,6 +18,7 @@ interface DashboardProps {
   currentView: 'structures' | 'finances';
   alerts: Alert[];
   onNavigateToAlert: (location: AlertLocation) => void;
+  onAcknowledgeAlert: (alertId: string) => void;
 }
 
 const speedOptions: { label: string; speed: GameSpeed }[] = [
@@ -55,7 +56,7 @@ const AlertIcon = ({ type }: { type: string }) => {
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert }) => {
   const [progress, setProgress] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const tickStartTimeRef = useRef(Date.now());
@@ -117,6 +118,9 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - progress);
+  
+  const unacknowledgedAlerts = alerts.filter(a => !a.isAcknowledged);
+  const unacknowledgedCount = unacknowledgedAlerts.length;
 
   return (
     <header className="dashboard">
@@ -185,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
         <div className="notifications-container" ref={alertsContainerRef}>
             <button className="btn btn-secondary btn-icon" onClick={() => setIsAlertsOpen(prev => !prev)} title="Alerts" aria-label="Alerts">
               <span className="material-symbols-outlined">notifications</span>
-              {alerts.length > 0 && <span className="notifications-badge">{alerts.length}</span>}
+              {unacknowledgedCount > 0 && <span className="notifications-badge">{unacknowledgedCount}</span>}
             </button>
             {isAlertsOpen && (
                 <div className="alerts-popover">
@@ -193,11 +197,15 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
                         {alerts.length > 0 ? `Active Alerts (${alerts.length})` : 'No Active Alerts'}
                     </div>
                     {alerts.map(alert => (
-                        <div key={alert.id} className="alert-item">
-                            <AlertIcon type={alert.type} />
+                        <div key={alert.id} className={`alert-item ${alert.isAcknowledged ? 'acknowledged' : ''}`}>
+                            {alert.isAcknowledged ? (
+                                <span className="material-symbols-outlined alert-item-ack-icon">check_circle</span>
+                            ) : (
+                                <AlertIcon type={alert.type} />
+                            )}
                             <span className="alert-item-message">{alert.message}</span>
                             <div className="alert-item-action">
-                                <button className="btn" onClick={() => { onNavigateToAlert(alert.location); setIsAlertsOpen(false); }}>Go</button>
+                                <button className="btn" onClick={() => { onAcknowledgeAlert(alert.id); onNavigateToAlert(alert.location); setIsAlertsOpen(false); }}>Go</button>
                             </div>
                         </div>
                     ))}

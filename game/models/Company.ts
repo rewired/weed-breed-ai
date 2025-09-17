@@ -226,7 +226,10 @@ export class Company {
   checkForAlerts(ticks: number) {
     const newAlerts: Alert[] = [];
     const newAlertKeys = new Set<string>();
-    const COOLDOWN_TICKS = 3 * 24; // 3 game days
+    const COOLDOWN_TICKS = 2 * 24; // 2 game days
+
+    // Create a map of previous alerts to preserve their acknowledged state
+    const previousAlertsMap = new Map(this.alerts.map(a => [`${a.location.zoneId}-${a.type}`, a]));
 
     // --- Clean up expired cooldowns for hygiene ---
     for (const key in this.alertCooldowns) {
@@ -234,8 +237,6 @@ export class Company {
             delete this.alertCooldowns[key];
         }
     }
-
-    const previousAlertKeys = new Set(this.alerts.map(a => `${a.location.zoneId}-${a.type}`));
 
     const createAlert = (zoneId: string, type: AlertType, message: string, location: { structureId: string, roomId: string, zoneId: string }) => {
         const key = `${zoneId}-${type}`;
@@ -246,12 +247,14 @@ export class Company {
         }
 
         if (!newAlertKeys.has(key)) {
+            const existingAlert = previousAlertsMap.get(key);
             newAlerts.push({
                 id: `alert-${key}-${ticks}`,
                 type,
                 message,
                 location,
                 tickGenerated: ticks,
+                isAcknowledged: existingAlert?.isAcknowledged || false,
             });
             newAlertKeys.add(key);
         }
@@ -297,7 +300,7 @@ export class Company {
     }
 
     // --- Set cooldown for resolved alerts ---
-    for (const prevKey of previousAlertKeys) {
+    for (const [prevKey] of previousAlertsMap) {
         if (!newAlertKeys.has(prevKey)) {
             // This alert was present last tick but not this tick, so it's resolved.
             this.alertCooldowns[prevKey] = ticks + COOLDOWN_TICKS;

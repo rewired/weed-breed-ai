@@ -167,6 +167,7 @@ export interface Alert {
     message: string;
     location: AlertLocation;
     tickGenerated: number;
+    isAcknowledged?: boolean;
 }
 
 
