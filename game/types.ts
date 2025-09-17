@@ -64,6 +64,18 @@ export interface StrainBlueprint {
       flowering: [number, number];
     };
   };
+  waterDemand: {
+    dailyWaterUsagePerSquareMeter: {
+      [stage: string]: number;
+    };
+  };
+  nutrientDemand: {
+    dailyNutrientDemand: {
+      [stage: string]: {
+        [nutrient: string]: number;
+      };
+    };
+  };
   photoperiod: {
     vegetationDays: number;
     floweringDays: number;
@@ -109,6 +121,12 @@ export interface StrainPrice {
     harvestPricePerGram: number;
 }
 
+export interface UtilityPrices {
+  pricePerKwh: number;
+  pricePerLiterWater: number;
+  pricePerGramNutrients: number;
+}
+
 export interface BlueprintDB {
   structures: Record<string, StructureBlueprint>;
   strains: Record<string, StrainBlueprint>;
@@ -116,6 +134,7 @@ export interface BlueprintDB {
   cultivationMethods: Record<string, CultivationMethodBlueprint>;
   devicePrices: Record<string, DevicePrice>;
   strainPrices: Record<string, StrainPrice>;
+  utilityPrices: UtilityPrices;
 }
 
 export interface GameState {

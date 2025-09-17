@@ -3,7 +3,7 @@ import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import { Structure, Room, Company, GameState } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
 
 const PAUSING_MODALS: ModalType[] = ['editDevice', 'editLightCycle'];
 
@@ -12,6 +12,7 @@ interface ModalState {
   addRoom: boolean;
   addZone: boolean;
   addDevice: boolean;
+  addSupply: boolean;
   reset: boolean;
   rename: boolean;
   delete: boolean;
@@ -26,6 +27,8 @@ interface ModalState {
   itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant', id: string, name: string, context?: any } | null;
   itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
   activeZoneId: string | null;
+  // FIX: Add optional supplyType property to ModalState to match context passed when opening the 'addSupply' modal.
+  supplyType?: 'water' | 'nutrients';
 }
 
 interface FormState {
@@ -41,6 +44,9 @@ interface FormState {
   deviceTargetHumidity: number | null;
   deviceTargetCO2: number | null;
   lightCycleOnHours: number;
+  // For supplies modal
+  supplyType: 'water' | 'nutrients' | null;
+  supplyQuantity: number;
   // For breeding modal
   parentAId: string | null;
   parentBId: string | null;
@@ -60,6 +66,7 @@ const initialModalState: ModalState = {
   addRoom: false,
   addZone: false,
   addDevice: false,
+  addSupply: false,
   reset: false,
   rename: false,
   delete: false,
@@ -89,6 +96,8 @@ const initialFormState: FormState = {
   deviceTargetHumidity: null,
   deviceTargetCO2: null,
   lightCycleOnHours: 18,
+  supplyType: null,
+  supplyQuantity: 0,
   parentAId: null,
   parentBId: null,
   newStrainName: '',
@@ -134,7 +143,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
       }
     }
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle'].includes(type)) {
+    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle'].includes(type)) {
         resetForm();
     }
   }, [resetForm, setIsSimRunning]);
@@ -160,6 +169,10 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
         const firstId = Object.keys(blueprints)[0];
         updateForm('selectedDeviceBlueprintId', firstId || null);
         updateForm('deviceQuantity', 1);
+    }
+    if(modalState.addSupply) {
+      updateForm('supplyType', modalState.supplyType || 'water');
+      updateForm('supplyQuantity', 100);
     }
     if(modalState.breedStrain && gameState) {
         const availableStrains = getAvailableStrains(gameState.company);

@@ -34,6 +34,8 @@ export class Zone {
   plantings: Record<string, Planting>;
   deviceGroupSettings: Record<string, any>;
   lightCycle: { on: number; off: number };
+  waterLevel_L: number;
+  nutrientLevel_g: number;
   currentEnvironment: {
     temperature_C: number;
     humidity_rh: number; // 0-1
@@ -51,6 +53,8 @@ export class Zone {
     this.devices = data.devices || {};
     this.deviceGroupSettings = data.deviceGroupSettings || {};
     this.lightCycle = data.lightCycle || { on: 18, off: 6 };
+    this.waterLevel_L = data.waterLevel_L || 0;
+    this.nutrientLevel_g = data.nutrientLevel_g || 0;
     
     // --- MIGRATION & INITIALIZATION LOGIC ---
     const blueprints = getBlueprints();
@@ -440,12 +444,36 @@ export class Zone {
       this.updateEnvironment(structure, isLightOn);
 
       const allStrains = { ...getBlueprints().strains, ...company.customStrains };
+      
+      // Calculate and consume supplies
+      let totalWaterDemandL = 0;
+      let totalNutrientDemandG = 0; // Assuming nutrients are measured in grams for now
 
       for (const plantingId in this.plantings) {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              planting.update(strain, this.currentEnvironment, rng, isLightOn);
+              const stage = planting.getGrowthStage();
+              const waterDemandPerPlant = (strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0) * this.area_m2 / this.getPlantCapacity() / 24;
+              const nutrientDemandPerPlant = (strain.nutrientDemand.dailyNutrientDemand[stage]?.nitrogen || 0) / 24; // Simplified to nitrogen for now
+              
+              totalWaterDemandL += waterDemandPerPlant * planting.quantity;
+              totalNutrientDemandG += nutrientDemandPerPlant * planting.quantity;
+          }
+      }
+      
+      const hasWater = this.waterLevel_L >= totalWaterDemandL;
+      const hasNutrients = this.nutrientLevel_g >= totalNutrientDemandG;
+
+      if(hasWater) this.waterLevel_L -= totalWaterDemandL;
+      if(hasNutrients) this.nutrientLevel_g -= totalNutrientDemandG;
+
+
+      for (const plantingId in this.plantings) {
+          const planting = this.plantings[plantingId];
+          const strain = allStrains[planting.strainId];
+          if (strain) {
+              planting.update(strain, this.currentEnvironment, rng, isLightOn, hasWater, hasNutrients);
           }
       }
   }
@@ -461,6 +489,8 @@ export class Zone {
       plantings: Object.fromEntries(Object.entries(this.plantings).map(([id, p]) => [id, p.toJSON()])),
       currentEnvironment: this.currentEnvironment,
       lightCycle: this.lightCycle,
+      waterLevel_L: this.waterLevel_L,
+      nutrientLevel_g: this.nutrientLevel_g,
     };
   }
 }

@@ -34,6 +34,18 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
               <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>
               <p>Plants: {plantCount} / {plantCapacity}</p>
           </div>
+          {/* Supplies */}
+          <div className="card">
+            <h5>Supplies</h5>
+             <div className="env-stats">
+                  <span>Water: {zone.waterLevel_L?.toFixed(2) ?? '0.00'} L</span>
+                  <span>Nutrients: {zone.nutrientLevel_g?.toFixed(2) ?? '0.00'} g</span>
+            </div>
+            <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.5rem'}}>
+                <button className="btn-add-item" style={{flex: 1}} onClick={() => onOpenModal('addSupply', { activeZoneId: zone.id, supplyType: 'water' })}>+ Water</button>
+                <button className="btn-add-item" style={{flex: 1}} onClick={() => onOpenModal('addSupply', { activeZoneId: zone.id, supplyType: 'nutrients' })}>+ Nutrients</button>
+            </div>
+          </div>
           {/* Lighting */}
            <div className="card">
               <div className="zone-section-header">

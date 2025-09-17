@@ -1,4 +1,4 @@
-import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice } from './types';
+import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice, UtilityPrices } from './types';
 
 const BLUEPRINT_BASE_PATH = '/data/blueprints/';
 
@@ -81,6 +81,8 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       cultivationMethods: {},
       devicePrices: {},
       strainPrices: {},
+      // FIX: Added missing properties to the default utilityPrices object to match the UtilityPrices type.
+      utilityPrices: { pricePerKwh: 0.15, pricePerLiterWater: 0.01, pricePerGramNutrients: 0.10 }, // Default value
     };
     
     const devicePricesPromise = fetch('/data/prices/devicePrices.json')
@@ -101,6 +103,15 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
         throw e;
       });
 
+    const utilityPricesPromise = fetch('/data/prices/utilityPrices.json')
+      .then(res => res.json())
+      .then((data: UtilityPrices) => {
+        db.utilityPrices = data;
+      }).catch(e => {
+        console.error("Failed to load utility prices", e);
+        throw e;
+      });
+
     // Load all blueprints based on the manifest
     await Promise.all([
       fetchAndStore<StructureBlueprint>(`${BLUEPRINT_BASE_PATH}structures/`, structureFiles, db.structures),
@@ -109,6 +120,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       fetchAndStore<CultivationMethodBlueprint>(`${BLUEPRINT_BASE_PATH}cultivationMethods/`, cultivationMethodFiles, db.cultivationMethods),
       devicePricesPromise,
       strainPricesPromise,
+      utilityPricesPromise,
     ]);
     
     blueprintDB = db;

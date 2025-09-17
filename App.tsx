@@ -172,6 +172,20 @@ const App = () => {
     }
   }, [gameState, modalState.activeZoneId, formState.selectedDeviceBlueprintId, formState.deviceQuantity, updateGameState, closeModal]);
 
+  const handleAddSupply = useCallback(() => {
+    if (!gameState || !modalState.activeZoneId) return;
+    const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[modalState.activeZoneId]);
+    const zone = room?.zones[modalState.activeZoneId];
+    if (!zone || !formState.supplyType || formState.supplyQuantity <= 0) return;
+    
+    const success = gameState.company.purchaseSuppliesForZone(zone, formState.supplyType, formState.supplyQuantity);
+    
+    if (success) {
+        updateGameState();
+        closeModal('addSupply');
+    }
+  }, [gameState, modalState.activeZoneId, formState.supplyType, formState.supplyQuantity, updateGameState, closeModal]);
+
   const handlePlantStrain = useCallback(() => {
     if (!gameState || !modalState.activeZoneId || !formState.plantStrainId || formState.plantQuantity <= 0) return;
     
@@ -392,6 +406,7 @@ const App = () => {
           handleAddRoom,
           handleAddZone,
           handleAddDevice,
+          handleAddSupply,
           handlePlantStrain,
           handleBreedStrain,
           handleRenameItem,

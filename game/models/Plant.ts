@@ -26,11 +26,11 @@ export class Plant {
     this.strainId = strainId;
   }
 
-  update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean) {
+  update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean) {
     this.ageInTicks++;
 
     // 1. Calculate Environmental Stress
-    this.calculateStress(strain, environment);
+    this.calculateStress(strain, environment, hasWater, hasNutrients);
     
     // 2. Update Health
     this.updateHealth();
@@ -46,7 +46,7 @@ export class Plant {
     }
   }
 
-  private calculateStress(strain: StrainBlueprint, environment: Environment) {
+  private calculateStress(strain: StrainBlueprint, environment: Environment, hasWater: boolean, hasNutrients: boolean) {
       let currentStress = 0;
       const idealTempRange = this.growthStage === GrowthStage.Flowering
         ? strain.environmentalPreferences.idealTemperature.flowering
@@ -59,6 +59,14 @@ export class Plant {
           currentStress += Math.pow(tempDelta / 5, 2) * 0.1; // /5 means 5 degrees off is significant
       }
       
+      // Add stress for lack of supplies
+      if (!hasWater) {
+        currentStress += 0.3; // Significant stress from dehydration
+      }
+      if (!hasNutrients) {
+        currentStress += 0.2; // Significant stress from nutrient deficiency
+      }
+
       // Clamp stress between 0 and 1
       this.stress = Math.max(0, Math.min(1, currentStress));
   }

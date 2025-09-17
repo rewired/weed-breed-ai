@@ -75,6 +75,27 @@ export class Company {
     return false;
   }
   
+  purchaseSuppliesForZone(zone: Zone, supplyType: 'water' | 'nutrients', quantity: number): boolean {
+    const prices = getBlueprints().utilityPrices;
+    let cost = 0;
+    
+    if (supplyType === 'water') {
+        cost = prices.pricePerLiterWater * quantity;
+    } else {
+        cost = prices.pricePerGramNutrients * quantity;
+    }
+
+    if (this.spendCapital(cost)) {
+        if (supplyType === 'water') {
+            zone.waterLevel_L = (zone.waterLevel_L || 0) + quantity;
+        } else {
+            zone.nutrientLevel_g = (zone.nutrientLevel_g || 0) + quantity;
+        }
+        return true;
+    }
+    return false;
+}
+  
   breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string): StrainBlueprint | null {
       if (!parentA || !parentB) {
         console.error("Parent strains not found for breeding.");
@@ -128,14 +149,44 @@ export class Company {
 
     // 2. Then calculate tick-based expenses
     let totalExpenses = 0;
-    const structureBlueprints = getBlueprints().structures;
+    const blueprints = getBlueprints();
+    const pricePerKwh = blueprints.utilityPrices.pricePerKwh;
 
     for (const structureId in this.structures) {
-      const structure = this.structures[structureId];
-      const blueprint = structureBlueprints[structure.blueprintId];
-      if (blueprint) {
-        totalExpenses += structure.getRentalCostPerTick(blueprint);
-      }
+        const structure = this.structures[structureId];
+        const structureBlueprint = blueprints.structures[structure.blueprintId];
+        
+        // Rent
+        if (structureBlueprint) {
+            totalExpenses += structure.getRentalCostPerTick(structureBlueprint);
+        }
+
+        // Device Costs (Maintenance & Electricity)
+        for (const roomId in structure.rooms) {
+            const room = structure.rooms[roomId];
+            for (const zoneId in room.zones) {
+                const zone = room.zones[zoneId];
+                for (const deviceId in zone.devices) {
+                    const device = zone.devices[deviceId];
+                    
+                    // Maintenance Cost (applies to all devices)
+                    const devicePrice = blueprints.devicePrices[device.blueprintId];
+                    if (devicePrice) {
+                        totalExpenses += devicePrice.baseMaintenanceCostPerTick;
+                    }
+                    
+                    // Electricity Cost (only for 'on' devices)
+                    if (device.status === 'on') {
+                        const deviceBlueprint = blueprints.devices[device.blueprintId];
+                        const powerKw = deviceBlueprint?.settings?.power;
+                        if (powerKw) {
+                            // 1 tick = 1 hour, so kWh = kW * 1h
+                            totalExpenses += powerKw * pricePerKwh;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     this.capital -= totalExpenses;
