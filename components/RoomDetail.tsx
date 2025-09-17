@@ -32,6 +32,7 @@ const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick' 
           const plantCapacity = zone.getPlantCapacity();
           const plantCount = zone.getTotalPlantedCount();
           const dominantInfo = zone.getDominantPlantingInfo(allStrains);
+          const expectedYield = zone.getTotalExpectedYield(allStrains);
 
           let plantSummary = `${plantCount} / ${plantCapacity}`;
           if (dominantInfo && plantCount > 0) {
@@ -47,6 +48,7 @@ const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick' 
               <p>Area: {zone.area_m2} m²</p>
               <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>
               <p>Plants: {plantSummary}</p>
+              {expectedYield > 0 && <p>Exp. Yield: {expectedYield.toFixed(1)}g</p>}
             </div>
           );
         })}

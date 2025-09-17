@@ -112,6 +112,10 @@ export interface CultivationMethodBlueprint {
   kind: string;
   areaPerPlant: number;
   setupCost: number;
+  strainTraitCompatibility?: {
+    preferred?: Record<string, { min?: number; max?: number }>;
+    conflicting?: Record<string, { min?: number; max?: number }>;
+  }
 }
 
 export interface DevicePrice {

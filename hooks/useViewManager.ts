@@ -30,10 +30,12 @@ export const useViewManager = () => {
   const goToStructureView = useCallback(() => {
     setSelectedRoomId(null);
     setSelectedZoneId(null);
+    setCurrentView('structures');
   }, []);
   
   const goToRoomView = useCallback(() => {
     setSelectedZoneId(null);
+    setCurrentView('structures');
   }, []);
 
   return {

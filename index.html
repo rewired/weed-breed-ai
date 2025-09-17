@@ -328,6 +328,11 @@
       .btn-secondary:hover {
         background-color: #5a6268;
       }
+
+      .btn-secondary.active {
+        background-color: var(--primary-color);
+        color: white;
+      }
       
       .btn-tertiary {
         background-color: transparent;
@@ -932,6 +937,19 @@
         text-align: right;
         font-family: monospace;
         letter-spacing: 0.5px;
+      }
+      
+      .compatibility-warning {
+        margin: 1rem 0;
+        padding: 0.75rem;
+        background-color: rgba(255, 193, 7, 0.1);
+        border: 1px solid var(--warning-color);
+        border-radius: 4px;
+      }
+      .compatibility-warning p {
+        margin: 0;
+        color: var(--warning-color);
+        font-size: 0.9rem;
       }
 
     </style>

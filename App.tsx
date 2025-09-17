@@ -62,6 +62,10 @@ const App = () => {
   
   //--- Action Handlers ---//
   
+  const handleFinancesClick = useCallback(() => {
+    setCurrentView(prev => prev === 'finances' ? 'structures' : 'finances');
+  }, [setCurrentView]);
+
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -400,9 +404,10 @@ const App = () => {
             onSaveClick={() => openModal('save')}
             onLoadClick={() => openModal('load')}
             onExportClick={exportGame}
-            onFinancesClick={() => setCurrentView('finances')}
+            onFinancesClick={handleFinancesClick}
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
+            currentView={currentView}
           />
           <main>
             <Navigation

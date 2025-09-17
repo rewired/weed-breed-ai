@@ -29,6 +29,7 @@ const Structures: React.FC<StructuresProps> = ({ company, onRentClick, onStructu
                 plantSummaryText += ` (${capitalizedStage} - ${plantSummary.progress.toFixed(0)}%)`;
             }
           }
+          const expectedYield = structure.getTotalExpectedYield(allStrains);
 
           return (
             <div key={structure.id} className="card" data-clickable="true" onClick={() => onStructureClick(structure.id)}>
@@ -38,6 +39,7 @@ const Structures: React.FC<StructuresProps> = ({ company, onRentClick, onStructu
               <p>Area: {structure.area_m2} m²</p>
               <p>Rooms: {Object.keys(structure.rooms).length}</p>
               {plantSummaryText && <p>Plants: {plantSummaryText}</p>}
+              {expectedYield > 0 && <p>Exp. Yield: {expectedYield.toFixed(1)}g</p>}
             </div>
           );
         })}

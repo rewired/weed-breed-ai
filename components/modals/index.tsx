@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import { GameState, StrainBlueprint, Room, CultivationMethodBlueprint, Structure } from '../../game/types';
 import { getAvailableStrains, getBlueprints } from '../../game/blueprints';
@@ -375,7 +375,14 @@ const BreedStrainModalContent = ({ gameState, formState, updateForm, handlers, c
     );
 };
 
+const getNestedProperty = (obj: any, path: string) => {
+  return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
+};
+
+
 const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formState, updateForm, handlers, closeModal }) => {
+    const [compatibilityWarning, setCompatibilityWarning] = useState<string | null>(null);
+
     const availableStrains = getAvailableStrains(gameState.company);
     const strainOptions = Object.values(availableStrains);
     const strainPrices = getBlueprints().strainPrices;
@@ -386,6 +393,39 @@ const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formStat
     const canAfford = gameState.company.capital >= totalCost;
 
     const zone = selectedRoom && modalState.activeZoneId ? selectedRoom.zones[modalState.activeZoneId] : null;
+
+    useEffect(() => {
+        setCompatibilityWarning(null);
+        if (!selectedStrain || !zone) return;
+
+        const cultivationMethod = getBlueprints().cultivationMethods[zone.cultivationMethodId];
+        const conflicts = cultivationMethod?.strainTraitCompatibility?.conflicting;
+
+        if (!conflicts) return;
+
+        for (const [traitPath, rule] of Object.entries(conflicts)) {
+            const strainValue = getNestedProperty(selectedStrain, traitPath);
+            if (typeof strainValue !== 'number') continue;
+
+            let isConflict = false;
+            let message = '';
+            if (rule.min !== undefined && strainValue >= rule.min) {
+                isConflict = true;
+                message = `Warning: This strain's high ${traitPath} trait may conflict with the ${cultivationMethod.name} method.`;
+            } else if (rule.max !== undefined && strainValue <= rule.max) {
+                isConflict = true;
+                message = `Warning: This strain's low ${traitPath} trait may conflict with the ${cultivationMethod.name} method.`;
+            }
+
+            if (isConflict) {
+                setCompatibilityWarning(message);
+                break; // Show first warning found
+            }
+        }
+
+    }, [selectedStrain, zone]);
+
+
     let availableSpace = 0;
     if (zone) {
       const capacity = zone.getPlantCapacity();
@@ -413,6 +453,12 @@ const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formStat
                     <button type="button" className="btn-max" onClick={() => updateForm('plantQuantity', availableSpace)} disabled={availableSpace <= 0}>MAX</button>
                 </div>
             </div>
+
+            {compatibilityWarning && (
+                <div className="compatibility-warning">
+                    <p>{compatibilityWarning}</p>
+                </div>
+            )}
 
             <p><strong>Total Seed Cost:</strong> ${totalCost.toFixed(2)}</p>
             {selectedStrain && typeof selectedStrain.germinationRate === 'number' && (

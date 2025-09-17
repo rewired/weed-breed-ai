@@ -1,3 +1,4 @@
+
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
   "slug": "white_widow",
@@ -90,19 +91,19 @@
   "nutrientDemand": {
     "dailyNutrientDemand": {
       "seedling": {
-        "nitrogen": 0.3,
-        "phosphorus": 0.2,
-        "potassium": 0.3
+        "nitrogen": 0.03,
+        "phosphorus": 0.02,
+        "potassium": 0.03
       },
       "vegetation": {
-        "nitrogen": 1.1,
-        "phosphorus": 0.7,
-        "potassium": 1.1
+        "nitrogen": 0.11,
+        "phosphorus": 0.07,
+        "potassium": 0.11
       },
       "flowering": {
-        "nitrogen": 0.6,
-        "phosphorus": 1.5,
-        "potassium": 1.5
+        "nitrogen": 0.06,
+        "phosphorus": 0.15,
+        "potassium": 0.15
       }
     },
     "npkTolerance": 0.2,
@@ -110,9 +111,9 @@
   },
   "waterDemand": {
     "dailyWaterUsagePerSquareMeter": {
-      "seedling": 1.1,
-      "vegetation": 2.7,
-      "flowering": 4.1
+      "seedling": 0.14,
+      "vegetation": 0.34,
+      "flowering": 0.51
     },
     "minimumFractionRequired": 0.15
   },

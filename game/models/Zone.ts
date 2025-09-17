@@ -372,6 +372,17 @@ export class Zone {
     return largestPlanting.getDominantStageInfo(strain);
   }
 
+  getTotalExpectedYield(allStrains: Record<string, StrainBlueprint>): number {
+    return Object.values(this.plantings).reduce((total, planting) => {
+        const strain = allStrains[planting.strainId];
+        if (strain) {
+            const plantingYield = planting.plants.reduce((sum, plant) => sum + plant.getExpectedYield(strain), 0);
+            return total + plantingYield;
+        }
+        return total;
+    }, 0);
+  }
+
   getHarvestablePlants(): { plant: Plant, planting: Planting }[] {
     const harvestable: { plant: Plant, planting: Planting }[] = [];
     for (const plantingId in this.plantings) {

@@ -128,6 +128,12 @@ export class Structure {
     };
   }
 
+  getTotalExpectedYield(allStrains: Record<string, StrainBlueprint>): number {
+    return Object.values(this.rooms).reduce((total, room) => {
+        return total + room.getTotalExpectedYield(allStrains);
+    }, 0);
+  }
+
   update(company: Company, rng: () => number, ticks: number) {
     for (const roomId in this.rooms) {
       this.rooms[roomId].update(company, this, rng, ticks);

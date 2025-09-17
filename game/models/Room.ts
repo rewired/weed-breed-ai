@@ -117,6 +117,12 @@ export class Room {
     };
   }
 
+  getTotalExpectedYield(allStrains: Record<string, StrainBlueprint>): number {
+    return Object.values(this.zones).reduce((total, zone) => {
+        return total + zone.getTotalExpectedYield(allStrains);
+    }, 0);
+  }
+
   update(company: Company, structure: Structure, rng: () => number, ticks: number) {
     for (const zoneId in this.zones) {
       this.zones[zoneId].update(company, structure, rng, ticks);

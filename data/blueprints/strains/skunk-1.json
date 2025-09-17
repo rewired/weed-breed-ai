@@ -1,3 +1,4 @@
+
 {
   "id": "5a6e9e57-0b3a-4f9f-8f19-12f3f8ec3a0e",
   "slug": "skunk_1",
@@ -106,19 +107,19 @@
   "nutrientDemand": {
     "dailyNutrientDemand": {
       "seedling": {
-        "nitrogen": 0.3,
-        "phosphorus": 0.2,
-        "potassium": 0.3
+        "nitrogen": 0.03,
+        "phosphorus": 0.02,
+        "potassium": 0.03
       },
       "vegetation": {
-        "nitrogen": 1.2,
-        "phosphorus": 0.6,
-        "potassium": 1.0
+        "nitrogen": 0.12,
+        "phosphorus": 0.06,
+        "potassium": 0.1
       },
       "flowering": {
-        "nitrogen": 0.7,
-        "phosphorus": 1.4,
-        "potassium": 1.6
+        "nitrogen": 0.07,
+        "phosphorus": 0.14,
+        "potassium": 0.16
       }
     },
     "npkTolerance": 0.15,
@@ -126,9 +127,9 @@
   },
   "waterDemand": {
     "dailyWaterUsagePerSquareMeter": {
-      "seedling": 1.2,
-      "vegetation": 2.88,
-      "flowering": 4.32
+      "seedling": 0.15,
+      "vegetation": 0.36,
+      "flowering": 0.54
     },
     "minimumFractionRequired": 0.15
   },
