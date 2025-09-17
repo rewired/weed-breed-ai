@@ -26,7 +26,7 @@ export class Plant {
     this.strainId = strainId;
   }
 
-  update(strain: StrainBlueprint, environment: Environment) {
+  update(strain: StrainBlueprint, environment: Environment, rng: () => number) {
     this.ageInTicks++;
 
     // 1. Calculate Environmental Stress
@@ -36,7 +36,7 @@ export class Plant {
     this.updateHealth();
 
     // 3. Update Biomass (Growth)
-    this.grow(strain);
+    this.grow(strain, rng);
 
     // 4. Update Growth Stage
     this.updateStage(strain);
@@ -77,16 +77,23 @@ export class Plant {
       this.health = Math.max(0, Math.min(1, this.health));
   }
 
-  private grow(strain: StrainBlueprint) {
+  private grow(strain: StrainBlueprint, rng: () => number) {
       if (this.health <= 0) return;
       
       const BASE_GROWTH_PER_TICK = 0.05; // Base biomass gain per tick under ideal conditions
       const growthRateModifier = strain.morphology.growthRate;
       
+      let noiseModifier = 1.0;
+      if (strain.noise?.enabled && strain.noise.pct > 0) {
+          // rng() gives [0, 1), so (rng() * 2 - 1) gives [-1, 1)
+          const noiseValue = (rng() * 2 - 1) * strain.noise.pct;
+          noiseModifier += noiseValue;
+      }
+
       // Growth is affected by health and negatively by stress
       const potentialGrowth = BASE_GROWTH_PER_TICK * growthRateModifier * this.health * (1 - this.stress * 0.5);
       
-      this.biomass += potentialGrowth;
+      this.biomass += potentialGrowth * noiseModifier;
   }
 
   private updateStage(strain: StrainBlueprint) {

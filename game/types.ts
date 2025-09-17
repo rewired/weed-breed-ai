@@ -42,8 +42,20 @@ export interface StrainBlueprint {
     yieldFactor: number;
     leafAreaIndex: number;
   };
+  noise?: {
+    enabled: boolean;
+    pct: number;
+  };
   environmentalPreferences: {
     idealTemperature: {
+      vegetation: [number, number];
+      flowering: [number, number];
+    };
+    lightIntensity: {
+      vegetation: [number, number];
+      flowering: [number, number];
+    };
+    idealHumidity: {
       vegetation: [number, number];
       flowering: [number, number];
     };
@@ -104,6 +116,7 @@ export interface BlueprintDB {
 
 export interface GameState {
   ticks: number;
+  seed: number;
   company: Company;
 }
 

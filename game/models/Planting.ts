@@ -37,12 +37,17 @@ export class Planting {
         }
     }
 
-    update(strain: StrainBlueprint, environment: Environment) {
+    update(strain: StrainBlueprint, environment: Environment, rng: () => number) {
         this.plants.forEach(plant => {
             if (plant.growthStage !== GrowthStage.Dead) {
-                plant.update(strain, environment);
+                plant.update(strain, environment, rng);
             }
         });
+    }
+
+    removePlant(plantId: string) {
+        this.plants = this.plants.filter(p => p.id !== plantId);
+        this.quantity = this.plants.length;
     }
 
     getAverageHealth(): number {
@@ -56,6 +61,18 @@ export class Planting {
         // For simplicity, we'll return the stage of the first plant.
         // A more complex model could show a distribution.
         return this.plants[0].growthStage;
+    }
+
+    getStageDistribution(): Record<string, number> {
+        const distribution: Record<string, number> = {};
+        for (const plant of this.plants) {
+            const stage = plant.growthStage;
+            if (!distribution[stage]) {
+                distribution[stage] = 0;
+            }
+            distribution[stage]++;
+        }
+        return distribution;
     }
 
     toJSON() {

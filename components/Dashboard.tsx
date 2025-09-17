@@ -10,6 +10,7 @@ interface DashboardProps {
   onReset: () => void;
   onSaveClick: () => void;
   onLoadClick: () => void;
+  onExportClick: () => void;
   gameSpeed: GameSpeed;
   onSetGameSpeed: (speed: GameSpeed) => void;
 }
@@ -22,7 +23,7 @@ const speedOptions: { label: string; speed: GameSpeed }[] = [
   { label: 'Ultra', speed: 20 },
 ];
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, gameSpeed, onSetGameSpeed }) => {
+const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, gameSpeed, onSetGameSpeed }) => {
   return (
     <header className="dashboard">
       <div className="dashboard-metrics">
@@ -38,9 +39,16 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onS
         </div>
       </div>
       <div className="dashboard-controls">
-        <button className="btn btn-secondary" onClick={onSaveClick}>Save</button>
-        <button className="btn btn-secondary" onClick={onLoadClick}>Load</button>
-
+        {!isSimRunning ? (
+            <button className="btn btn-start btn-icon" onClick={onStart} title="Start Simulation" aria-label="Start Simulation">
+              <span className="material-symbols-outlined">play_circle</span>
+            </button>
+        ) : (
+            <button className="btn btn-pause btn-icon" onClick={onPause} title="Pause Simulation" aria-label="Pause Simulation">
+              <span className="material-symbols-outlined">pause_circle</span>
+            </button>
+        )}
+        
         <div className="game-speed-controls">
           {speedOptions.map(({ label, speed }) => (
             <button
@@ -54,12 +62,19 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, ticks, isSimRunning, onS
           ))}
         </div>
 
-        {!isSimRunning ? (
-            <button className="btn btn-start" onClick={onStart}>Start</button>
-        ) : (
-            <button className="btn btn-pause" onClick={onPause}>Pause</button>
-        )}
-        <button className="btn btn-reset" onClick={onReset}>Reset</button>
+        <button className="btn btn-secondary btn-icon" onClick={onSaveClick} title="Save Game" aria-label="Save Game">
+          <span className="material-symbols-outlined">save</span>
+        </button>
+        <button className="btn btn-secondary btn-icon" onClick={onLoadClick} title="Load Game" aria-label="Load Game">
+          <span className="material-symbols-outlined">folder_open</span>
+        </button>
+        <button className="btn btn-secondary btn-icon" onClick={onExportClick} title="Export Game" aria-label="Export Game">
+          <span className="material-symbols-outlined">download</span>
+        </button>
+        
+        <button className="btn btn-reset btn-icon" onClick={onReset} title="Reset Game" aria-label="Reset Game">
+          <span className="material-symbols-outlined">restart_alt</span>
+        </button>
       </div>
     </header>
   );

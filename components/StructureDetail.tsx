@@ -27,8 +27,12 @@ const StructureDetail: React.FC<StructureDetailProps> = ({ structure, onAddRoomC
         <div>
           <div className="content-panel__title-group">
             <h2>{structure.name}</h2>
-            <button className="btn-rename" onClick={() => onRenameClick(structure.id, structure.name)}>Rename</button>
-            <button className="btn-delete" onClick={() => onDeleteStructureClick(structure.id, structure.name)}>Delete</button>
+            <button className="btn-action-icon" onClick={() => onRenameClick(structure.id, structure.name)} title="Rename Structure" aria-label="Rename Structure">
+              <span className="material-symbols-outlined">edit</span>
+            </button>
+            <button className="btn-action-icon delete" onClick={() => onDeleteStructureClick(structure.id, structure.name)} title="Delete Structure" aria-label="Delete Structure">
+              <span className="material-symbols-outlined">delete</span>
+            </button>
           </div>
           <p>
             {usedArea} / {structure.area_m2} m² used ({availableArea} m² available)
@@ -44,7 +48,9 @@ const StructureDetail: React.FC<StructureDetailProps> = ({ structure, onAddRoomC
             <div className="card__header">
                 <h3>{room.name}</h3>
                 <div className="card__actions">
-                    <button className="btn-delete" onClick={(e) => { e.stopPropagation(); onDeleteRoomClick(room.id, room.name); }}>Delete</button>
+                    <button className="btn-action-icon delete" onClick={(e) => { e.stopPropagation(); onDeleteRoomClick(room.id, room.name); }} title="Delete Room" aria-label="Delete Room">
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
                 </div>
             </div>
             <p>Area: {room.area_m2} m²</p>

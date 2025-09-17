@@ -62,9 +62,9 @@ export class Structure {
     return monthlyCost / TICKS_PER_MONTH;
   }
 
-  update(company: Company) {
+  update(company: Company, rng: () => number) {
     for (const roomId in this.rooms) {
-      this.rooms[roomId].update(company, this);
+      this.rooms[roomId].update(company, this, rng);
     }
   }
   

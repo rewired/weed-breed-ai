@@ -54,9 +54,9 @@ export class Room {
     delete this.zones[zoneId];
   }
 
-  update(company: Company, structure: Structure) {
+  update(company: Company, structure: Structure, rng: () => number) {
     for (const zoneId in this.zones) {
-      this.zones[zoneId].update(company, structure);
+      this.zones[zoneId].update(company, structure, rng);
     }
   }
 

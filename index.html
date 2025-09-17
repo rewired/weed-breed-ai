@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Weedbreed</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <style>
       :root {
         --background-color: #1a1a1a;
@@ -298,6 +299,16 @@
       .btn-secondary:hover {
         background-color: #5a6268;
       }
+      
+      .btn-tertiary {
+        background-color: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary-color);
+      }
+      .btn-tertiary:hover {
+        background-color: var(--border-color);
+        color: var(--text-color);
+      }
 
       .btn-danger {
         background-color: var(--danger-color);
@@ -327,35 +338,41 @@
       .btn-reset:hover {
           background-color: var(--danger-hover-color);
       }
-
-      .btn-rename {
-        background: none;
-        border: 1px solid var(--border-color);
-        color: var(--text-secondary-color);
-        padding: 0.2rem 0.6rem;
-        font-size: 0.8rem;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
+      
+      .btn-icon {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        font-size: 24px;
+        border-radius: 50%;
       }
 
-      .btn-rename:hover {
+      .btn-action-icon {
+        background: none;
+        border: none;
+        color: var(--text-secondary-color);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+      .btn-action-icon .material-symbols-outlined {
+        font-size: 20px;
+      }
+      .btn-action-icon:hover {
         background-color: var(--border-color);
         color: var(--text-color);
       }
-
-      .btn-delete {
-        background: none;
-        border: 1px solid var(--danger-color);
+      .btn-action-icon.delete {
         color: var(--danger-color);
-        padding: 0.2rem 0.6rem;
-        font-size: 0.8rem;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
       }
-
-      .btn-delete:hover {
+      .btn-action-icon.delete:hover {
         background-color: var(--danger-color);
         color: white;
       }
@@ -411,6 +428,10 @@
         color: var(--text-color);
         font-size: 1rem;
         box-sizing: border-box;
+      }
+      
+      .form-group input[type="range"] {
+        padding: 0;
       }
 
       .form-group input:focus, .form-group select:focus {
@@ -472,54 +493,28 @@
         margin: 0 0 0.5rem 0;
         font-size: 0.9rem;
       }
-
-      .zone-inventory li {
-        padding: 0.2rem 0;
+      
+      .group-summary {
         display: flex;
         align-items: center;
         justify-content: space-between;
-      }
-      
-      .zone-inventory li[data-clickable="true"] {
         cursor: pointer;
         transition: background-color 0.2s ease;
         padding: 0.2rem 0.4rem;
         margin: 0 -0.4rem;
         border-radius: 4px;
       }
-      .zone-inventory li[data-clickable="true"]:hover {
+      .group-summary:hover {
         background-color: var(--border-color);
       }
       
-      .planting-list {
-        list-style: none;
-        padding: 0;
-        margin: 0.5rem 0;
-      }
-      .planting-item {
-        background-color: #222;
-        border: 1px solid var(--border-color);
-        border-left: 3px solid var(--primary-color);
-        border-radius: 4px;
-        padding: 0.5rem 0.75rem;
-        margin-bottom: 0.5rem;
-      }
-      .planting-item-header {
-        font-size: 0.95rem;
-        margin-bottom: 0.25rem;
-      }
-      .planting-item-body {
-        font-size: 0.85rem;
+      .planting-stage-summary {
         color: var(--text-secondary-color);
-        display: flex;
-        justify-content: space-between;
+        font-size: 0.9em;
+        font-weight: normal;
+        margin-left: 0.5rem;
       }
-      .planting-item-value {
-        color: var(--text-color);
-        font-weight: bold;
-        text-transform: capitalize;
-      }
-      
+
       .device-name-group {
         display: flex;
         align-items: center;
@@ -555,12 +550,28 @@
         font-size: 0.9em;
       }
 
+      .strain-notes-text {
+        font-size: 0.85rem;
+        color: var(--text-secondary-color);
+        font-style: italic;
+        margin: 0;
+        line-height: 1.4;
+      }
+
       .env-stats {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0.25rem 1rem;
         font-size: 0.9rem;
         color: var(--text-secondary-color);
+      }
+      
+      .target-stats {
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
       }
 
       .climate-stats {
@@ -661,11 +672,88 @@
       }
       .save-game-list-actions {
         display: flex;
+        align-items: center;
         gap: 0.5rem;
       }
       .save-game-list-actions .btn {
         padding: 0.3rem 0.8rem;
         font-size: 0.9rem;
+      }
+
+      /* Sub-list for individual items */
+      .sub-list {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 1.5rem;
+        border-left: 2px solid var(--border-color);
+      }
+      .sub-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.9em;
+      }
+      .sub-list-item-actions {
+        display: flex;
+        align-items: center;
+      }
+      .device-setting-display {
+        color: var(--text-secondary-color);
+        font-size: 0.9em;
+        margin-left: 0.5rem;
+      }
+
+      /* Planting Info Tooltip */
+      .planting-info-tooltip-container {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        margin-left: 4px;
+      }
+
+      .planting-info-icon {
+        font-size: 16px;
+        color: var(--text-secondary-color);
+        cursor: help;
+        user-select: none;
+      }
+      .planting-info-icon:hover {
+        color: var(--text-color);
+      }
+
+      .planting-info-tooltip {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        transform: translateY(8px);
+        width: 250px;
+        background-color: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.75rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        z-index: 10;
+        text-align: left;
+        font-weight: normal;
+      }
+      .planting-info-tooltip-container:hover .planting-info-tooltip {
+        display: block;
+      }
+      .planting-info-tooltip h5 {
+        margin: 0 0 0.5rem 0;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        color: var(--text-secondary-color);
+      }
+      .planting-info-tooltip .target-stats {
+        font-size: 0.85rem;
+      }
+      .planting-info-tooltip .strain-notes-text {
+        font-size: 0.8rem;
+        font-style: italic;
+        line-height: 1.3;
       }
     </style>
   <script type="importmap">

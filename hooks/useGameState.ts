@@ -115,8 +115,8 @@ export const useGameState = () => {
     }
   }, [getSaveGames]);
 
-  const startNewGame = useCallback((companyName: string) => {
-    const newState = initialGameState(companyName);
+  const startNewGame = useCallback((companyName: string, seed?: number) => {
+    const newState = initialGameState(companyName, seed);
     setGameState(newState);
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const saveName = `${companyName} - ${timestamp}`;
@@ -129,6 +129,53 @@ export const useGameState = () => {
     localStorage.removeItem(LAST_PLAYED_KEY);
     setGameState(null); // Go back to start screen
   }, []);
+
+  const exportGame = useCallback(() => {
+    if (!gameState) {
+      alert("No active game to export.");
+      return;
+    }
+    try {
+      const stateToSave = {
+        ...gameState,
+        company: gameState.company.toJSON(),
+      };
+      const jsonString = JSON.stringify(stateToSave, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${gameState.company.name}-save.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export game state:", error);
+      alert("Error exporting game.");
+    }
+  }, [gameState]);
+  
+  const importGame = useCallback((jsonString: string) => {
+    setIsSimRunning(false);
+    try {
+      const importedState = JSON.parse(jsonString);
+      const company = new Company(importedState.company);
+      const newGameState = { ...importedState, company };
+      setGameState(newGameState);
+      
+      const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      const saveName = `(Imported) ${company.name} - ${timestamp}`;
+      
+      saveGame(saveName, newGameState);
+
+      alert(`Game "${company.name}" imported and saved as "${saveName}".`);
+
+    } catch (error) {
+      console.error("Failed to import game state:", error);
+      alert("Error importing game. The file might be invalid or corrupted.");
+    }
+  }, [getSaveGames, saveGame]);
   
   return {
     gameState,
@@ -144,5 +191,7 @@ export const useGameState = () => {
     getSaveGames,
     gameSpeed,
     setGameSpeed,
+    exportGame,
+    importGame,
   };
 };

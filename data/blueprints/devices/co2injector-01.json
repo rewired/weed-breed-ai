@@ -8,6 +8,7 @@
   "settings": {
     "power": 0.05,
     "targetCO2": 1100,
+    "targetCO2Range": [400, 1500],
     "hysteresis": 60,
     "pulsePpmPerTick": 150
   },
@@ -23,4 +24,3 @@
     ]
   }
 }
-

@@ -3,7 +3,7 @@ import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import { Structure, Room, Company, GameState } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice';
 
 interface ModalState {
   rent: boolean;
@@ -18,8 +18,10 @@ interface ModalState {
   newGame: boolean;
   save: boolean;
   load: boolean;
+  editDevice: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
-  itemToDelete: { type: 'structure' | 'room' | 'zone', id: string, name: string } | null;
+  itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant', id: string, name: string, context?: any } | null;
+  itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
   activeZoneId: string | null;
 }
 
@@ -32,6 +34,9 @@ interface FormState {
   selectedStructureBlueprintId: string | null;
   selectedDeviceBlueprintId: string | null;
   deviceQuantity: number;
+  deviceTargetTemp: number | null;
+  deviceTargetHumidity: number | null;
+  deviceTargetCO2: number | null;
   // For breeding modal
   parentAId: string | null;
   parentBId: string | null;
@@ -41,6 +46,7 @@ interface FormState {
   plantQuantity: number;
   // For New Game modal
   newCompanyName: string;
+  seed: string;
   // For Save Game modal
   saveGameName: string;
 }
@@ -58,8 +64,10 @@ const initialModalState: ModalState = {
   newGame: false,
   save: false,
   load: false,
+  editDevice: false,
   itemToRename: null,
   itemToDelete: null,
+  itemToEdit: null,
   activeZoneId: null,
 };
 
@@ -72,12 +80,16 @@ const initialFormState: FormState = {
   selectedStructureBlueprintId: null,
   selectedDeviceBlueprintId: null,
   deviceQuantity: 1,
+  deviceTargetTemp: null,
+  deviceTargetHumidity: null,
+  deviceTargetCO2: null,
   parentAId: null,
   parentBId: null,
   newStrainName: '',
   plantStrainId: null,
   plantQuantity: 1,
   newCompanyName: 'My Company',
+  seed: '',
   saveGameName: '',
 };
 
@@ -101,7 +113,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState }: UseMod
 
   const closeModal = useCallback((type: ModalType) => {
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save'].includes(type)) {
+    if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice'].includes(type)) {
         resetForm();
     }
   }, [resetForm]);
@@ -145,12 +157,28 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState }: UseMod
     if(modalState.rename && modalState.itemToRename) {
         updateForm('renameValue', modalState.itemToRename.currentName);
     }
+     if (modalState.editDevice && modalState.itemToEdit && selectedRoom) {
+      const { blueprintId, context } = modalState.itemToEdit;
+      const zone = selectedRoom.zones[context.zoneId];
+      const groupSettings = zone?.deviceGroupSettings[blueprintId];
+      if (groupSettings) {
+        if (typeof groupSettings.targetTemperature === 'number') {
+          updateForm('deviceTargetTemp', groupSettings.targetTemperature);
+        }
+        if (typeof groupSettings.targetHumidity === 'number') {
+          updateForm('deviceTargetHumidity', Math.round(groupSettings.targetHumidity * 100));
+        }
+        if (typeof groupSettings.targetCO2 === 'number') {
+          updateForm('deviceTargetCO2', groupSettings.targetCO2);
+        }
+      }
+    }
     if (modalState.save && gameState) {
       const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
       const suggestedName = `${gameState.company.name} - ${timestamp}`;
       updateForm('saveGameName', suggestedName);
     }
-  }, [modalState, updateForm, gameState]);
+  }, [modalState, updateForm, gameState, selectedRoom]);
 
   return {
     modalState,

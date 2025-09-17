@@ -164,6 +164,89 @@ const AddDeviceModalContent = ({ gameState, formState, updateForm, handlers, clo
     );
 };
 
+const EditDeviceModalContent = ({ modalState, formState, updateForm, handlers, closeModal, selectedRoom }) => {
+    if (!modalState.itemToEdit || !selectedRoom) return null;
+
+    const { blueprintId, name, context } = modalState.itemToEdit;
+    const zone = selectedRoom.zones[context.zoneId];
+    
+    if (!zone) return <p>Zone not found.</p>;
+    
+    const blueprint = getBlueprints().devices[blueprintId];
+    if (!blueprint) return <p>Blueprint not found.</p>;
+
+    const blueprintSettings = blueprint.settings || {};
+    let settingsContent = null;
+
+    if (blueprint.kind === 'ClimateUnit') {
+        const [min, max] = blueprintSettings.targetTemperatureRange || [15, 35];
+        const currentValue = formState.deviceTargetTemp ?? min;
+        settingsContent = (
+            <div className="form-group">
+                <label htmlFor="deviceTargetTemp">Target Temperature: {currentValue}°C</label>
+                <input
+                    id="deviceTargetTemp"
+                    type="range"
+                    min={min}
+                    max={max}
+                    step="1"
+                    value={currentValue}
+                    onChange={(e) => updateForm('deviceTargetTemp', Number(e.target.value))}
+                />
+            </div>
+        );
+    } else if (blueprint.kind === 'HumidityControlUnit') {
+        const [min, max] = [30, 80]; // Example range
+        const currentValue = formState.deviceTargetHumidity ?? 60;
+         settingsContent = (
+            <div className="form-group">
+                <label htmlFor="deviceTargetHumidity">Target Humidity: {currentValue}%</label>
+                <input
+                    id="deviceTargetHumidity"
+                    type="range"
+                    min={min}
+                    max={max}
+                    step="1"
+                    value={currentValue}
+                    onChange={(e) => updateForm('deviceTargetHumidity', Number(e.target.value))}
+                />
+            </div>
+        );
+    } else if (blueprint.kind === 'CO2Injector') {
+        const [min, max] = blueprintSettings.targetCO2Range || [400, 1500];
+        const currentValue = formState.deviceTargetCO2 ?? min;
+        settingsContent = (
+            <div className="form-group">
+                <label htmlFor="deviceTargetCO2">Target CO₂ Concentration: {currentValue} ppm</label>
+                <input
+                    id="deviceTargetCO2"
+                    type="range"
+                    min={min}
+                    max={max}
+                    step="50"
+                    value={currentValue}
+                    onChange={(e) => updateForm('deviceTargetCO2', Number(e.target.value))}
+                />
+            </div>
+        );
+    } else {
+        return <p>This device has no adjustable settings.</p>;
+    }
+
+
+    return (
+        <>
+            <h2>Settings for all {name}s</h2>
+            {settingsContent}
+            <div className="modal-actions">
+                <button className="btn btn-secondary" onClick={() => closeModal('editDevice')}>Cancel</button>
+                <button className="btn" onClick={handlers.handleEditDeviceSettings}>Save Settings</button>
+            </div>
+        </>
+    );
+};
+
+
 const TraitDisplay = ({ strain }: { strain: StrainBlueprint | null }) => {
     if (!strain) return <div className="trait-display"></div>;
     return (
@@ -289,6 +372,10 @@ const NewGameModalContent = ({ formState, updateForm, handlers, closeModal }) =>
                 <label htmlFor="companyName">Company Name</label>
                 <input id="companyName" type="text" value={formState.newCompanyName} onChange={(e) => updateForm('newCompanyName', e.target.value)} placeholder="e.g., GreenLeaf Inc." />
             </div>
+             <div className="form-group">
+                <label htmlFor="seed">Random Seed (Optional)</label>
+                <input id="seed" type="text" value={formState.seed} onChange={(e) => updateForm('seed', e.target.value)} placeholder="Leave blank for random" />
+            </div>
             <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => closeModal('newGame')}>Cancel</button>
                 <button className="btn" onClick={handlers.handleStartNewGame}>Start Game</button>
@@ -337,7 +424,9 @@ const LoadGameModalContent = ({ handlers, closeModal, dynamicData }) => {
                         <div key={name} className="save-game-list-item">
                             <span>{name}</span>
                             <div className="save-game-list-actions">
-                                <button className="btn-delete" onClick={() => handlers.handleDeleteGame(name)}>Delete</button>
+                                <button className="btn-action-icon delete" onClick={() => handlers.handleDeleteGame(name)} title="Delete Save" aria-label="Delete Save">
+                                  <span className="material-symbols-outlined">delete</span>
+                                </button>
                                 <button className="btn" onClick={() => handlers.handleLoadGame(name)}>Load</button>
                             </div>
                         </div>
@@ -458,6 +547,10 @@ export const Modals: React.FC<ModalsProps> = ({ gameState, selectedRoom, selecte
             
             <Modal isOpen={modalState.addDevice} onClose={() => closeModal('addDevice')}>
                 <AddDeviceModalContent {...{ gameState, formState, updateForm, handlers, closeModal, selectedRoom, selectedStructure, modalState }} />
+            </Modal>
+
+            <Modal isOpen={modalState.editDevice} onClose={() => closeModal('editDevice')}>
+                <EditDeviceModalContent {...{ modalState, formState, updateForm, handlers, closeModal, selectedRoom }} />
             </Modal>
 
             <Modal isOpen={modalState.breedStrain} onClose={() => closeModal('breedStrain')}>

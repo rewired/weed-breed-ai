@@ -120,10 +120,10 @@ export class Company {
       return newStrain;
   }
 
-  update() {
+  update(rng: () => number) {
     // 1. Run simulation updates first
     for (const structureId in this.structures) {
-        this.structures[structureId].update(this);
+        this.structures[structureId].update(this, rng);
     }
 
     // 2. Then calculate tick-based expenses

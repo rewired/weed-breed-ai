@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useViewManager } from './hooks/useViewManager';
 import { useModals } from './hooks/useModals';
@@ -25,9 +25,13 @@ const App = () => {
     getSaveGames,
     gameSpeed,
     setGameSpeed,
+    exportGame,
+    importGame,
   } = useGameState();
 
   const { selectedStructureId, selectedRoomId, setSelectedStructureId, setSelectedRoomId, handleBack, goToRoot, goToStructureView } = useViewManager();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
@@ -39,15 +43,46 @@ const App = () => {
   });
   
   //--- Action Handlers ---//
+  
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result;
+      if (typeof text === 'string') {
+        importGame(text);
+      }
+    };
+    reader.onerror = (e) => {
+      console.error("Failed to read file:", e);
+      alert("Error reading file.");
+    };
+    reader.readAsText(file);
+
+    // Reset the input value so the same file can be selected again
+    event.target.value = '';
+  }, [importGame]);
+
 
   const handleStartNewGame = useCallback(() => {
     if (!formState.newCompanyName) {
       alert("Please enter a company name.");
       return;
     }
-    startNewGame(formState.newCompanyName);
+    const seed = formState.seed ? parseInt(formState.seed, 10) : undefined;
+    if (formState.seed && isNaN(seed)) {
+      alert("Seed must be a number.");
+      return;
+    }
+    startNewGame(formState.newCompanyName, seed);
     closeModal('newGame');
-  }, [formState.newCompanyName, startNewGame, closeModal]);
+  }, [formState.newCompanyName, formState.seed, startNewGame, closeModal]);
 
   const handleSaveGame = useCallback(() => {
     if (!formState.saveGameName) {
@@ -170,9 +205,32 @@ const App = () => {
     closeModal('rename');
   }, [gameState, modalState.itemToRename, formState.renameValue, selectedStructure, selectedRoom, updateGameState, closeModal]);
 
+  const handleEditDeviceSettings = useCallback(() => {
+    if (!selectedRoom || !modalState.itemToEdit) return;
+    const { blueprintId, context } = modalState.itemToEdit;
+    const zone = selectedRoom.zones[context.zoneId];
+    if (!zone) return;
+
+    const groupSettings = zone.deviceGroupSettings[blueprintId];
+    if (groupSettings) {
+        if (formState.deviceTargetTemp !== null) {
+            groupSettings.targetTemperature = formState.deviceTargetTemp;
+        }
+        if (formState.deviceTargetHumidity !== null) {
+            groupSettings.targetHumidity = formState.deviceTargetHumidity / 100;
+        }
+        if (formState.deviceTargetCO2 !== null) {
+            groupSettings.targetCO2 = formState.deviceTargetCO2;
+        }
+    }
+    updateGameState();
+    closeModal('editDevice');
+  }, [selectedRoom, modalState.itemToEdit, formState, updateGameState, closeModal]);
+
+
   const handleDeleteItem = useCallback(() => {
     if (!gameState || !modalState.itemToDelete) return;
-    const { type, id } = modalState.itemToDelete;
+    const { type, id, context } = modalState.itemToDelete;
 
     if (type === 'structure') {
       gameState.company.deleteStructure(id);
@@ -186,6 +244,20 @@ const App = () => {
       }
     } else if (type === 'zone' && selectedRoom) {
       selectedRoom.deleteZone(id);
+    } else if (type === 'device' && selectedRoom && context?.zoneId) {
+      const zone = selectedRoom.zones[context.zoneId];
+      if (zone) {
+          zone.removeDevice(id);
+      }
+    } else if (type === 'plant' && selectedRoom && context?.zoneId && context?.plantingId) {
+      const zone = selectedRoom.zones[context.zoneId];
+      const planting = zone?.plantings[context.plantingId];
+      if (planting) {
+          planting.removePlant(id);
+          if (planting.quantity === 0) {
+              zone.removePlanting(context.plantingId);
+          }
+      }
     }
 
     updateGameState();
@@ -216,6 +288,13 @@ const App = () => {
 
   return (
     <>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".json,application/json" 
+        onChange={handleFileSelect} 
+      />
       {gameState ? (
         <>
           <Dashboard 
@@ -227,6 +306,7 @@ const App = () => {
             onReset={() => openModal('reset')}
             onSaveClick={() => openModal('save')}
             onLoadClick={() => openModal('load')}
+            onExportClick={exportGame}
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
           />
@@ -253,6 +333,7 @@ const App = () => {
         <StartScreen 
           onNewGameClick={() => openModal('newGame')}
           onLoadGameClick={() => openModal('load')}
+          onImportClick={handleImportClick}
         />
       )}
 
@@ -279,6 +360,7 @@ const App = () => {
           handleSaveGame,
           handleLoadGame,
           handleDeleteGame,
+          handleEditDeviceSettings,
         }}
         dynamicData={{
             saveGames: getSaveGames()

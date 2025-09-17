@@ -32,6 +32,7 @@ export class Zone {
   cultivationMethodId: string;
   devices: Record<string, Device>;
   plantings: Record<string, Planting>;
+  deviceGroupSettings: Record<string, any>;
   currentEnvironment: {
     temperature_C: number;
     humidity_rh: number; // 0-1
@@ -47,6 +48,38 @@ export class Zone {
     this.area_m2 = data.area_m2;
     this.cultivationMethodId = data.cultivationMethodId;
     this.devices = data.devices || {};
+    this.deviceGroupSettings = data.deviceGroupSettings || {};
+    
+    // --- MIGRATION & INITIALIZATION LOGIC ---
+    const blueprints = getBlueprints();
+    const uniqueBlueprintIds = new Set(Object.values(this.devices).map(d => d.blueprintId));
+
+    uniqueBlueprintIds.forEach(blueprintId => {
+        // If settings for this group don't exist, create them.
+        if (!this.deviceGroupSettings[blueprintId]) {
+            // Find a device of this type to potentially migrate settings from.
+            const deviceToMigrateFrom = Object.values(this.devices).find(d => d.blueprintId === blueprintId);
+            
+            // Check if old settings exist on the device instance itself (old save format)
+            if (deviceToMigrateFrom && (deviceToMigrateFrom as any).settings) {
+                this.deviceGroupSettings[blueprintId] = { ...((deviceToMigrateFrom as any).settings) };
+            } else {
+                // Otherwise, fall back to blueprint defaults
+                const blueprint = blueprints.devices[blueprintId];
+                if (blueprint && blueprint.settings) {
+                    this.deviceGroupSettings[blueprintId] = { ...blueprint.settings };
+                }
+            }
+        }
+    });
+
+    // Clean up old settings from individual devices after migration.
+    Object.values(this.devices).forEach(device => {
+        if ((device as any).settings) {
+            delete (device as any).settings;
+        }
+    });
+    
     this.plantings = {};
     if (data.plantings) {
         for (const plantingId in data.plantings) {
@@ -137,8 +170,21 @@ export class Zone {
     };
 
     this.devices[newDeviceId] = newDevice;
+
+    // Initialize group settings if they don't exist
+    if (!this.deviceGroupSettings[blueprintId] && blueprint.settings) {
+      this.deviceGroupSettings[blueprintId] = { ...blueprint.settings };
+    }
   }
   
+  removeDevice(deviceId: string): void {
+    delete this.devices[deviceId];
+  }
+
+  removePlanting(plantingId: string): void {
+    delete this.plantings[plantingId];
+  }
+
   getPlantCapacity(): number {
     const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId] as CultivationMethodBlueprint;
     if (!cultivationMethod || !cultivationMethod.areaPerPlant || cultivationMethod.areaPerPlant <= 0) {
@@ -302,9 +348,9 @@ export class Zone {
         if (device.status !== 'on') continue;
 
         const blueprint = blueprints.devices[device.blueprintId];
-        if (!blueprint || !blueprint.settings) continue;
+        if (!blueprint) continue;
         
-        const settings = blueprint.settings;
+        const settings = this.deviceGroupSettings[device.blueprintId] || blueprint.settings || {};
 
         switch(blueprint.kind) {
             case 'Lamp':
@@ -364,7 +410,7 @@ export class Zone {
     this.currentEnvironment.co2_ppm = Math.max(0, this.currentEnvironment.co2_ppm);
   }
 
-  update(company: Company, structure: Structure) {
+  update(company: Company, structure: Structure, rng: () => number) {
       this.updateEnvironment(structure);
 
       const allStrains = { ...getBlueprints().strains, ...company.customStrains };
@@ -373,7 +419,7 @@ export class Zone {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              planting.update(strain, this.currentEnvironment);
+              planting.update(strain, this.currentEnvironment, rng);
           }
       }
   }
@@ -385,6 +431,7 @@ export class Zone {
       area_m2: this.area_m2,
       cultivationMethodId: this.cultivationMethodId,
       devices: this.devices,
+      deviceGroupSettings: this.deviceGroupSettings,
       plantings: Object.fromEntries(Object.entries(this.plantings).map(([id, p]) => [id, p.toJSON()])),
       currentEnvironment: this.currentEnvironment,
     };
