@@ -59,6 +59,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
     if (selectedStructure) {
         return <StructureDetail 
             structure={selectedStructure} 
+            company={company}
             onRoomClick={onRoomClick} 
             onAddRoomClick={() => onOpenModal('addRoom')}
             onRenameClick={(id, name) => onOpenModal('rename', { itemToRename: { type: 'structure', id, currentName: name }})}
