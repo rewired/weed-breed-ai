@@ -29,12 +29,15 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                     <ul>
                         {Object.values(zone.plantings).map(planting => {
                             const strain = allStrains[planting.strainId];
+                            if (!strain) return null;
                             const isExpanded = expandedItems[`planting-${planting.id}`];
-                            const stageDistribution = planting.getStageDistribution();
-                            const stageSummary = Object.entries(stageDistribution)
-                                .filter(([, count]) => count > 0)
-                                .map(([stage, count]) => `${stage.charAt(0).toUpperCase() + stage.slice(1)}: ${count}`)
-                                .join(', ');
+                            
+                            const dominantStageInfo = planting.getDominantStageInfo(strain);
+                            let summaryText = '';
+                            if (dominantStageInfo) {
+                                const capitalizedStage = dominantStageInfo.stage.charAt(0).toUpperCase() + dominantStageInfo.stage.slice(1);
+                                summaryText = `(${capitalizedStage} - ${dominantStageInfo.progress.toFixed(0)}%)`;
+                            }
                             
                             const stage = planting.getGrowthStage();
                             let preferenceKey: 'vegetation' | 'flowering' | null = null;
@@ -75,7 +78,7 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                                                     </div>
                                                 </div>
                                             )}
-                                            {stageSummary && <span className="planting-stage-summary">({stageSummary})</span>}
+                                            {summaryText && <span className="planting-stage-summary">{summaryText}</span>}
                                         </span>
                                         <span className="device-count">(x{planting.quantity})</span>
                                     </div>
@@ -83,9 +86,10 @@ const ZonePlantingList: React.FC<ZonePlantingListProps> = ({ zone, company, onOp
                                         <ul className="sub-list">
                                             {planting.plants.map(plant => {
                                                 const capitalizedStage = plant.growthStage.charAt(0).toUpperCase() + plant.growthStage.slice(1);
+                                                const progress = plant.getStageProgress(strain);
                                                 return (
                                                     <li key={plant.id} className="sub-list-item">
-                                                        <span>Plant #{plant.id.slice(-4)} (Stage: {capitalizedStage}, Health: {(plant.health*100).toFixed(0)}%)</span>
+                                                        <span>Plant #{plant.id.slice(-4)} (Stage: {capitalizedStage} <span className="planting-progress">{progress.toFixed(0)}%</span>, Health: {(plant.health*100).toFixed(0)}%)</span>
                                                         <button
                                                             className="btn-action-icon delete"
                                                             onClick={() => onOpenModal('delete', { itemToDelete: { type: 'plant', id: plant.id, name: `Plant #${plant.id.slice(-4)}`, context: { zoneId: zone.id, plantingId: planting.id } } })}

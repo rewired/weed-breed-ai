@@ -82,6 +82,7 @@
       .dashboard-metrics {
         display: flex;
         gap: 2rem;
+        align-items: center;
       }
 
       .dashboard-metric {
@@ -100,6 +101,34 @@
         font-weight: bold;
         color: var(--primary-color);
       }
+
+      .time-display {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .tick-progress-circle {
+        width: 44px;
+        height: 44px;
+        transform: rotate(-90deg);
+      }
+      .tick-progress-circle circle {
+        transition: stroke-dashoffset 0.1s linear;
+      }
+      .time-display-text {
+        text-align: left;
+      }
+      .time-display-date {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        line-height: 1;
+      }
+      .time-display-ticks {
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+      }
+
 
       .dashboard-controls {
         display: flex;
@@ -519,6 +548,11 @@
         font-size: 0.9em;
         font-weight: normal;
         margin-left: 0.5rem;
+      }
+      
+      .planting-progress {
+        color: var(--primary-hover-color);
+        font-weight: bold;
       }
 
       .device-name-group {

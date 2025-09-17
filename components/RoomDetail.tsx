@@ -1,7 +1,7 @@
 import React from 'react';
 import { Company, Room, Structure } from '../game/types';
 import { roomPurposes } from '../game/roomPurposes';
-import { getBlueprints } from '../game/blueprints';
+import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import BreedingStation from './BreedingStation';
 
 interface RoomDetailProps {
@@ -20,8 +20,9 @@ const getPurposeName = (purposeId: string) => {
     return purpose ? purpose.name : purposeId;
 };
 
-const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick'>> = ({ room, onZoneClick }) => {
+const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick' | 'company'>> = ({ room, onZoneClick, company }) => {
   const zones = Object.values(room.zones);
+  const allStrains = getAvailableStrains(company);
 
   return (
     <>
@@ -30,6 +31,13 @@ const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick'>
           const cultivationMethod = getBlueprints().cultivationMethods[zone.cultivationMethodId];
           const plantCapacity = zone.getPlantCapacity();
           const plantCount = zone.getTotalPlantedCount();
+          const dominantInfo = zone.getDominantPlantingInfo(allStrains);
+
+          let plantSummary = `${plantCount} / ${plantCapacity}`;
+          if (dominantInfo && plantCount > 0) {
+              const capitalizedStage = dominantInfo.stage.charAt(0).toUpperCase() + dominantInfo.stage.slice(1);
+              plantSummary += ` (${capitalizedStage} - ${dominantInfo.progress.toFixed(0)}%)`;
+          }
 
           return (
             <div key={zone.id} className="card" data-clickable="true" onClick={() => onZoneClick(zone.id)}>
@@ -38,7 +46,7 @@ const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick'>
               </div>
               <p>Area: {zone.area_m2} m²</p>
               <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>
-              <p>Plants: {plantCount} / {plantCapacity}</p>
+              <p>Plants: {plantSummary}</p>
             </div>
           );
         })}
@@ -71,7 +79,7 @@ const RoomDetail: React.FC<RoomDetailProps> = (props) => {
     >
       + Add Zone
     </button>;
-    content = <DefaultRoomContent room={props.room} onZoneClick={onZoneClick} />;
+    content = <DefaultRoomContent room={props.room} onZoneClick={onZoneClick} company={props.company} />;
   }
 
   return (

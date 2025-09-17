@@ -1,7 +1,7 @@
 import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure } from '../types';
 import { getBlueprints } from '../blueprints';
 import { Planting } from './Planting';
-import { Plant } from './Plant';
+import { Plant, GrowthStage } from './Plant';
 
 // --- Constants for Environmental Calculations ---
 const RECOMMENDED_ACH = 5; // Air Changes per Hour for climate control
@@ -333,6 +333,27 @@ export class Zone {
     
     this.plantings[newPlantingId] = newPlanting;
     return true;
+  }
+
+  getDominantPlantingInfo(allStrains: Record<string, StrainBlueprint>): { stage: GrowthStage, progress: number } | null {
+    if (Object.keys(this.plantings).length === 0) return null;
+
+    let largestPlanting: Planting | null = null;
+    let maxQuantity = 0;
+    for (const plantingId in this.plantings) {
+        const planting = this.plantings[plantingId];
+        if (planting.quantity > maxQuantity) {
+            maxQuantity = planting.quantity;
+            largestPlanting = planting;
+        }
+    }
+
+    if (!largestPlanting) return null;
+    
+    const strain = allStrains[largestPlanting.strainId];
+    if (!strain) return null;
+
+    return largestPlanting.getDominantStageInfo(strain);
   }
 
   updateEnvironment(structure: Structure, isLightOn: boolean) {

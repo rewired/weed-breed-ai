@@ -75,6 +75,33 @@ export class Planting {
         return distribution;
     }
 
+    getDominantStageInfo(strain: StrainBlueprint): { stage: GrowthStage, progress: number } | null {
+        if (this.plants.length === 0) return null;
+
+        const distribution = this.getStageDistribution();
+        
+        let dominantStage: GrowthStage | null = null;
+        let maxCount = 0;
+
+        for (const stage in distribution) {
+            if (distribution[stage] > maxCount) {
+                maxCount = distribution[stage];
+                dominantStage = stage as GrowthStage;
+            }
+        }
+
+        if (!dominantStage) return null;
+
+        const plantsInDominantStage = this.plants.filter(p => p.growthStage === dominantStage);
+        const totalProgress = plantsInDominantStage.reduce((sum, plant) => sum + plant.getStageProgress(strain), 0);
+        const averageProgress = totalProgress / plantsInDominantStage.length;
+
+        return {
+            stage: dominantStage,
+            progress: averageProgress,
+        };
+    }
+
     toJSON() {
         return {
             id: this.id,

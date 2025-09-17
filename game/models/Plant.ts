@@ -114,6 +114,30 @@ export class Plant {
           this.growthStage = GrowthStage.Seedling;
       }
   }
+
+  getStageProgress(strain: StrainBlueprint): number {
+    const ageInDays = this.ageInTicks / 24;
+    const seedlingDays = 3;
+    const vegDays = strain.photoperiod.vegetationDays;
+    const flowerDays = strain.photoperiod.floweringDays;
+
+    switch (this.growthStage) {
+      case GrowthStage.Seedling:
+        return Math.min(100, (ageInDays / seedlingDays) * 100);
+      case GrowthStage.Vegetative:
+        const daysIntoVeg = ageInDays - seedlingDays;
+        return Math.min(100, (daysIntoVeg / vegDays) * 100);
+      case GrowthStage.Flowering:
+        const daysIntoFlower = ageInDays - seedlingDays - vegDays;
+        return Math.min(100, (daysIntoFlower / flowerDays) * 100);
+      case GrowthStage.Harvestable:
+        return 100;
+      case GrowthStage.Dead:
+        return 0;
+      default:
+        return 0;
+    }
+  }
   
   toJSON() {
       return {
