@@ -48,12 +48,8 @@ const EmployeeCard = ({ employee, onHire, onAssignRole }: { employee: Employee, 
     return (
         <div className="card employee-card">
             <div className="employee-card__header">
-                <div>
-                    <h4 className="employee-card__name">{employee.firstName} {employee.lastName}</h4>
-                </div>
-                <div className="employee-card__actions">
-                    <div className="employee-card__salary">${employee.salaryPerDay.toFixed(2)} / day</div>
-                </div>
+                <h4 className="employee-card__name" title={`${employee.firstName} ${employee.lastName}`}>{employee.firstName} {employee.lastName}</h4>
+                <div className="employee-card__salary">${employee.salaryPerDay.toFixed(2)} / day</div>
             </div>
             
             {onAssignRole ? (

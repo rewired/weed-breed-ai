@@ -1156,20 +1156,22 @@
       }
 
       .employee-card__header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
+        margin-bottom: 0.5rem;
       }
       .employee-card__name {
         font-size: 1.5rem;
         font-weight: bold;
-        margin: 0 0 0.25rem 0;
+        margin: 0;
         color: var(--text-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .employee-card__salary {
         font-size: 1rem;
         color: var(--primary-color);
         font-weight: bold;
+        margin-top: 0.25rem;
       }
       .employee-card__role {
         margin-bottom: 1rem;
