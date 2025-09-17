@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import { Structure, Room, Company, GameState } from '../game/types';
 
 type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
+
+const PAUSING_MODALS: ModalType[] = ['editDevice', 'editLightCycle'];
 
 interface ModalState {
   rent: boolean;
@@ -101,26 +103,41 @@ interface UseModalsProps {
     selectedStructure: Structure | null;
     selectedRoom: Room | null;
     gameState?: GameState | null; 
+    isSimRunning: boolean;
+    setIsSimRunning: (isRunning: boolean) => void;
 }
 
-export const useModals = ({ selectedStructure, selectedRoom, gameState }: UseModalsProps) => {
+export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRunning, setIsSimRunning }: UseModalsProps) => {
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [formState, setFormState] = useState<FormState>(initialFormState);
+  const wasRunningBeforeModal = useRef<boolean>(false);
   
   const openModal = useCallback((type: ModalType, context?: any) => {
+    if (PAUSING_MODALS.includes(type)) {
+      if (isSimRunning) {
+        wasRunningBeforeModal.current = true;
+        setIsSimRunning(false);
+      }
+    }
     setModalState(prev => ({ ...prev, [type]: true, ...context }));
-  }, []);
+  }, [isSimRunning, setIsSimRunning]);
 
   const resetForm = useCallback(() => {
     setFormState(initialFormState);
   }, []);
 
   const closeModal = useCallback((type: ModalType) => {
+    if (PAUSING_MODALS.includes(type)) {
+      if (wasRunningBeforeModal.current) {
+        setIsSimRunning(true);
+        wasRunningBeforeModal.current = false;
+      }
+    }
     setModalState(prev => ({ ...prev, [type]: false }));
     if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle'].includes(type)) {
         resetForm();
     }
-  }, [resetForm]);
+  }, [resetForm, setIsSimRunning]);
 
   const updateForm = useCallback((field: keyof FormState, value: any) => {
     setFormState(prev => ({ ...prev, [field]: value }));

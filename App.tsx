@@ -52,6 +52,8 @@ const App = () => {
     selectedStructure,
     selectedRoom,
     gameState,
+    isSimRunning,
+    setIsSimRunning,
   });
   
   //--- Action Handlers ---//
@@ -220,7 +222,7 @@ const App = () => {
   }, [gameState, modalState.itemToRename, formState.renameValue, selectedStructure, selectedRoom, updateGameState, closeModal]);
 
   const handleEditDeviceSettings = useCallback(() => {
-    if (!modalState.itemToEdit) return;
+    if (!modalState.itemToEdit || !gameState) return;
     const { blueprintId, context } = modalState.itemToEdit;
     const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[context.zoneId]);
     const zone = room?.zones[context.zoneId];
@@ -243,7 +245,7 @@ const App = () => {
   }, [gameState, modalState.itemToEdit, formState, updateGameState, closeModal]);
 
   const handleEditLightCycle = useCallback(() => {
-    if (!modalState.activeZoneId) return;
+    if (!modalState.activeZoneId || !gameState) return;
     const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[modalState.activeZoneId]);
     const zone = room?.zones[modalState.activeZoneId];
     if (!zone) return;
