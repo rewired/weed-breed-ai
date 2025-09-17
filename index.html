@@ -11,6 +11,7 @@
         --surface-color: #2c2c2c;
         --primary-color: #4caf50;
         --primary-hover-color: #5cb85c;
+        --primary-light-color: #81c784;
         --text-color: #e0e0e0;
         --text-secondary-color: #a0a0a0;
         --border-color: #444;
@@ -18,6 +19,7 @@
         --danger-hover-color: #c82333;
         --warning-color: #ffc107;
         --warning-hover-color: #e0a800;
+        --warning-light-color: #ffd54f;
         --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
       }
 
@@ -312,6 +314,13 @@
       }
       .lighting-insufficient {
         color: var(--warning-color);
+      }
+      
+      .lighting-ok .card-info-value {
+        color: var(--primary-light-color);
+      }
+      .lighting-insufficient .card-info-value {
+        color: var(--warning-light-color);
       }
 
       .btn {
