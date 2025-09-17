@@ -87,7 +87,7 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
               <div className="env-stats">
                   <span>Temp: {temperature_C?.toFixed(1) ?? 'N/A'} °C</span>
                   <span>RH: {(humidity_rh * 100)?.toFixed(0) ?? 'N/A'} %</span>
-                  <span>CO2: {co2_ppm?.toFixed(0) ?? 'N/A'} ppm</span>
+                  <span>CO₂: {co2_ppm?.toFixed(0) ?? 'N/A'} ppm</span>
                   <span className={isHumiditySufficient ? 'lighting-ok' : 'lighting-insufficient'}>
                     Dehumid.: {humidityDetails.actualDehumidification.toFixed(2)}/{humidityDetails.requiredDehumidification.toFixed(2)} kg/h
                   </span>

@@ -1,4 +1,5 @@
 
+
 import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting } from '../types';
 import { getBlueprints } from '../blueprints';
 import { Planting } from './Planting';
@@ -221,7 +222,7 @@ export class Zone {
         if (device.status !== 'on') continue;
 
         const blueprint = blueprints.devices[device.blueprintId] as DeviceBlueprint;
-        if (blueprint?.kind === 'ClimateUnit' && blueprint.settings?.airflow) {
+        if ((blueprint?.kind === 'ClimateUnit' || blueprint?.kind === 'Ventilation') && blueprint.settings?.airflow) {
             actualAirflow += blueprint.settings.airflow;
         }
     }
@@ -405,15 +406,54 @@ export class Zone {
       }
   }
 
+  calculateDuplicationCost(): { deviceCost: number, setupCost: number, total: number } {
+    const blueprints = getBlueprints();
+    let deviceCost = 0;
+    let setupCost = 0;
+
+    // Device costs
+    for (const deviceId in this.devices) {
+      const device = this.devices[deviceId];
+      const priceInfo = blueprints.devicePrices[device.blueprintId];
+      if (priceInfo) {
+        deviceCost += priceInfo.capitalExpenditure;
+      }
+    }
+
+    // Cultivation method setup cost
+    const cultivationMethod = blueprints.cultivationMethods[this.cultivationMethodId];
+    if (cultivationMethod) {
+      setupCost = (cultivationMethod.setupCost || 0) * this.area_m2;
+    }
+    
+    return {
+        deviceCost,
+        setupCost,
+        total: deviceCost + setupCost,
+    };
+  }
+
   updateEnvironment(structure: Structure, isLightOn: boolean) {
     let tempDelta = 0;
     let humidityDelta = 0;
     let co2Delta = 0;
-    let airExchangeMultiplier = 1.0; // Base multiplier is 1
 
     const blueprints = getBlueprints();
     const zoneVolume = this.area_m2 * structure.height_m;
     if (zoneVolume <= 0) return;
+
+    // --- Calculate total airflow and resulting air changes per hour (tick) ---
+    let totalAirflow = 0;
+    for (const deviceId in this.devices) {
+        const device = this.devices[deviceId];
+        if (device.status !== 'on') continue;
+        const blueprint = blueprints.devices[device.blueprintId];
+        if (blueprint?.settings?.airflow && (blueprint.kind === 'Ventilation' || blueprint.kind === 'ClimateUnit')) {
+            totalAirflow += blueprint.settings.airflow;
+        }
+    }
+    const airChangesPerTick = zoneVolume > 0 ? totalAirflow / zoneVolume : 0;
+    const airExchangeMultiplier = 1.0 + (airChangesPerTick / RECOMMENDED_ACH);
 
     // 1. Device Effects
     for (const deviceId in this.devices) {
@@ -424,12 +464,6 @@ export class Zone {
         if (!blueprint) continue;
         
         const settings = this.deviceGroupSettings[device.blueprintId] || blueprint.settings || {};
-
-        // Ventilation devices increase the rate of air exchange with the ambient environment.
-        if (blueprint.kind === 'Ventilation' && settings.airExchangeFactor) {
-            // Multiple fans are additive. A factor of 5 means it adds 4x the base exchange rate.
-            airExchangeMultiplier += settings.airExchangeFactor - 1;
-        }
 
         switch(blueprint.kind) {
             case 'Lamp':

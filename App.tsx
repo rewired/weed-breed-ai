@@ -375,6 +375,31 @@ const App = () => {
     closeModal('reset');
   }, [resetGame, goToRoot, closeModal]);
 
+  const handleDuplicateRoom = useCallback((structureId: string, roomId: string) => {
+    if (!gameState) return;
+    const structure = gameState.company.structures[structureId];
+    if (structure) {
+      const success = structure.duplicateRoom(roomId, gameState.company);
+      if (success) {
+        updateGameState();
+      }
+    }
+  }, [gameState, updateGameState]);
+
+  const handleDuplicateZone = useCallback((roomId: string, zoneId: string) => {
+    if (!gameState) return;
+    const room = Object.values(gameState.company.structures)
+      .flatMap(s => Object.values(s.rooms))
+      .find(r => r.id === roomId);
+    
+    if (room) {
+      const success = room.duplicateZone(zoneId, gameState.company);
+      if (success) {
+        updateGameState();
+      }
+    }
+  }, [gameState, updateGameState]);
+
 
   //--- Render ---//
 
@@ -433,6 +458,8 @@ const App = () => {
                 onOpenModal={openModal}
                 onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
                 onHarvest={handleHarvest}
+                onDuplicateRoom={handleDuplicateRoom}
+                onDuplicateZone={handleDuplicateZone}
             />
           </main>
         </>

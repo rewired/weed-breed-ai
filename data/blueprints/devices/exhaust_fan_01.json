@@ -8,10 +8,10 @@
   "lifespanInHours": 17520,
   "settings": {
     "power": 0.05,
-    "airExchangeFactor": 5.0
+    "airflow": 170
   },
   "meta": {
-    "description": "A simple and affordable exhaust fan for small tents and grow areas. Effectively removes heat, humidity, and stale air by exchanging it with the ambient environment.",
+    "description": "A simple and affordable exhaust fan with an airflow of 170 m³/h, perfect for small tents and grow areas. Effectively removes heat, humidity, and stale air by exchanging it with the ambient environment.",
     "advantages": [
       "Low cost",
       "Low power consumption",

@@ -13,6 +13,7 @@ interface RoomDetailProps {
   onDeleteRoomClick: (id: string, name: string) => void;
   onZoneClick: (zoneId: string) => void;
   onOpenModal: (type: any, context?: any) => void;
+  onDuplicateZone: (roomId: string, zoneId: string) => void;
 }
 
 const getPurposeName = (purposeId: string) => {
@@ -20,9 +21,11 @@ const getPurposeName = (purposeId: string) => {
     return purpose ? purpose.name : purposeId;
 };
 
-const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick' | 'company'>> = ({ room, onZoneClick, company }) => {
+const DefaultRoomContent: React.FC<RoomDetailProps> = ({ room, onZoneClick, company, onDuplicateZone }) => {
   const zones = Object.values(room.zones);
   const allStrains = getAvailableStrains(company);
+  const usedArea = Object.values(room.zones).reduce((sum, zone) => sum + zone.area_m2, 0);
+  const availableArea = room.area_m2 - usedArea;
 
   return (
     <>
@@ -44,6 +47,17 @@ const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick' 
             <div key={zone.id} className="card" data-clickable="true" onClick={() => onZoneClick(zone.id)}>
               <div className="card__header">
                   <h3>{zone.name}</h3>
+                  <div className="card__actions">
+                    <button 
+                        className="btn-action-icon" 
+                        onClick={(e) => { e.stopPropagation(); onDuplicateZone(room.id, zone.id); }} 
+                        title={availableArea < zone.area_m2 ? "Not enough space to duplicate" : "Duplicate Zone"} 
+                        aria-label="Duplicate Zone" 
+                        disabled={availableArea < zone.area_m2}
+                      >
+                        <span className="material-symbols-outlined">content_copy</span>
+                    </button>
+                  </div>
               </div>
               <p>Area: {zone.area_m2} m²</p>
               <p>Method: {cultivationMethod ? cultivationMethod.name : 'N/A'}</p>
@@ -59,7 +73,7 @@ const DefaultRoomContent: React.FC<Pick<RoomDetailProps, 'room' | 'onZoneClick' 
 }
 
 const RoomDetail: React.FC<RoomDetailProps> = (props) => {
-  const { room, onAddZoneClick, onRenameRoomClick, onDeleteRoomClick, onOpenModal, onZoneClick } = props;
+  const { room, onAddZoneClick, onRenameRoomClick, onDeleteRoomClick, onOpenModal } = props;
   
   const usedArea = Object.values(room.zones).reduce((sum, zone) => sum + zone.area_m2, 0);
   const availableArea = room.area_m2 - usedArea;
@@ -81,7 +95,7 @@ const RoomDetail: React.FC<RoomDetailProps> = (props) => {
     >
       + Add Zone
     </button>;
-    content = <DefaultRoomContent room={props.room} onZoneClick={onZoneClick} company={props.company} />;
+    content = <DefaultRoomContent {...props} />;
   }
 
   return (

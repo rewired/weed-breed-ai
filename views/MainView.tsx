@@ -19,6 +19,8 @@ interface MainViewProps {
     onOpenModal: (type: any, context?: any) => void;
     onToggleDeviceGroupStatus: (zoneId: string, blueprintId: string) => void;
     onHarvest: (plantId?: string) => void;
+    onDuplicateRoom: (structureId: string, roomId: string) => void;
+    onDuplicateZone: (roomId: string, zoneId: string) => void;
     ticks: number;
 }
 
@@ -35,6 +37,8 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onOpenModal,
         onToggleDeviceGroupStatus,
         onHarvest,
+        onDuplicateRoom,
+        onDuplicateZone,
         ticks,
     } = props;
 
@@ -67,6 +71,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
             onDeleteRoomClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'room', id, name }})}
             onZoneClick={onZoneClick}
             onOpenModal={onOpenModal}
+            onDuplicateZone={onDuplicateZone}
         />;
     } 
     
@@ -79,6 +84,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
             onRenameClick={(id, name) => onOpenModal('rename', { itemToRename: { type: 'structure', id, currentName: name }})}
             onDeleteStructureClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'structure', id, name }})}
             onDeleteRoomClick={(id, name) => onOpenModal('delete', { itemToDelete: { type: 'room', id, name }})}
+            onDuplicateRoom={onDuplicateRoom}
         />;
     }
     

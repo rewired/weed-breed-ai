@@ -1,6 +1,6 @@
 import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
-import { Company, StrainBlueprint, Structure } from '../types';
+import { Company, StrainBlueprint, Structure, Device } from '../types';
 import { GrowthStage } from './Plant';
 
 export class Room {
@@ -58,6 +58,56 @@ export class Room {
   
   deleteZone(zoneId: string): void {
     delete this.zones[zoneId];
+  }
+
+  duplicateZone(zoneId: string, company: Company): boolean {
+    const originalZone = this.zones[zoneId];
+    if (!originalZone) {
+      console.error(`Zone with id ${zoneId} not found in room ${this.id}`);
+      alert("Error: Original zone not found.");
+      return false;
+    }
+
+    if (originalZone.area_m2 > this.getAvailableArea()) {
+      alert("Not enough space in the room to duplicate this zone.");
+      return false;
+    }
+
+    const costDetails = originalZone.calculateDuplicationCost();
+    if (!company.spendCapital(costDetails.total)) {
+      // spendCapital already shows an alert
+      return false;
+    }
+    
+    // Log expenses
+    company.logExpense('devices', costDetails.deviceCost);
+    company.logExpense('supplies', costDetails.setupCost); // Assuming setup cost is a 'supply'
+
+    // Create the copy
+    const newZoneData = originalZone.toJSON(); // Get a clean data object
+    newZoneData.id = `zone-${Date.now()}`;
+    newZoneData.name = `${originalZone.name} (Copy)`;
+    newZoneData.plantings = {}; // CRITICAL: Do not copy plants
+    newZoneData.waterLevel_L = 0;
+    newZoneData.nutrientLevel_g = 0;
+    
+    // Create new unique IDs for devices
+    const newDevices: Record<string, Device> = {};
+    for (const deviceId in newZoneData.devices) {
+      const oldDevice = newZoneData.devices[deviceId];
+      const newDeviceId = `device-${Date.now()}-${Math.random()}`;
+      newDevices[newDeviceId] = {
+        ...oldDevice,
+        id: newDeviceId,
+        durability: 1.0, // New devices are at full durability
+      };
+    }
+    newZoneData.devices = newDevices;
+
+    const newZone = new Zone(newZoneData);
+    this.zones[newZone.id] = newZone;
+
+    return true;
   }
 
   getRoomPlantSummary(allStrains: Record<string, StrainBlueprint>): { count: number, capacity: number, dominantStage: GrowthStage | null, progress: number } {

@@ -1,6 +1,7 @@
 import { Room } from './Room';
+import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
-import { StructureBlueprint, Company, StrainBlueprint } from '../types';
+import { StructureBlueprint, Company, StrainBlueprint, Device } from '../types';
 import { GrowthStage } from './Plant';
 
 const TICKS_PER_MONTH = 30;
@@ -61,6 +62,76 @@ export class Structure {
 
   deleteRoom(roomId: string): void {
     delete this.rooms[roomId];
+  }
+  
+  duplicateRoom(roomId: string, company: Company): boolean {
+    const originalRoom = this.rooms[roomId];
+    if (!originalRoom) {
+      console.error(`Room with id ${roomId} not found in structure ${this.id}`);
+      alert("Error: Original room not found.");
+      return false;
+    }
+
+    if (originalRoom.area_m2 > this.getAvailableArea()) {
+      alert("Not enough space in the structure to duplicate this room.");
+      return false;
+    }
+    
+    // Calculate total cost
+    let totalDeviceCost = 0;
+    let totalSetupCost = 0;
+    for (const zoneId in originalRoom.zones) {
+      const zone = originalRoom.zones[zoneId];
+      const costDetails = zone.calculateDuplicationCost();
+      totalDeviceCost += costDetails.deviceCost;
+      totalSetupCost += costDetails.setupCost;
+    }
+    const totalCost = totalDeviceCost + totalSetupCost;
+    
+    if (!company.spendCapital(totalCost)) {
+      // spendCapital already shows an alert
+      return false;
+    }
+    
+    // Log expenses
+    company.logExpense('devices', totalDeviceCost);
+    company.logExpense('supplies', totalSetupCost);
+
+    // Create a copy of the room
+    const newRoomData = originalRoom.toJSON();
+    newRoomData.id = `room-${Date.now()}`;
+    newRoomData.name = `${originalRoom.name} (Copy)`;
+    newRoomData.zones = {}; // Start with empty zones, we'll populate it
+    const newRoom = new Room(newRoomData);
+
+    // Duplicate each zone from the original room into the new room
+    for (const zoneId in originalRoom.zones) {
+      const originalZone = originalRoom.zones[zoneId];
+      const newZoneData = originalZone.toJSON();
+      newZoneData.id = `zone-${Date.now()}-${Math.random()}`;
+      // Name doesn't need to change as it's scoped to the new room
+      newZoneData.plantings = {};
+      newZoneData.waterLevel_L = 0;
+      newZoneData.nutrientLevel_g = 0;
+
+      // Create new unique IDs for devices
+      const newDevices: Record<string, any> = {};
+      for (const deviceId in newZoneData.devices) {
+        const oldDevice = newZoneData.devices[deviceId];
+        const newDeviceId = `device-${Date.now()}-${Math.random()}`;
+        newDevices[newDeviceId] = {
+          ...oldDevice,
+          id: newDeviceId,
+          durability: 1.0,
+        };
+      }
+      newZoneData.devices = newDevices;
+      
+      newRoom.zones[newZoneData.id] = new Zone(newZoneData);
+    }
+
+    this.rooms[newRoom.id] = newRoom;
+    return true;
   }
 
   getRentalCostPerTick(blueprint: StructureBlueprint): number {
