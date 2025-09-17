@@ -407,7 +407,17 @@ export class Company {
           
           const baseSalary = 50;
           const salaryPerSkillPoint = 8;
-          const salary = baseSalary + (totalSkillPoints * salaryPerSkillPoint);
+          const baseSalaryValue = baseSalary + (totalSkillPoints * salaryPerSkillPoint);
+
+          let salaryModifier = 1.0;
+          if (assignedTraits.some(t => t.id === 'trait_frugal')) {
+              salaryModifier -= 0.15; // 15% less for frugal
+          }
+          if (assignedTraits.some(t => t.id === 'trait_demanding')) {
+              salaryModifier += 0.20; // 20% more for demanding
+          }
+
+          const salary = baseSalaryValue * salaryModifier;
 
           return {
               id: `emp-${Date.now()}-${rng()}`,
