@@ -1,6 +1,7 @@
 import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation } from '../types';
-import { getBlueprints } from '../blueprints';
+import { getAvailableStrains, getBlueprints } from '../blueprints';
 import { mulberry32 } from '../utils';
+import { GrowthStage } from './Plant';
 
 const ALL_SKILLS: SkillName[] = ['Gardening', 'Maintenance', 'Technical', 'Botanical', 'Cleanliness', 'Negotiation'];
 const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
@@ -461,6 +462,24 @@ export class Company {
                 if (this.spendCapital(cost)) {
                     this.logExpense('supplies', cost);
                     zone.cyclesUsed = 0;
+                }
+            }
+            break;
+        case 'adjust_light_cycle':
+            const plantingToFlip = Object.values(zone.plantings).find(p => {
+                const strain = getAvailableStrains(this)[p.strainId];
+                if (!strain) return false;
+                const vegDays = strain.photoperiod.vegetationDays;
+                return p.plants.some(plant => 
+                    plant.growthStage === GrowthStage.Vegetative &&
+                    ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2)
+                );
+            });
+            if (plantingToFlip) {
+                const strain = getAvailableStrains(this)[plantingToFlip.strainId];
+                if (strain) {
+                    const [on, off] = strain.environmentalPreferences.lightCycle.flowering;
+                    zone.lightCycle = { on, off };
                 }
             }
             break;

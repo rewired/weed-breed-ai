@@ -222,7 +222,7 @@ export interface Employee {
   timeOnMarket?: number;
 }
 
-export type TaskType = 'repair_device' | 'maintain_device' | 'harvest_plants' | 'refill_supplies_water' | 'refill_supplies_nutrients' | 'overhaul_zone';
+export type TaskType = 'repair_device' | 'maintain_device' | 'harvest_plants' | 'refill_supplies_water' | 'refill_supplies_nutrients' | 'overhaul_zone' | 'adjust_light_cycle';
 
 export interface TaskLocation {
   structureId: string;

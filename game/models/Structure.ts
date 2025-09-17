@@ -3,7 +3,7 @@ import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
 import { StructureBlueprint, Company, StrainBlueprint, Device, Employee, SkillName, JobRole, Task, TaskType } from '../types';
 import { GrowthStage } from './Plant';
-import { getBlueprints } from '../blueprints';
+import { getAvailableStrains, getBlueprints } from '../blueprints';
 
 const TICKS_PER_MONTH = 30;
 
@@ -229,6 +229,7 @@ export class Structure {
   
   generateTasks(company: Company) {
       const newTasks: Task[] = [];
+      const allStrains = getAvailableStrains(company);
       
       const createTask = (type: TaskType, priority: number, requiredRole: JobRole, requiredSkill: SkillName, minSkillLevel: number, location: { roomId: string; zoneId: string; itemId: string; }, description: string) => {
           const key = `${type}-${location.itemId}`;
@@ -278,6 +279,34 @@ export class Structure {
               const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
               if (method && (zone.cyclesUsed || 0) >= method.maxCycles && zone.getTotalPlantedCount() === 0) {
                    createTask('overhaul_zone', 7, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Overhaul substrate in ${zone.name}`);
+              }
+              
+              // Proactive Gardener tasks
+              for (const planting of Object.values(zone.plantings)) {
+                  const strain = allStrains[planting.strainId];
+                  if (!strain) continue;
+
+                  // Check for light cycle adjustment
+                  const idealVegCycle = strain.environmentalPreferences.lightCycle.vegetation;
+                  if (zone.lightCycle.on === idealVegCycle[0]) {
+                      const vegDays = strain.photoperiod.vegetationDays;
+                      const needsFlip = planting.plants.some(plant => 
+                          plant.growthStage === GrowthStage.Vegetative &&
+                          ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2) // Within 2 days of flipping
+                      );
+
+                      if (needsFlip) {
+                          createTask(
+                              'adjust_light_cycle',
+                              8, // High priority
+                              'Gardener',
+                              'Gardening',
+                              3, // Min skill level
+                              {...location, itemId: zone.id}, // Task is for the whole zone
+                              `Adjust light cycle for ${strain.name} in ${zone.name}`
+                          );
+                      }
+                  }
               }
           }
       }
