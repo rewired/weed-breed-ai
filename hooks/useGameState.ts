@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GameState } from '../game/types';
-// FIX: import gameTick to be used in the game loop.
+import { GameState, GameSpeed } from '../game/types';
 import { initialGameState, gameTick } from '../game/engine';
 import { loadAllBlueprints } from '../game/blueprints';
 import { Company } from '../game/models/Company';
@@ -8,12 +7,13 @@ import { Company } from '../game/models/Company';
 const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';
 const SAVE_PREFIX = 'weedbreed-save-';
-const TICK_INTERVAL = 5000; // 5 seconds
+const TICK_INTERVAL = 5000; // 5 seconds for 1x speed
 
 export const useGameState = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSimRunning, setIsSimRunning] = useState(false);
+  const [gameSpeed, setGameSpeed] = useState<GameSpeed>(1);
 
   const getSaveGames = useCallback((): string[] => {
     const listJSON = localStorage.getItem(SAVE_LIST_KEY);
@@ -63,15 +63,16 @@ export const useGameState = () => {
   
   useEffect(() => {
     if (isSimRunning) {
+        const interval = TICK_INTERVAL / gameSpeed;
         const timer = setInterval(() => {
             setGameState(prevState => {
                 if (!prevState) return null;
                 return gameTick(prevState);
             });
-        }, TICK_INTERVAL);
+        }, interval);
         return () => clearInterval(timer);
     }
-  }, [isSimRunning]);
+  }, [isSimRunning, gameSpeed]);
 
   const updateGameState = useCallback(() => {
     setGameState(gs => gs ? { ...gs } : null);
@@ -124,14 +125,10 @@ export const useGameState = () => {
 
   const resetGame = useCallback(() => {
     setIsSimRunning(false);
-    const saves = getSaveGames();
-    saves.forEach(saveName => {
-        localStorage.removeItem(`${SAVE_PREFIX}${saveName}`);
-    });
-    localStorage.removeItem(SAVE_LIST_KEY);
+    // We no longer delete save games. We just return to the start screen.
     localStorage.removeItem(LAST_PLAYED_KEY);
     setGameState(null); // Go back to start screen
-  }, [getSaveGames]);
+  }, []);
   
   return {
     gameState,
@@ -145,5 +142,7 @@ export const useGameState = () => {
     deleteGame,
     startNewGame,
     getSaveGames,
+    gameSpeed,
+    setGameSpeed,
   };
 };

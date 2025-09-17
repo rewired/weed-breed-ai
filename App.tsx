@@ -23,6 +23,8 @@ const App = () => {
     deleteGame,
     startNewGame,
     getSaveGames,
+    gameSpeed,
+    setGameSpeed,
   } = useGameState();
 
   const { selectedStructureId, selectedRoomId, setSelectedStructureId, setSelectedRoomId, handleBack, goToRoot, goToStructureView } = useViewManager();
@@ -225,6 +227,8 @@ const App = () => {
             onReset={() => openModal('reset')}
             onSaveClick={() => openModal('save')}
             onLoadClick={() => openModal('load')}
+            gameSpeed={gameSpeed}
+            onSetGameSpeed={setGameSpeed}
           />
           <main>
             <Navigation

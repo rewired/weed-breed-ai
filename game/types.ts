@@ -124,6 +124,8 @@ export interface Device {
   maintenanceCostPerTick: number;
 }
 
+export type GameSpeed = 0.5 | 1 | 4 | 10 | 20;
+
 export interface GroupedDeviceInfo {
   blueprintId: string;
   name: string;
