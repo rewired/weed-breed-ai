@@ -1,15 +1,17 @@
 import React from 'react';
-import { Structure, Room } from '../game/types';
+import { Structure, Room, Zone } from '../game/types';
 
 interface NavigationProps {
   structure: Structure | null;
   room: Room | null;
+  zone: Zone | null;
   onBack: () => void;
   onRootClick: () => void;
   onStructureClick: () => void;
+  onRoomClick: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ structure, room, onBack, onRootClick, onStructureClick }) => {
+const Navigation: React.FC<NavigationProps> = ({ structure, room, zone, onBack, onRootClick, onStructureClick, onRoomClick }) => {
   const showBack = !!structure;
 
   return (
@@ -35,7 +37,19 @@ const Navigation: React.FC<NavigationProps> = ({ structure, room, onBack, onRoot
       {room && (
         <>
           <span className="nav-path-separator">/</span>
-          <span>{room.name}</span>
+           {zone ? (
+            <span className="nav-path-link" onClick={onRoomClick}>
+              {room.name}
+            </span>
+          ) : (
+            <span>{room.name}</span>
+          )}
+        </>
+      )}
+       {zone && (
+        <>
+          <span className="nav-path-separator">/</span>
+          <span>{zone.name}</span>
         </>
       )}
     </div>

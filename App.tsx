@@ -29,12 +29,24 @@ const App = () => {
     importGame,
   } = useGameState();
 
-  const { selectedStructureId, selectedRoomId, setSelectedStructureId, setSelectedRoomId, handleBack, goToRoot, goToStructureView } = useViewManager();
+  const { 
+    selectedStructureId, 
+    selectedRoomId, 
+    selectedZoneId,
+    setSelectedStructureId, 
+    setSelectedRoomId, 
+    setSelectedZoneId,
+    handleBack, 
+    goToRoot, 
+    goToStructureView,
+    goToRoomView,
+  } = useViewManager();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
+  const selectedZone = selectedRoom && selectedZoneId ? selectedRoom.zones[selectedZoneId] : null;
   
   const { modalState, formState, openModal, closeModal, updateForm, resetForm } = useModals({
     selectedStructure,
@@ -146,23 +158,25 @@ const App = () => {
   }, [selectedRoom, formState, updateGameState, closeModal]);
   
   const handleAddDevice = useCallback(() => {
-    if (!gameState || !selectedRoom || !modalState.activeZoneId || !formState.selectedDeviceBlueprintId || !formState.deviceQuantity) return;
-    const zone = selectedRoom.zones[modalState.activeZoneId];
-    if (!zone) return;
+    if (!gameState || !modalState.activeZoneId) return;
+    const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[modalState.activeZoneId]);
+    const zone = room?.zones[modalState.activeZoneId];
+    if (!zone || !formState.selectedDeviceBlueprintId || !formState.deviceQuantity) return;
     
     const success = gameState.company.purchaseDevicesForZone(formState.selectedDeviceBlueprintId, zone, formState.deviceQuantity);
     if (success) {
       updateGameState();
       closeModal('addDevice');
     }
-  }, [gameState, selectedRoom, modalState.activeZoneId, formState.selectedDeviceBlueprintId, formState.deviceQuantity, updateGameState, closeModal]);
+  }, [gameState, modalState.activeZoneId, formState.selectedDeviceBlueprintId, formState.deviceQuantity, updateGameState, closeModal]);
 
   const handlePlantStrain = useCallback(() => {
-    if (!gameState || !selectedRoom || !modalState.activeZoneId || !formState.plantStrainId || formState.plantQuantity <= 0) return;
+    if (!gameState || !modalState.activeZoneId || !formState.plantStrainId || formState.plantQuantity <= 0) return;
     
-    const zone = selectedRoom.zones[modalState.activeZoneId];
+    const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[modalState.activeZoneId]);
+    const zone = room?.zones[modalState.activeZoneId];
     if (!zone) {
-        console.error(`Zone with id ${modalState.activeZoneId} not found in room ${selectedRoom.id}`);
+        console.error(`Zone with id ${modalState.activeZoneId} not found`);
         return;
     }
 
@@ -172,7 +186,7 @@ const App = () => {
         updateGameState();
         closeModal('plantStrain');
     }
-}, [gameState, selectedRoom, modalState.activeZoneId, formState.plantStrainId, formState.plantQuantity, updateGameState, closeModal]);
+}, [gameState, modalState.activeZoneId, formState.plantStrainId, formState.plantQuantity, updateGameState, closeModal]);
 
   const handleBreedStrain = useCallback(() => {
     if (!gameState || !formState.parentAId || !formState.parentBId || !formState.newStrainName) return;
@@ -206,9 +220,10 @@ const App = () => {
   }, [gameState, modalState.itemToRename, formState.renameValue, selectedStructure, selectedRoom, updateGameState, closeModal]);
 
   const handleEditDeviceSettings = useCallback(() => {
-    if (!selectedRoom || !modalState.itemToEdit) return;
+    if (!modalState.itemToEdit) return;
     const { blueprintId, context } = modalState.itemToEdit;
-    const zone = selectedRoom.zones[context.zoneId];
+    const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[context.zoneId]);
+    const zone = room?.zones[context.zoneId];
     if (!zone) return;
 
     const groupSettings = zone.deviceGroupSettings[blueprintId];
@@ -225,7 +240,21 @@ const App = () => {
     }
     updateGameState();
     closeModal('editDevice');
-  }, [selectedRoom, modalState.itemToEdit, formState, updateGameState, closeModal]);
+  }, [gameState, modalState.itemToEdit, formState, updateGameState, closeModal]);
+
+  const handleEditLightCycle = useCallback(() => {
+    if (!modalState.activeZoneId) return;
+    const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[modalState.activeZoneId]);
+    const zone = room?.zones[modalState.activeZoneId];
+    if (!zone) return;
+
+    zone.lightCycle = {
+      on: formState.lightCycleOnHours,
+      off: 24 - formState.lightCycleOnHours,
+    };
+    updateGameState();
+    closeModal('editLightCycle');
+  }, [gameState, modalState.activeZoneId, formState.lightCycleOnHours, updateGameState, closeModal]);
 
 
   const handleDeleteItem = useCallback(() => {
@@ -244,13 +273,18 @@ const App = () => {
       }
     } else if (type === 'zone' && selectedRoom) {
       selectedRoom.deleteZone(id);
-    } else if (type === 'device' && selectedRoom && context?.zoneId) {
-      const zone = selectedRoom.zones[context.zoneId];
+      if (id === selectedZoneId) {
+        setSelectedZoneId(null);
+      }
+    } else if (type === 'device' && context?.zoneId) {
+      const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[context.zoneId]);
+      const zone = room?.zones[context.zoneId];
       if (zone) {
           zone.removeDevice(id);
       }
-    } else if (type === 'plant' && selectedRoom && context?.zoneId && context?.plantingId) {
-      const zone = selectedRoom.zones[context.zoneId];
+    } else if (type === 'plant' && context?.zoneId && context?.plantingId) {
+      const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[context.zoneId]);
+      const zone = room?.zones[context.zoneId];
       const planting = zone?.plantings[context.plantingId];
       if (planting) {
           planting.removePlant(id);
@@ -262,16 +296,17 @@ const App = () => {
 
     updateGameState();
     closeModal('delete');
-  }, [gameState, modalState.itemToDelete, selectedStructureId, selectedRoomId, selectedStructure, selectedRoom, goToRoot, setSelectedRoomId, updateGameState, closeModal]);
+  }, [gameState, modalState.itemToDelete, selectedStructureId, selectedRoomId, selectedZoneId, selectedStructure, selectedRoom, goToRoot, setSelectedRoomId, setSelectedZoneId, updateGameState, closeModal]);
 
   const handleToggleDeviceGroupStatus = useCallback((zoneId: string, blueprintId: string) => {
-    if (!selectedRoom) return;
-    const zone = selectedRoom.zones[zoneId];
+    if (!gameState) return;
+    const room = Object.values(gameState.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.zones[zoneId]);
+    const zone = room?.zones[zoneId];
     if (zone) {
         zone.toggleDeviceGroupStatus(blueprintId);
         updateGameState();
     }
-  }, [selectedRoom, updateGameState]);
+  }, [gameState, updateGameState]);
 
   const handleResetConfirm = useCallback(() => {
     resetGame();
@@ -314,16 +349,20 @@ const App = () => {
             <Navigation
               structure={selectedStructure}
               room={selectedRoom}
+              zone={selectedZone}
               onBack={handleBack}
               onRootClick={goToRoot}
               onStructureClick={goToStructureView}
+              onRoomClick={goToRoomView}
             />
             <MainView 
                 company={gameState.company}
                 selectedStructure={selectedStructure}
                 selectedRoom={selectedRoom}
+                selectedZone={selectedZone}
                 onStructureClick={setSelectedStructureId}
                 onRoomClick={setSelectedRoomId}
+                onZoneClick={setSelectedZoneId}
                 onOpenModal={openModal}
                 onToggleDeviceGroupStatus={handleToggleDeviceGroupStatus}
             />
@@ -361,6 +400,7 @@ const App = () => {
           handleLoadGame,
           handleDeleteGame,
           handleEditDeviceSettings,
+          handleEditLightCycle,
         }}
         dynamicData={{
             saveGames: getSaveGames()

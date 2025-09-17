@@ -29,8 +29,8 @@ export function gameTick(currentState: GameState): GameState {
       ticks: currentState.ticks + 1,
   };
   
-  // All the complex logic is now handled inside the company model, passing the RNG down
-  newState.company.update(rng);
+  // All the complex logic is now handled inside the company model, passing the RNG and ticks down
+  newState.company.update(rng, newState.ticks);
 
   return newState;
 }

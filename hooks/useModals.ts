@@ -3,7 +3,7 @@ import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import { Structure, Room, Company, GameState } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
 
 interface ModalState {
   rent: boolean;
@@ -19,6 +19,7 @@ interface ModalState {
   save: boolean;
   load: boolean;
   editDevice: boolean;
+  editLightCycle: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
   itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant', id: string, name: string, context?: any } | null;
   itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
@@ -37,6 +38,7 @@ interface FormState {
   deviceTargetTemp: number | null;
   deviceTargetHumidity: number | null;
   deviceTargetCO2: number | null;
+  lightCycleOnHours: number;
   // For breeding modal
   parentAId: string | null;
   parentBId: string | null;
@@ -65,6 +67,7 @@ const initialModalState: ModalState = {
   save: false,
   load: false,
   editDevice: false,
+  editLightCycle: false,
   itemToRename: null,
   itemToDelete: null,
   itemToEdit: null,
@@ -83,6 +86,7 @@ const initialFormState: FormState = {
   deviceTargetTemp: null,
   deviceTargetHumidity: null,
   deviceTargetCO2: null,
+  lightCycleOnHours: 18,
   parentAId: null,
   parentBId: null,
   newStrainName: '',
@@ -113,7 +117,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState }: UseMod
 
   const closeModal = useCallback((type: ModalType) => {
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice'].includes(type)) {
+    if (['addRoom', 'addZone', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle'].includes(type)) {
         resetForm();
     }
   }, [resetForm]);
@@ -172,6 +176,12 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState }: UseMod
           updateForm('deviceTargetCO2', groupSettings.targetCO2);
         }
       }
+    }
+    if (modalState.editLightCycle && modalState.activeZoneId && selectedRoom) {
+        const zone = selectedRoom.zones[modalState.activeZoneId];
+        if (zone) {
+            updateForm('lightCycleOnHours', zone.lightCycle.on);
+        }
     }
     if (modalState.save && gameState) {
       const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');

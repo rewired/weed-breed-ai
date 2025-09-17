@@ -33,6 +33,7 @@ export class Zone {
   devices: Record<string, Device>;
   plantings: Record<string, Planting>;
   deviceGroupSettings: Record<string, any>;
+  lightCycle: { on: number; off: number };
   currentEnvironment: {
     temperature_C: number;
     humidity_rh: number; // 0-1
@@ -49,6 +50,7 @@ export class Zone {
     this.cultivationMethodId = data.cultivationMethodId;
     this.devices = data.devices || {};
     this.deviceGroupSettings = data.deviceGroupSettings || {};
+    this.lightCycle = data.lightCycle || { on: 18, off: 6 };
     
     // --- MIGRATION & INITIALIZATION LOGIC ---
     const blueprints = getBlueprints();
@@ -273,7 +275,7 @@ export class Zone {
     const blueprints = getBlueprints();
     let totalCoverage = 0;
     let totalWeightedPPFD = 0; // sum of (ppfd * coverageArea)
-    const PHOTOPERIOD_HOURS = 18;
+    const photoperiodHours = this.lightCycle.on;
 
     for (const deviceId in this.devices) {
         const device = this.devices[deviceId];
@@ -291,7 +293,7 @@ export class Zone {
     }
     
     const averagePPFD = totalCoverage > 0 ? totalWeightedPPFD / totalCoverage : 0;
-    const dli = (averagePPFD * PHOTOPERIOD_HOURS * 3600) / 1_000_000;
+    const dli = (averagePPFD * photoperiodHours * 3600) / 1_000_000;
 
     return {
         coverage: totalCoverage,
@@ -329,11 +331,11 @@ export class Zone {
         quantity,
     });
     
-    this.plantings[newPlanting.id] = newPlanting;
+    this.plantings[newPlantingId] = newPlanting;
     return true;
   }
 
-  updateEnvironment(structure: Structure) {
+  updateEnvironment(structure: Structure, isLightOn: boolean) {
     let tempDelta = 0;
     let humidityDelta = 0;
     let co2Delta = 0;
@@ -354,7 +356,7 @@ export class Zone {
 
         switch(blueprint.kind) {
             case 'Lamp':
-                if (settings.power && settings.heatFraction) {
+                if (isLightOn && settings.power && settings.heatFraction) {
                     tempDelta += (settings.power * settings.heatFraction) * LAMP_HEAT_FACTOR;
                 }
                 break;
@@ -410,8 +412,11 @@ export class Zone {
     this.currentEnvironment.co2_ppm = Math.max(0, this.currentEnvironment.co2_ppm);
   }
 
-  update(company: Company, structure: Structure, rng: () => number) {
-      this.updateEnvironment(structure);
+  update(company: Company, structure: Structure, rng: () => number, ticks: number) {
+      const hourOfDay = ticks % 24;
+      const isLightOn = hourOfDay < this.lightCycle.on;
+
+      this.updateEnvironment(structure, isLightOn);
 
       const allStrains = { ...getBlueprints().strains, ...company.customStrains };
 
@@ -419,7 +424,7 @@ export class Zone {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
-              planting.update(strain, this.currentEnvironment, rng);
+              planting.update(strain, this.currentEnvironment, rng, isLightOn);
           }
       }
   }
@@ -434,6 +439,7 @@ export class Zone {
       deviceGroupSettings: this.deviceGroupSettings,
       plantings: Object.fromEntries(Object.entries(this.plantings).map(([id, p]) => [id, p.toJSON()])),
       currentEnvironment: this.currentEnvironment,
+      lightCycle: this.lightCycle,
     };
   }
 }

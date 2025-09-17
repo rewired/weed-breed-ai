@@ -480,8 +480,14 @@
         border-top: 1px solid var(--border-color);
       }
 
-      .zone-inventory h5, .zone-environment h5, .zone-plantings h5, .zone-lighting h5, .zone-climate h5 {
-        margin: 0 0 0.5rem 0;
+      .zone-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .zone-section-header h5 {
+        margin: 0;
         text-transform: uppercase;
         font-size: 0.8rem;
         color: var(--text-secondary-color);
@@ -586,7 +592,7 @@
         font-size: 0.9rem;
         color: var(--text-secondary-color);
       }
-      .lighting-stats > span:first-child {
+      .lighting-stats > span {
         grid-column: 1 / -1;
       }
 
@@ -614,6 +620,16 @@
       .btn-add-item:hover {
         background-color: var(--primary-color);
         color: var(--background-color);
+      }
+
+      .btn-add-item:disabled {
+        border-color: #555;
+        color: #555;
+        cursor: not-allowed;
+      }
+      .btn-add-item:disabled:hover {
+        background-color: transparent;
+        color: #555;
       }
 
       .sufficiency-preview {
@@ -754,6 +770,30 @@
         font-size: 0.8rem;
         font-style: italic;
         line-height: 1.3;
+      }
+
+      /* Zone Detail View */
+      .zone-detail-view {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      @media (min-width: 900px) {
+        .zone-detail-view {
+          grid-template-columns: 350px 1fr;
+        }
+      }
+
+      .zone-detail-info-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .zone-detail-lists-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
       }
     </style>
   <script type="importmap">

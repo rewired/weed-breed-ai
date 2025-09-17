@@ -26,7 +26,7 @@ export class Plant {
     this.strainId = strainId;
   }
 
-  update(strain: StrainBlueprint, environment: Environment, rng: () => number) {
+  update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean) {
     this.ageInTicks++;
 
     // 1. Calculate Environmental Stress
@@ -36,7 +36,7 @@ export class Plant {
     this.updateHealth();
 
     // 3. Update Biomass (Growth)
-    this.grow(strain, rng);
+    this.grow(strain, rng, isLightOn);
 
     // 4. Update Growth Stage
     this.updateStage(strain);
@@ -77,8 +77,8 @@ export class Plant {
       this.health = Math.max(0, Math.min(1, this.health));
   }
 
-  private grow(strain: StrainBlueprint, rng: () => number) {
-      if (this.health <= 0) return;
+  private grow(strain: StrainBlueprint, rng: () => number, isLightOn: boolean) {
+      if (this.health <= 0 || !isLightOn) return;
       
       const BASE_GROWTH_PER_TICK = 0.05; // Base biomass gain per tick under ideal conditions
       const growthRateModifier = strain.morphology.growthRate;
@@ -97,17 +97,18 @@ export class Plant {
   }
 
   private updateStage(strain: StrainBlueprint) {
-      // Assuming 1 tick = 1 day for simplicity
-      const ageInDays = this.ageInTicks;
+      // 1 tick = 1 hour, so 24 ticks = 1 day.
+      const ageInDays = this.ageInTicks / 24;
       
       const vegDays = strain.photoperiod.vegetationDays;
       const flowerDays = strain.photoperiod.floweringDays;
+      const seedlingDays = 3; // First 3 days are seedling stage.
       
       if (ageInDays > vegDays + flowerDays) {
           this.growthStage = GrowthStage.Harvestable;
       } else if (ageInDays > vegDays) {
           this.growthStage = GrowthStage.Flowering;
-      } else if (ageInDays > 3) { // Seedling for 3 days
+      } else if (ageInDays > seedlingDays) { 
           this.growthStage = GrowthStage.Vegetative;
       } else {
           this.growthStage = GrowthStage.Seedling;

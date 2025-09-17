@@ -38,7 +38,14 @@ const StructureDetail: React.FC<StructureDetailProps> = ({ structure, onAddRoomC
             {usedArea} / {structure.area_m2} m² used ({availableArea} m² available)
           </p>
         </div>
-        <button className="btn" onClick={onAddRoomClick}>+ Add Room</button>
+        <button 
+          className="btn" 
+          onClick={onAddRoomClick} 
+          disabled={availableArea <= 0}
+          title={availableArea <= 0 ? "No available space in this structure" : "Add a new room"}
+        >
+          + Add Room
+        </button>
       </div>
 
       <h3>Rooms</h3>

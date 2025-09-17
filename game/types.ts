@@ -59,6 +59,10 @@ export interface StrainBlueprint {
       vegetation: [number, number];
       flowering: [number, number];
     };
+    lightCycle: {
+      vegetation: [number, number];
+      flowering: [number, number];
+    };
   };
   photoperiod: {
     vegetationDays: number;
