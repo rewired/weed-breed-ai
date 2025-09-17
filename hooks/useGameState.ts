@@ -120,7 +120,8 @@ export const useGameState = () => {
     const newState = initialGameState(companyName, seed);
     // Immediately populate the job market
     const rng = mulberry32(newState.seed);
-    await newState.company.updateJobMarket(rng);
+    // FIX: Pass the required 'ticks' and 'seed' arguments to updateJobMarket.
+    await newState.company.updateJobMarket(rng, newState.ticks, newState.seed);
     
     setGameState(newState);
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');

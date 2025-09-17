@@ -350,14 +350,16 @@ export class Company {
     return true;
   }
 
-  async updateJobMarket(rng: () => number) {
+  async updateJobMarket(rng: () => number, ticks: number, seed: number) {
       const { personnelData } = getBlueprints();
       const { traits } = personnelData;
       let names: { firstName: string, lastName: string }[] = [];
 
       // API First Approach
       try {
-          const response = await fetch('https://randomuser.me/api/?results=12&inc=name');
+          const week = Math.floor(ticks / (24 * 7));
+          const apiSeed = `weedbreed-${seed}-${week}`;
+          const response = await fetch(`https://randomuser.me/api/?results=12&inc=name&seed=${apiSeed}`);
           if (!response.ok) throw new Error('API response not ok');
           const data = await response.json();
           names = data.results.map((r: any) => ({
@@ -565,11 +567,11 @@ export class Company {
       }
   }
 
-  update(rng: () => number, ticks: number) {
+  update(rng: () => number, ticks: number, seed: number) {
     this.checkForAlerts(ticks);
 
     if (ticks > 0 && ticks % (24 * 7) === 0) { // Every 7 days
-      this.updateJobMarket(rng);
+      this.updateJobMarket(rng, ticks, seed);
     }
 
     // Daily updates (Salaries, Learning by Doing)
