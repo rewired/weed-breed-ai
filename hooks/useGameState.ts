@@ -3,6 +3,7 @@ import { GameState, GameSpeed } from '../game/types';
 import { initialGameState, gameTick } from '../game/engine';
 import { loadAllBlueprints } from '../game/blueprints';
 import { Company } from '../game/models/Company';
+import { mulberry32 } from '../game/utils';
 
 const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';
@@ -115,8 +116,12 @@ export const useGameState = () => {
     }
   }, [getSaveGames]);
 
-  const startNewGame = useCallback((companyName: string, seed?: number) => {
+  const startNewGame = useCallback(async (companyName: string, seed?: number) => {
     const newState = initialGameState(companyName, seed);
+    // Immediately populate the job market
+    const rng = mulberry32(newState.seed);
+    await newState.company.updateJobMarket(rng);
+    
     setGameState(newState);
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const saveName = `${companyName} - ${timestamp}`;

@@ -129,7 +129,7 @@ const App = () => {
   }, [importGame]);
 
 
-  const handleStartNewGame = useCallback(() => {
+  const handleStartNewGame = useCallback(async () => {
     if (!formState.newCompanyName) {
       alert("Please enter a company name.");
       return;
@@ -139,7 +139,7 @@ const App = () => {
       alert("Seed must be a number.");
       return;
     }
-    startNewGame(formState.newCompanyName, seed);
+    await startNewGame(formState.newCompanyName, seed);
     closeModal('newGame');
   }, [formState.newCompanyName, formState.seed, startNewGame, closeModal]);
 
