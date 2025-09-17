@@ -287,7 +287,7 @@ export class Zone {
             continue;
         }
 
-        const blueprint = blueprints.devices[device.blueprintId] as DeviceBlueprint;
+        const blueprint = blueprints.devices[deviceId] as DeviceBlueprint;
         if (blueprint?.kind === 'Lamp' && blueprint.settings?.coverageArea && blueprint.settings?.ppfd) {
             const coverage = blueprint.settings.coverageArea;
             const ppfd = blueprint.settings.ppfd;
@@ -447,18 +447,23 @@ export class Zone {
       
       // Calculate and consume supplies
       let totalWaterDemandL = 0;
-      let totalNutrientDemandG = 0; // Assuming nutrients are measured in grams for now
+      let totalNutrientDemandG = 0;
 
       for (const plantingId in this.plantings) {
           const planting = this.plantings[plantingId];
           const strain = allStrains[planting.strainId];
           if (strain) {
               const stage = planting.getGrowthStage();
-              const waterDemandPerPlant = (strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0) * this.area_m2 / this.getPlantCapacity() / 24;
-              const nutrientDemandPerPlant = (strain.nutrientDemand.dailyNutrientDemand[stage]?.nitrogen || 0) / 24; // Simplified to nitrogen for now
+              const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
+              const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
               
-              totalWaterDemandL += waterDemandPerPlant * planting.quantity;
-              totalNutrientDemandG += nutrientDemandPerPlant * planting.quantity;
+              // Water demand is based on the area this specific planting occupies
+              const plantingArea = areaPerPlant * planting.quantity;
+              const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
+              totalWaterDemandL += (waterDemandPerM2PerDay * plantingArea) / 24;
+              
+              // Nutrient demand is now correctly calculated for N, P, and K
+              totalNutrientDemandG += planting.getTotalNutrientDemandPerTick(strain);
           }
       }
       
@@ -491,6 +496,34 @@ export class Zone {
       lightCycle: this.lightCycle,
       waterLevel_L: this.waterLevel_L,
       nutrientLevel_g: this.nutrientLevel_g,
+    };
+  }
+
+  public getSupplyConsumptionRates(company: Company) {
+    const allStrains = { ...getBlueprints().strains, ...company.customStrains };
+    
+    let waterDemandPerTick = 0;
+    let nutrientDemandPerTick = 0;
+
+    for (const plantingId in this.plantings) {
+        const planting = this.plantings[plantingId];
+        const strain = allStrains[planting.strainId];
+        if (strain) {
+            const stage = planting.getGrowthStage();
+            const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
+            const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
+            
+            const plantingArea = areaPerPlant * planting.quantity;
+            const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
+            waterDemandPerTick += (waterDemandPerM2PerDay * plantingArea) / 24;
+            
+            nutrientDemandPerTick += planting.getTotalNutrientDemandPerTick(strain);
+        }
+    }
+
+    return {
+        waterPerDay: waterDemandPerTick * 24,
+        nutrientsPerDay: nutrientDemandPerTick * 24,
     };
   }
 }

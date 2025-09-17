@@ -6,9 +6,13 @@ interface ZoneInfoPanelProps {
   zone: Zone;
   structure: Structure;
   onOpenModal: (type: any, context?: any) => void;
+  supplyConsumption: {
+    waterPerDay: number;
+    nutrientsPerDay: number;
+  };
 }
 
-const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenModal }) => {
+const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenModal, supplyConsumption }) => {
     const { temperature_C, humidity_rh, co2_ppm } = zone.currentEnvironment;
     const plantCapacity = zone.getPlantCapacity();
     const plantCount = zone.getTotalPlantedCount();
@@ -40,6 +44,9 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
              <div className="env-stats">
                   <span>Water: {zone.waterLevel_L?.toFixed(2) ?? '0.00'} L</span>
                   <span>Nutrients: {zone.nutrientLevel_g?.toFixed(2) ?? '0.00'} g</span>
+            </div>
+            <div className="consumption-display">
+                <p>Consumption: {supplyConsumption.waterPerDay.toFixed(2)} L/day, {supplyConsumption.nutrientsPerDay.toFixed(2)} g/day</p>
             </div>
             <div style={{display: 'flex', gap: '0.5rem', marginTop: '0.5rem'}}>
                 <button className="btn-add-item" style={{flex: 1}} onClick={() => onOpenModal('addSupply', { activeZoneId: zone.id, supplyType: 'water' })}>+ Water</button>

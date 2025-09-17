@@ -5,7 +5,7 @@ import { Structure, Room, Company, GameState } from '../game/types';
 
 type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle';
 
-const PAUSING_MODALS: ModalType[] = ['editDevice', 'editLightCycle'];
+const PAUSING_MODALS: ModalType[] = ['editDevice', 'editLightCycle', 'addSupply'];
 
 interface ModalState {
   rent: boolean;

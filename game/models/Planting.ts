@@ -101,6 +101,25 @@ export class Planting {
             progress: averageProgress,
         };
     }
+    
+    public getTotalNutrientDemandPerTick(strain: StrainBlueprint): number {
+        if (this.plants.length === 0) return 0;
+
+        // We can assume all plants in a planting are at the same stage
+        const stage = this.getGrowthStage();
+        const dailyDemandPerPlant = strain.nutrientDemand.dailyNutrientDemand[stage];
+
+        if (!dailyDemandPerPlant) return 0;
+
+        const totalDailyDemandPerPlant =
+            (dailyDemandPerPlant.nitrogen || 0) +
+            (dailyDemandPerPlant.phosphorus || 0) +
+            (dailyDemandPerPlant.potassium || 0);
+
+        const totalTickDemandPerPlant = totalDailyDemandPerPlant / 24;
+
+        return totalTickDemandPerPlant * this.quantity;
+    }
 
     toJSON() {
         return {

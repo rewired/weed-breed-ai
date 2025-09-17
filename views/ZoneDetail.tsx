@@ -20,6 +20,8 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, onRen
     return <div className="content-panel">Zone not found.</div>;
   }
   
+  const supplyConsumption = zone.getSupplyConsumptionRates(company);
+
   return (
     <div className="content-panel">
       <div className="content-panel__header">
@@ -39,6 +41,7 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, onRen
                 zone={zone}
                 structure={structure}
                 onOpenModal={onOpenModal}
+                supplyConsumption={supplyConsumption}
             />
         
             <div className="zone-detail-lists-panel">

@@ -166,6 +166,11 @@ export class Company {
             const room = structure.rooms[roomId];
             for (const zoneId in room.zones) {
                 const zone = room.zones[zoneId];
+                
+                // Determine if lights should be on in this zone for this tick
+                const hourOfDay = ticks % 24;
+                const isLightOnInZone = hourOfDay < zone.lightCycle.on;
+
                 for (const deviceId in zone.devices) {
                     const device = zone.devices[deviceId];
                     
@@ -179,9 +184,18 @@ export class Company {
                     if (device.status === 'on') {
                         const deviceBlueprint = blueprints.devices[device.blueprintId];
                         const powerKw = deviceBlueprint?.settings?.power;
+                        
                         if (powerKw) {
-                            // 1 tick = 1 hour, so kWh = kW * 1h
-                            totalExpenses += powerKw * pricePerKwh;
+                            let shouldIncurPowerCost = true;
+                            // **FIX**: Lamps only incur cost if the light cycle says they are on.
+                            if (deviceBlueprint.kind === 'Lamp') {
+                                shouldIncurPowerCost = isLightOnInZone;
+                            }
+                            
+                            if (shouldIncurPowerCost) {
+                                // 1 tick = 1 hour, so kWh = kW * 1h
+                                totalExpenses += powerKw * pricePerKwh;
+                            }
                         }
                     }
                 }
