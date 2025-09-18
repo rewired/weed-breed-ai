@@ -37,10 +37,10 @@ const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formStat
             let message = '';
             if (rule.min !== undefined && strainValue >= rule.min) {
                 isConflict = true;
-                message = `Warning: This strain's high ${traitPath} trait may conflict with the ${cultivationMethod.name} method.`;
+                message = `Warning: This strain's high ${traitPath.split('.').pop()} may conflict with the ${cultivationMethod.name} method.`;
             } else if (rule.max !== undefined && strainValue <= rule.max) {
                 isConflict = true;
-                message = `Warning: This strain's low ${traitPath} trait may conflict with the ${cultivationMethod.name} method.`;
+                message = `Warning: This strain's low ${traitPath.split('.').pop()} may conflict with the ${cultivationMethod.name} method.`;
             }
 
             if (isConflict) {
@@ -49,7 +49,7 @@ const PlantStrainModalContent = ({ gameState, selectedRoom, modalState, formStat
             }
         }
 
-    }, [selectedStrain, zone]);
+    }, [selectedStrain, zone, formState.plantStrainId]);
 
     let availableSpace = 0;
     if (zone) {

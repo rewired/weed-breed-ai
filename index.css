@@ -552,9 +552,7 @@ h1, h2, h3 {
 }
 .zone-section-header h5 {
   margin: 0;
-  text-transform: uppercase;
   font-size: 0.8rem;
-  color: var(--text-secondary-color);
 }
 
 .zone-inventory ul, .zone-plantings ul {
@@ -624,7 +622,7 @@ h1, h2, h3 {
 .device-count {
   color: var(--text-secondary-color);
   font-size: 0.9em;
-  margin-right: 0.25rem;
+  margin-right: 0.5rem;
 }
 
 .strain-notes-text {

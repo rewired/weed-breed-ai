@@ -46,7 +46,7 @@ const PlantingPlanModalContent = ({ gameState, selectedRoom, modalState, formSta
             }
         }
 
-    }, [selectedStrain, zone]);
+    }, [selectedStrain, zone, formState.plantStrainId]);
 
     return (
         <>
