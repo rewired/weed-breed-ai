@@ -573,6 +573,7 @@ h1, h2, h3 {
   padding: 0.2rem 0.4rem;
   margin: 0 -0.4rem;
   border-radius: 4px;
+  flex-wrap: nowrap;
 }
 .group-summary:hover {
   background-color: var(--border-color);
@@ -623,6 +624,7 @@ h1, h2, h3 {
 .device-count {
   color: var(--text-secondary-color);
   font-size: 0.9em;
+  margin-right: 0.25rem;
 }
 
 .strain-notes-text {

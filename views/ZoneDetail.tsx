@@ -75,6 +75,12 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
             />
         
             <div className="zone-detail-lists-panel">
+                <ZonePlantingList 
+                    zone={zone}
+                    company={company}
+                    onOpenModal={onOpenModal}
+                    onHarvest={(plantId?: string) => onHarvest(zone.id, plantId)}
+                />
                 <ZonePlantingPlan
                     zone={zone}
                     company={company}
@@ -87,12 +93,6 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
                     onAddDeviceClick={onAddDeviceClick}
                     onOpenModal={onOpenModal}
                     onToggleDeviceGroupStatus={onToggleDeviceGroupStatus}
-                />
-                <ZonePlantingList 
-                    zone={zone}
-                    company={company}
-                    onOpenModal={onOpenModal}
-                    onHarvest={(plantId?: string) => onHarvest(zone.id, plantId)}
                 />
             </div>
        </div>

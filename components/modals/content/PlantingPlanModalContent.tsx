@@ -1,13 +1,52 @@
-import React from 'react';
-import { getAvailableStrains } from '../../../game/blueprints';
+import React, { useState, useEffect } from 'react';
+import { getAvailableStrains, getBlueprints } from '../../../game/blueprints';
+import { StrainBlueprint } from '../../../game/types';
+
+const getNestedProperty = (obj: any, path: string) => {
+  return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);
+};
 
 const PlantingPlanModalContent = ({ gameState, selectedRoom, modalState, formState, updateForm, handlers, closeModal }) => {
+    const [compatibilityWarning, setCompatibilityWarning] = useState<string | null>(null);
+
     if (!selectedRoom || !modalState.activeZoneId) return null;
     const zone = selectedRoom.zones[modalState.activeZoneId];
     if (!zone) return null;
 
     const availableStrains = getAvailableStrains(gameState.company);
     const strainOptions = Object.values(availableStrains);
+    const selectedStrain = formState.plantStrainId ? availableStrains[formState.plantStrainId] : null;
+
+    useEffect(() => {
+        setCompatibilityWarning(null);
+        if (!selectedStrain || !zone) return;
+
+        const cultivationMethod = getBlueprints().cultivationMethods[zone.cultivationMethodId];
+        const conflicts = cultivationMethod?.strainTraitCompatibility?.conflicting;
+
+        if (!conflicts) return;
+
+        for (const [traitPath, rule] of Object.entries(conflicts)) {
+            const strainValue = getNestedProperty(selectedStrain, traitPath);
+            if (typeof strainValue !== 'number') continue;
+
+            let isConflict = false;
+            let message = '';
+            if (rule.min !== undefined && strainValue >= rule.min) {
+                isConflict = true;
+                message = `Warning: This strain's high ${traitPath.split('.').pop()} may conflict with the ${cultivationMethod.name} method.`;
+            } else if (rule.max !== undefined && strainValue <= rule.max) {
+                isConflict = true;
+                message = `Warning: This strain's low ${traitPath.split('.').pop()} may conflict with the ${cultivationMethod.name} method.`;
+            }
+
+            if (isConflict) {
+                setCompatibilityWarning(message);
+                break; // Show first warning found
+            }
+        }
+
+    }, [selectedStrain, zone]);
 
     return (
         <>
@@ -25,15 +64,22 @@ const PlantingPlanModalContent = ({ gameState, selectedRoom, modalState, formSta
                     <button type="button" className="btn-max" onClick={() => updateForm('plantQuantity', zone.getPlantCapacity())}>MAX</button>
                 </div>
             </div>
-            <div className="form-group">
-                 <label htmlFor="autoReplantToggle" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            
+            {compatibilityWarning && (
+                <div className="compatibility-warning">
+                    <p>{compatibilityWarning}</p>
+                </div>
+            )}
+
+            <div className="form-group policy-item">
+                <label>Enable Auto-Replant</label>
+                <label className="toggle-switch">
                     <input
                         type="checkbox"
-                        id="autoReplantToggle"
                         checked={formState.plantingPlanAutoReplant}
                         onChange={(e) => updateForm('plantingPlanAutoReplant', e.target.checked)}
                     />
-                    Enable Auto-Replant
+                    <span className="slider round"></span>
                 </label>
             </div>
             <div className="modal-actions">

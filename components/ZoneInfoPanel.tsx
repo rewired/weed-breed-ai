@@ -57,9 +57,6 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
            <div className="card">
               <div className="zone-section-header">
                 <h5>Lighting</h5>
-                <button className="btn-action-icon" onClick={() => onOpenModal('editLightCycle', { activeZoneId: zone.id })} title="Edit Light Cycle" aria-label="Edit Light Cycle">
-                  <span className="material-symbols-outlined">schedule</span>
-                </button>
               </div>
               <div className="lighting-stats">
                   <span>Cycle: <span className="card-info-value">{zone.lightCycle.on}h / {zone.lightCycle.off}h</span></span>
@@ -70,22 +67,16 @@ const ZoneInfoPanel: React.FC<ZoneInfoPanelProps> = ({ zone, structure, onOpenMo
                   <span>DLI: <span className="card-info-value">{lightingDetails.dli.toFixed(1)} mol/m²/day</span></span>
               </div>
           </div>
-          {/* Climate */}
+          {/* Environment & Climate */}
           <div className="card">
-              <h5>Climate</h5>
-              <div className="climate-stats">
-                  <span className={isClimateSufficient ? 'lighting-ok' : 'lighting-insufficient'}>
-                      Airflow: <span className="card-info-value">{climateDetails.actualAirflow.toFixed(0)} / {climateDetails.requiredAirflow.toFixed(0)} m³/h</span>
-                  </span>
-              </div>
-          </div>
-          {/* Environment */}
-          <div className="card">
-              <h5>Environment</h5>
+              <h5>Environment & Climate</h5>
               <div className="env-stats">
                   <span>Temp: <span className="card-info-value">{temperature_C?.toFixed(1) ?? 'N/A'} °C</span></span>
                   <span>RH: <span className="card-info-value">{(humidity_rh * 100)?.toFixed(0) ?? 'N/A'} %</span></span>
                   <span>CO₂: <span className="card-info-value">{co2_ppm?.toFixed(0) ?? 'N/A'} ppm</span></span>
+                  <span className={isClimateSufficient ? 'lighting-ok' : 'lighting-insufficient'}>
+                      Airflow: <span className="card-info-value">{climateDetails.actualAirflow.toFixed(0)}/{climateDetails.requiredAirflow.toFixed(0)} m³/h</span>
+                  </span>
                   <span className={isHumiditySufficient ? 'lighting-ok' : 'lighting-insufficient'}>
                     Dehumid.: <span className="card-info-value">{humidityDetails.actualDehumidification.toFixed(2)}/{humidityDetails.requiredDehumidification.toFixed(2)} kg/h</span>
                   </span>

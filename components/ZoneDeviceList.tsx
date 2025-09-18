@@ -39,17 +39,18 @@ const ZoneDeviceList: React.FC<ZoneDeviceListProps> = ({ zone, onToggleDeviceGro
                             const isExpanded = expandedItems[`device-${deviceGroup.blueprintId}`];
                             const blueprint = getBlueprints().devices[deviceGroup.blueprintId];
                             const isAdjustable = blueprint?.kind === 'ClimateUnit' || blueprint?.kind === 'HumidityControlUnit' || blueprint?.kind === 'CO2Injector';
+                            const isLightCycleAdjustable = blueprint?.kind === 'Lamp';
                             const groupSettings = zone.deviceGroupSettings[deviceGroup.blueprintId];
                             let currentSettingDisplay = null;
 
                             if (groupSettings) {
-                                if (blueprint?.kind === 'ClimateUnit' && groupSettings.targetTemperature) {
+                                if (blueprint?.kind === 'ClimateUnit' && typeof groupSettings.targetTemperature === 'number') {
                                     currentSettingDisplay = `(Set: ${groupSettings.targetTemperature}°C)`;
                                 }
-                                if (blueprint?.kind === 'HumidityControlUnit' && groupSettings.targetHumidity) {
+                                if (blueprint?.kind === 'HumidityControlUnit' && typeof groupSettings.targetHumidity === 'number') {
                                     currentSettingDisplay = `(Set: ${Math.round(groupSettings.targetHumidity * 100)}%)`;
                                 }
-                                if (blueprint?.kind === 'CO2Injector' && groupSettings.targetCO2) {
+                                if (blueprint?.kind === 'CO2Injector' && typeof groupSettings.targetCO2 === 'number') {
                                     currentSettingDisplay = `(Set: ${groupSettings.targetCO2} ppm)`;
                                 }
                             }
@@ -63,9 +64,10 @@ const ZoneDeviceList: React.FC<ZoneDeviceListProps> = ({ zone, onToggleDeviceGro
                                                 onClick={(e) => { e.stopPropagation(); onToggleDeviceGroupStatus(zone.id, deviceGroup.blueprintId); }}
                                                 title={getStatusTooltip(deviceGroup.status)}
                                             ></span>
-                                            {deviceGroup.name} <span className="device-setting-display">{currentSettingDisplay}</span>
+                                            {`${deviceGroup.name} ${currentSettingDisplay || ''}`}
                                         </span>
                                         <div className="sub-list-item-actions">
+                                            <span className="device-count">(×{deviceGroup.count})</span>
                                             {isAdjustable && (
                                                 <button
                                                     className="btn-action-icon"
@@ -75,7 +77,16 @@ const ZoneDeviceList: React.FC<ZoneDeviceListProps> = ({ zone, onToggleDeviceGro
                                                     <span className="material-symbols-outlined">tune</span>
                                                 </button>
                                             )}
-                                            <span className="device-count">(x{deviceGroup.count})</span>
+                                            {isLightCycleAdjustable && (
+                                                <button
+                                                    className="btn-action-icon"
+                                                    onClick={(e) => { e.stopPropagation(); onOpenModal('editLightCycle', { activeZoneId: zone.id })}}
+                                                    title="Edit Light Cycle"
+                                                    aria-label="Edit Light Cycle"
+                                                >
+                                                    <span className="material-symbols-outlined">schedule</span>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     {isExpanded && (
