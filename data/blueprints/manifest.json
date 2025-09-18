@@ -29,5 +29,26 @@
     "firstNames.json",
     "lastNames.json",
     "traits.json"
+  ],
+  "diseases": [
+    "anthracnose.json",
+    "bacterial_leaf_spot.json",
+    "bacterial_wilt.json",
+    "botrytis_gray_mold.json",
+    "downy_mildew.json",
+    "hop_latent_viroid.json",
+    "mosaic_virus.json",
+    "powdery_mildew.json",
+    "root_rot.json"
+  ],
+  "pests": [
+    "aphids.json",
+    "broad_mites.json",
+    "caterpillars.json",
+    "fungus_gnats.json",
+    "root_aphids.json",
+    "spider_mites.json",
+    "thrips.json",
+    "whiteflies.json"
   ]
 }

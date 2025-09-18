@@ -30,7 +30,8 @@
     "symptoms": [
       "General growth suppression ('dudding')",
       "Small, deformed leaves; reduced resin production"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -40,5 +41,6 @@
     "mechanical": [
       "Screen and remove infected mother plants"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

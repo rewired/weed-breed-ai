@@ -20,7 +20,7 @@ export class Planting {
         // If loading from save, data.plants will be an array of plain objects
         if (data.plants && data.plants.length > 0 && !(data.plants[0] instanceof Plant)) {
             this.plants = data.plants.map((plantData: any) => {
-                const plant = new Plant(plantData.strainId);
+                const plant = new Plant(plantData.strainId, () => 0); // Dummy RNG for rehydration
                 Object.assign(plant, plantData); // Re-hydrate instance
                 return plant;
             });
@@ -29,7 +29,7 @@ export class Planting {
         else if (!data.plants) {
             this.plants = [];
             for (let i = 0; i < this.quantity; i++) {
-                this.plants.push(new Plant(this.strainId));
+                this.plants.push(new Plant(this.strainId, Math.random)); // This branch is not used, but requires an rng
             }
         } 
         // If it's already an array of Plant instances (e.g., from a previous session in memory)
@@ -107,7 +107,7 @@ export class Planting {
 
         const plantsInDominantStage = this.plants.filter(p => p.growthStage === dominantStage);
         const totalProgress = plantsInDominantStage.reduce((sum, plant) => sum + plant.getStageProgress(strain), 0);
-        const averageProgress = totalProgress / plantsInDominantStage.length;
+        const averageProgress = plantsInDominantStage.length > 0 ? totalProgress / plantsInDominantStage.length : 0;
 
         return {
             stage: dominantStage,

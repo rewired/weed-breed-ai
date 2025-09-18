@@ -36,7 +36,8 @@
     "symptoms": [
       "Sudden wilting despite sufficient soil moisture",
       "Darkened vascular tissue"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -47,5 +48,6 @@
     "mechanical": [
       "Remove heavily infected plants"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

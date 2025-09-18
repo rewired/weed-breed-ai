@@ -35,7 +35,8 @@
     "symptoms": [
       "Dark, sunken lesions on leaves and stems",
       "Possible spore rings"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -45,5 +46,6 @@
     "mechanical": [
       "Remove infected shoots"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

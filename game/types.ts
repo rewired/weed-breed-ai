@@ -121,6 +121,40 @@ export interface CultivationMethodBlueprint {
   }
 }
 
+export interface DiseaseBlueprint {
+  id: string;
+  kind: 'Disease';
+  name: string;
+  pathogenType: string;
+  targets: string[];
+  environmentalRisk: Record<string, any>;
+  transmission: string[];
+  contagious: boolean;
+  model: Record<string, number>;
+  detection: {
+    symptoms: string[];
+    scoutingHints?: string[];
+  };
+  treatments: Record<string, string[]>;
+  yieldImpact?: Record<string, number>;
+}
+
+export interface PestBlueprint {
+  id: string;
+  kind: 'Pest';
+  name: string;
+  category: string;
+  targets: string[];
+  environmentalRisk: Record<string, any>;
+  populationDynamics: Record<string, number>;
+  damageModel: Record<string, any>;
+  detection: {
+    symptoms: string[];
+    monitoring: string[];
+  };
+  controlOptions: Record<string, string[]>;
+}
+
 export interface DevicePrice {
     capitalExpenditure: number;
     baseMaintenanceCostPerTick: number;
@@ -156,16 +190,57 @@ export interface TaskDefinition {
   description: string;
 }
 
+export interface DifficultySetting {
+  name: string;
+  description: string;
+  modifiers: Record<string, any>;
+}
+
+export interface TreatmentOption {
+    id: string;
+    name: string;
+    category: string;
+    targets: string[];
+    applicability: string[];
+    efficacy: Record<string, any>;
+    costs: Record<string, any>;
+    cooldownDays: number;
+    notes: string;
+    costBasis: string;
+    risks?: Record<string, any>;
+}
+
+export interface TreatmentOptionsConfig {
+    kind: string;
+    version: string;
+    options: TreatmentOption[];
+}
+
+export interface BalancingConfig {
+    kind: string;
+    version: string;
+    global: Record<string, any>;
+    phaseMultipliers: Record<string, any>;
+    // ... other properties
+}
+
+
 export interface BlueprintDB {
   structures: Record<string, StructureBlueprint>;
   strains: Record<string, StrainBlueprint>;
   devices: Record<string, DeviceBlueprint>;
   cultivationMethods: Record<string, CultivationMethodBlueprint>;
+  diseases: Record<string, DiseaseBlueprint>;
+  pests: Record<string, PestBlueprint>;
   devicePrices: Record<string, DevicePrice>;
   strainPrices: Record<string, StrainPrice>;
   utilityPrices: UtilityPrices;
   personnelData: PersonnelData;
   taskDefinitions: Record<TaskType, TaskDefinition>;
+  difficulty: Record<string, DifficultySetting>;
+  diseaseBalancing: BalancingConfig;
+  pestBalancing: BalancingConfig;
+  treatmentOptions: TreatmentOptionsConfig;
 }
 
 export type ExpenseCategory = 'rent' | 'maintenance' | 'power' | 'structures' | 'devices' | 'supplies' | 'seeds' | 'salaries';

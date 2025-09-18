@@ -1,3 +1,4 @@
+
 {
   "kind": "TreatmentOptions",
   "version": "1.1.0",
@@ -62,7 +63,8 @@
       },
       "cooldownDays": 0,
       "notes": "Pruning lower leaves, repositioning fans, cleaning filters.",
-      "costBasis": "perZone"
+      "costBasis": "perZone",
+      "risks": {}
     },
     {
       "id": "97187f66-817f-4e8a-b0cb-db237b663743",
@@ -90,7 +92,8 @@
       },
       "cooldownDays": 0,
       "notes": "Adjust setpoints to prevent condensation; pairs well with defoliation.",
-      "costBasis": "perZone"
+      "costBasis": "perZone",
+      "risks": {}
     },
     {
       "id": "0828046f-3986-456b-9abe-3f35f5a1f9c4",
@@ -122,7 +125,8 @@
       },
       "cooldownDays": 2,
       "notes": "Especially effective against fungus gnats and root pathogens.",
-      "costBasis": "perZone"
+      "costBasis": "perZone",
+      "risks": {}
     },
     {
       "id": "fa328792-9539-4254-bd5d-cbe8233b6289",
@@ -178,7 +182,8 @@
       },
       "cooldownDays": 7,
       "notes": "Preventive + early curative against powdery mildew.",
-      "costBasis": "perSquareMeter"
+      "costBasis": "perSquareMeter",
+      "risks": {}
     },
     {
       "id": "80edee83-4577-4063-877c-68f8d6ab35bc",
@@ -210,7 +215,8 @@
       },
       "cooldownDays": 10,
       "notes": "Suppresses root pathogens; slight benefit vs root aphids.",
-      "costBasis": "perSquareMeter"
+      "costBasis": "perSquareMeter",
+      "risks": {}
     },
     {
       "id": "26eba5ec-66e0-41e9-98b5-cce64ebbc079",
@@ -237,7 +243,8 @@
       },
       "cooldownDays": 7,
       "notes": "Highly effective on fungus gnat larvae; drench media.",
-      "costBasis": "perSquareMeter"
+      "costBasis": "perSquareMeter",
+      "risks": {}
     },
     {
       "id": "8241536e-1b0e-4f7b-8857-63bca0179c3e",
@@ -264,7 +271,8 @@
       },
       "cooldownDays": 0,
       "notes": "Bag and discard; disinfect tools between cuts.",
-      "costBasis": "perZone"
+      "costBasis": "perZone",
+      "risks": {}
     },
     {
       "id": "40d709c5-5cc6-4bbf-92d0-7e172057170c",
@@ -293,7 +301,8 @@
       },
       "cooldownDays": 0,
       "notes": "Monitoring plus partial mass trapping of flying adults.",
-      "costBasis": "perZone"
+      "costBasis": "perZone",
+      "risks": {}
     },
     {
       "id": "327a4266-caba-4129-8538-0f7f2c12fbd0",
@@ -318,7 +327,8 @@
       },
       "cooldownDays": 3,
       "notes": "Effective on aphids/mites early; avoid oversaturation of media.",
-      "costBasis": "perZone"
+      "costBasis": "perZone",
+      "risks": {}
     },
     {
       "id": "91d9ee39-32e5-4d83-9702-1365d171a5ea",
@@ -352,6 +362,7 @@
         "phytotoxicity": "medium",
         "notes": "Avoid on open flowers; can harm beneficials."
       },
+      "notes": "Smothers soft-bodied insects and some fungal spores; ensure complete coverage.",
       "costBasis": "perSquareMeter"
     },
     {
@@ -378,7 +389,8 @@
       },
       "cooldownDays": 5,
       "notes": "Good knockdown for powdery mildew; pH shock on leaf surface.",
-      "costBasis": "perSquareMeter"
+      "costBasis": "perSquareMeter",
+      "risks": {}
     },
     {
       "id": "131fe37b-967b-4ff3-a9fd-d15cab018dc0",
@@ -467,7 +479,8 @@
       },
       "cooldownDays": 7,
       "notes": "Selective for caterpillars; minimal impact on beneficials.",
-      "costBasis": "perSquareMeter"
+      "costBasis": "perSquareMeter",
+      "risks": {}
     },
     {
       "id": "5dc92d86-7f0f-4e7f-8577-69b50f71ee78",

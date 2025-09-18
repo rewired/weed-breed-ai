@@ -31,7 +31,8 @@
     "symptoms": [
       "Mottled light and dark green leaf patterns (mosaic)",
       "Leaf deformation, stunted growth"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -41,5 +42,6 @@
     "mechanical": [
       "Remove infected plants"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

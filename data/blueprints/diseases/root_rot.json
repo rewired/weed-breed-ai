@@ -37,7 +37,8 @@
     "symptoms": [
       "Plants wilting despite wet soil",
       "Brown, slimy roots with foul smell"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -51,5 +52,6 @@
     "mechanical": [
       "Remove heavily affected plants"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

@@ -35,7 +35,8 @@
     "symptoms": [
       "Yellowish angular leaf spots",
       "Gray-white fungal growth on leaf undersides"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -45,5 +46,6 @@
     "mechanical": [
       "Remove infected leaves"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

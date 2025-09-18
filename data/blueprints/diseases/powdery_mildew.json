@@ -57,5 +57,6 @@
     "mechanical": [
       "Remove heavily infected leaves"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

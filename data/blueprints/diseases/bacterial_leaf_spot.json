@@ -35,7 +35,8 @@
     "symptoms": [
       "Water-soaked, later brown spots with yellow halo",
       "Oily sheen, marginal necrosis"
-    ]
+    ],
+    "scoutingHints": []
   },
   "treatments": {
     "cultural": [
@@ -45,5 +46,6 @@
     "mechanical": [
       "Remove heavily infected leaves"
     ]
-  }
+  },
+  "yieldImpact": {}
 }

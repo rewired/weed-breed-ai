@@ -18,3 +18,26 @@ export function mulberry32(seed: number) {
 export function yieldToMainThread(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
+
+export class RandomAdapter {
+  private rng: () => number;
+
+  constructor(rng: () => number) {
+    this.rng = rng;
+  }
+
+  /** Returns a float between 0 (inclusive) and 1 (exclusive). */
+  float(): number {
+    return this.rng();
+  }
+
+  /** Returns an integer between min (inclusive) and max (inclusive). */
+  int(min: number, max: number): number {
+    return Math.floor(this.rng() * (max - min + 1)) + min;
+  }
+
+  /** Returns true with a probability of p. */
+  chance(p: number): boolean {
+    return this.rng() < p;
+  }
+}
