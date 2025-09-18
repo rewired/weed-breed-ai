@@ -18,25 +18,25 @@ export const useViewManager = () => {
     } else if (currentView === 'finances' || currentView === 'personnel') {
       setCurrentView('structures');
     }
-  }, [selectedZoneId, selectedRoomId, selectedStructureId, currentView]);
+  }, [selectedZoneId, selectedRoomId, selectedStructureId, currentView, setSelectedZoneId, setSelectedRoomId, setSelectedStructureId, setCurrentView]);
 
   const goToRoot = useCallback(() => {
     setSelectedStructureId(null);
     setSelectedRoomId(null);
     setSelectedZoneId(null);
     setCurrentView('structures');
-  }, []);
+  }, [setSelectedStructureId, setSelectedRoomId, setSelectedZoneId, setCurrentView]);
 
   const goToStructureView = useCallback(() => {
     setSelectedRoomId(null);
     setSelectedZoneId(null);
     setCurrentView('structures');
-  }, []);
+  }, [setSelectedRoomId, setSelectedZoneId, setCurrentView]);
   
   const goToRoomView = useCallback(() => {
     setSelectedZoneId(null);
     setCurrentView('structures');
-  }, []);
+  }, [setSelectedZoneId, setCurrentView]);
 
   return {
     currentView,
