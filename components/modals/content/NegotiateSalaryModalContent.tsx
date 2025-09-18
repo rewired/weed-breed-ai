@@ -1,4 +1,5 @@
 import React from 'react';
+import { RAISE_ACCEPT_MORALE_GAIN, BONUS_OFFER_MORALE_GAIN, RAISE_DECLINE_MORALE_DROP } from '../../../game/constants/balance';
 
 const NegotiateSalaryModalContent = ({ gameState, modalState, handlers, closeModal }) => {
     const negotiation = modalState.itemToNegotiate;
@@ -24,13 +25,13 @@ const NegotiateSalaryModalContent = ({ gameState, modalState, handlers, closeMod
             <p>You have three options:</p>
             <div className="modal-actions" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
                 <button className="btn btn-start" onClick={handlers.handleAcceptRaise}>
-                    Accept Raise (+25 Morale)
+                    Accept Raise (+{RAISE_ACCEPT_MORALE_GAIN} Morale)
                 </button>
                 <button className="btn btn-pause" onClick={handlers.handleOfferBonus} disabled={gameState.company.capital < bonus}>
-                    Offer ${bonus.toFixed(2)} Bonus (+15 Morale)
+                    Offer ${bonus.toFixed(2)} Bonus (+{BONUS_OFFER_MORALE_GAIN} Morale)
                 </button>
                 <button className="btn btn-danger" onClick={handlers.handleDeclineRaise}>
-                    Decline Request (-20 Morale)
+                    Decline Request (-{RAISE_DECLINE_MORALE_DROP} Morale)
                 </button>
             </div>
         </>

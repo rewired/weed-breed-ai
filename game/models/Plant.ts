@@ -1,4 +1,5 @@
 import { StrainBlueprint } from '../types';
+import * as BALANCE from '../constants/balance';
 
 export enum GrowthStage {
   Seedling = 'seedling',
@@ -106,19 +107,15 @@ export class Plant {
   }
 
   private updateHealth(strain: StrainBlueprint, isLightOn: boolean, rng: () => number, diseaseChance: number) {
-      const STRESS_IMPACT_FACTOR = 0.05;
-      const RECOVERY_FACTOR = 0.003;
-      const DISEASE_IMPACT = 0.1;
-      
       const resilienceFactor = strain.generalResilience || 0;
-      const modifiedRecoveryFactor = RECOVERY_FACTOR * (1 + resilienceFactor * 0.5);
+      const modifiedRecoveryFactor = BALANCE.PLANT_RECOVERY_FACTOR * (1 + resilienceFactor * 0.5);
 
       if (rng() < (diseaseChance * (1 - resilienceFactor * 0.5))) {
-        this.health -= DISEASE_IMPACT;
+        this.health -= BALANCE.PLANT_DISEASE_IMPACT;
       }
 
       if (this.stress > 0.1) {
-          this.health -= this.stress * STRESS_IMPACT_FACTOR;
+          this.health -= this.stress * BALANCE.PLANT_STRESS_IMPACT_FACTOR;
       } else if (isLightOn) {
           this.health += modifiedRecoveryFactor;
       }
@@ -128,7 +125,6 @@ export class Plant {
   private grow(strain: StrainBlueprint, rng: () => number, isLightOn: boolean) {
       if (this.health <= 0 || !isLightOn) return;
       
-      const BASE_GROWTH_PER_TICK = 0.05;
       const growthRateModifier = strain.morphology.growthRate;
       
       let noiseModifier = 1.0;
@@ -137,7 +133,7 @@ export class Plant {
           noiseModifier += noiseValue;
       }
 
-      const potentialGrowth = BASE_GROWTH_PER_TICK * growthRateModifier * this.health * (1 - this.stress * 0.5);
+      const potentialGrowth = BALANCE.PLANT_BASE_GROWTH_PER_TICK * growthRateModifier * this.health * (1 - this.stress * 0.5);
       
       this.biomass += potentialGrowth * noiseModifier;
   }
@@ -147,10 +143,8 @@ export class Plant {
         return;
     }
 
-    const seedlingDays = 3;
     const vegDays = strain.photoperiod.vegetationDays;
     const flowerDays = strain.photoperiod.floweringDays;
-    const TRANSITION_PROBABILITY_PER_DAY = 0.25;
 
     let stageChanged = false;
     let newStage = this.growthStage;
@@ -159,14 +153,14 @@ export class Plant {
 
     switch (this.growthStage) {
         case GrowthStage.Seedling:
-            if (ageInDays >= seedlingDays) {
+            if (ageInDays >= BALANCE.PLANT_SEEDLING_DAYS) {
                 newStage = GrowthStage.Vegetative;
                 stageChanged = true;
             }
             break;
         case GrowthStage.Vegetative:
             if (daysInCurrentStage >= vegDays) {
-                if (rng() < TRANSITION_PROBABILITY_PER_DAY) {
+                if (rng() < BALANCE.PLANT_STAGE_TRANSITION_PROB_PER_DAY) {
                     newStage = GrowthStage.Flowering;
                     stageChanged = true;
                 }
@@ -174,7 +168,7 @@ export class Plant {
             break;
         case GrowthStage.Flowering:
             if (daysInCurrentStage >= flowerDays) {
-                if (rng() < TRANSITION_PROBABILITY_PER_DAY) {
+                if (rng() < BALANCE.PLANT_STAGE_TRANSITION_PROB_PER_DAY) {
                     newStage = GrowthStage.Harvestable;
                     stageChanged = true;
                 }
@@ -195,14 +189,13 @@ export class Plant {
     const ticksInStage = this.ageInTicks - this.stageStartTick;
     const daysInStage = ticksInStage / 24;
 
-    const seedlingDays = 3;
     const vegDays = strain.photoperiod.vegetationDays;
     const flowerDays = strain.photoperiod.floweringDays;
 
     switch (this.growthStage) {
       case GrowthStage.Seedling:
         const ageInDays = this.ageInTicks / 24;
-        return Math.min(100, (ageInDays / seedlingDays) * 100);
+        return Math.min(100, (ageInDays / BALANCE.PLANT_SEEDLING_DAYS) * 100);
       case GrowthStage.Vegetative:
         return Math.min(100, (daysInStage / vegDays) * 100);
       case GrowthStage.Flowering:

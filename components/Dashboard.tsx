@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameSpeed, Alert, AlertLocation } from '../game/types';
+import { GameSpeed, Alert } from '../game/types';
 
 interface DashboardProps {
   capital: number;
@@ -32,7 +32,7 @@ const speedOptions: { label: string; speed: GameSpeed }[] = [
   { label: '100x', speed: 100 },
 ];
 
-const TICK_INTERVAL_MS = 5000;
+const TICK_INTERVAL_MS = 1000;
 
 const AlertIcon = ({ type }: { type: string }) => {
     let iconName = 'info';

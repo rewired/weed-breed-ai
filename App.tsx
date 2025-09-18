@@ -8,11 +8,10 @@ import Navigation from './components/Navigation';
 import MainView from './views/MainView';
 import { Modals } from './components/modals';
 import StartScreen from './views/StartScreen';
-import { Alert } from './game/types';
 
 const App = () => {
   const { 
-    gameState, 
+    snapshot, 
     isLoading, 
     isSimRunning, 
     setIsSimRunning, 
@@ -75,17 +74,17 @@ const App = () => {
 
   // Auto-pause on new alerts
   useEffect(() => {
-    if (!gameState) {
+    if (!snapshot) {
         previousAlertsRef.current = new Set();
         return;
     }
-    const currentAlertKeys = new Set(gameState.company.alerts.map(a => a.id));
+    const currentAlertKeys = new Set(snapshot.company.alerts.map(a => a.id));
     const previousAlertKeys = previousAlertsRef.current;
     
     let isNewAlertTriggered = false;
     for (const key of currentAlertKeys) {
         if (!previousAlertKeys.has(key)) {
-            const alert = gameState.company.alerts.find(a => a.id === key);
+            const alert = snapshot.company.alerts.find(a => a.id === key);
             if (alert && !alert.isAcknowledged) {
               isNewAlertTriggered = true;
               break;
@@ -96,17 +95,17 @@ const App = () => {
         setIsSimRunning(false);
     }
     previousAlertsRef.current = currentAlertKeys;
-  }, [gameState, isSimRunning, setIsSimRunning]);
+  }, [snapshot, isSimRunning, setIsSimRunning]);
 
 
-  const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
+  const selectedStructure = selectedStructureId && snapshot ? snapshot.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
   const selectedZone = selectedRoom && selectedZoneId ? selectedRoom.zones[selectedZoneId] : null;
   
   const { modalState, formState, openModal, closeModal, updateForm, resetForm } = useModals({
     selectedStructure,
     selectedRoom,
-    gameState,
+    gameState: snapshot,
     isSimRunning,
     setIsSimRunning,
   });
@@ -131,13 +130,13 @@ const App = () => {
     event.target.value = '';
   }, [importGame]);
 
-  const handleNavigateToAlert = useCallback((alert: Alert) => {
-    if (!gameState) return;
+  const handleNavigateToAlert = useCallback((alert: any) => {
+    if (!snapshot) return;
     acknowledgeAlert(alert.id);
 
     if (alert.type === 'raise_request' && alert.context) {
         const { employeeId, newSalary } = alert.context;
-        const employee = gameState.company.employees[employeeId];
+        const employee = snapshot.company.employees[employeeId];
         if (employee) {
             const bonus = (newSalary - employee.salaryPerDay) * 45;
             openModal('negotiateSalary', { itemToNegotiate: { employee, newSalary, bonus } });
@@ -149,7 +148,7 @@ const App = () => {
         setSelectedRoomId(alert.location.roomId);
         setSelectedZoneId(alert.location.zoneId);
     }
-  }, [gameState, openModal, setSelectedStructureId, setSelectedRoomId, setSelectedZoneId, setCurrentView, acknowledgeAlert]);
+  }, [snapshot, openModal, setSelectedStructureId, setSelectedRoomId, setSelectedZoneId, setCurrentView, acknowledgeAlert]);
 
   const handleNavigateToZone = useCallback((direction: 'next' | 'prev') => {
     if (!selectedRoom || !selectedZoneId) return;
@@ -173,11 +172,11 @@ const App = () => {
     <>
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json,application/json" onChange={handleFileSelect} />
       <div className="app-container">
-        {gameState && (
+        {snapshot && (
           <Dashboard 
-            capital={gameState.company.capital}
-            cumulativeYield_g={gameState.company.cumulativeYield_g}
-            ticks={gameState.ticks}
+            capital={snapshot.company.capital}
+            cumulativeYield_g={snapshot.company.cumulativeYield_g}
+            ticks={snapshot.ticks}
             isSimRunning={isSimRunning}
             onStart={() => setIsSimRunning(true)}
             onPause={() => setIsSimRunning(false)}
@@ -190,14 +189,14 @@ const App = () => {
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
             currentView={currentView}
-            alerts={gameState.company.alerts}
+            alerts={snapshot.company.alerts}
             onNavigateToAlert={handleNavigateToAlert}
             onAcknowledgeAlert={acknowledgeAlert}
             onGameMenuToggle={setGameMenuOpen}
           />
         )}
         <div className={`content-area ${isBlurred ? 'blurred' : ''}`}>
-          {gameState ? (
+          {snapshot ? (
             <main>
               <Navigation
                 structure={selectedStructure}
@@ -209,8 +208,8 @@ const App = () => {
                 onRoomClick={goToRoomView}
               />
               <MainView 
-                  company={gameState.company}
-                  ticks={gameState.ticks}
+                  company={snapshot.company}
+                  ticks={snapshot.ticks}
                   currentView={currentView}
                   selectedStructure={selectedStructure}
                   selectedRoom={selectedRoom}
@@ -239,7 +238,7 @@ const App = () => {
       </div>
 
       <Modals 
-        gameState={gameState}
+        gameState={snapshot}
         selectedRoom={selectedRoom}
         selectedStructure={selectedStructure}
         modalState={modalState}

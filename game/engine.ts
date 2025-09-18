@@ -34,7 +34,7 @@ export function initialGameState(companyName: string = 'Weedbreed', seed?: numbe
   };
 }
 
-export function gameTick(currentState: GameState): GameState {
+export async function gameTick(currentState: GameState): Promise<GameState> {
   // Create a new deterministic RNG for this specific tick
   const rng = mulberry32(currentState.seed + currentState.ticks);
 
@@ -46,7 +46,7 @@ export function gameTick(currentState: GameState): GameState {
   };
   
   // All the complex logic is now handled inside the company model, passing the RNG and ticks down
-  newState.company.update(rng, newState.ticks, currentState.seed);
+  await newState.company.update(rng, newState.ticks, currentState.seed);
 
   return newState;
 }

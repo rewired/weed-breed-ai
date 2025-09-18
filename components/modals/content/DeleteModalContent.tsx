@@ -1,4 +1,5 @@
 import React from 'react';
+import { SEVERANCE_PAY_DAYS, FIRE_MORALE_DROP } from '../../../game/constants/balance';
 
 const DeleteModalContent = ({ modalState, handlers, closeModal }) => {
     if (!modalState.itemToDelete) return <p>Error: No item specified for deletion.</p>;
@@ -8,12 +9,12 @@ const DeleteModalContent = ({ modalState, handlers, closeModal }) => {
     let content;
     if (type === 'employee' && context?.employee) {
         const employee = context.employee;
-        const severance = employee.salaryPerDay * 7;
+        const severance = employee.salaryPerDay * SEVERANCE_PAY_DAYS;
         content = (
             <>
                 <h2>Confirm Firing</h2>
                 <p>Are you sure you want to fire <strong>{name}</strong>? This action cannot be undone.</p>
-                <p>This will cost <strong>${severance.toFixed(2)}</strong> in severance pay and will lower the morale of other staff in the same structure by 10 points.</p>
+                <p>This will cost <strong>${severance.toFixed(2)}</strong> in severance pay and will lower the morale of other staff in the same structure by {FIRE_MORALE_DROP} points.</p>
             </>
         );
     } else {

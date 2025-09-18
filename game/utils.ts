@@ -9,3 +9,12 @@ export function mulberry32(seed: number) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   }
 }
+
+/**
+ * Yields control back to the main thread, allowing the browser to process
+ * UI updates, user input, and other tasks. Useful for breaking up long-running
+ * synchronous computations to prevent the UI from freezing.
+ */
+export function yieldToMainThread(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
