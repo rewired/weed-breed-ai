@@ -15,27 +15,29 @@ export class Planting {
     constructor(data: any) {
         this.id = data.id;
         this.strainId = data.strainId;
-        this.quantity = data.quantity;
-        
-        // If loading from save, data.plants will be an array of plain objects
+
+        // This constructor no longer attempts to create its own Plant instances.
+        // It now exclusively handles rehydration of plant data from saves or
+        // accepts a pre-populated array of Plant instances. This responsibility
+        // correctly lies with the calling code (e.g., Zone.ts), which already
+        // uses the deterministic RNG. This removes the problematic branch that
+        // could have used Math.random.
         if (data.plants && data.plants.length > 0 && !(data.plants[0] instanceof Plant)) {
+            // Loading from save: data.plants is an array of plain objects. Rehydrate them.
             this.plants = data.plants.map((plantData: any) => {
                 const plant = new Plant(plantData.strainId, () => 0); // Dummy RNG for rehydration
                 Object.assign(plant, plantData); // Re-hydrate instance
                 return plant;
             });
-        } 
-        // If creating a new planting from scratch
-        else if (!data.plants) {
-            this.plants = [];
-            for (let i = 0; i < this.quantity; i++) {
-                this.plants.push(new Plant(this.strainId, Math.random)); // This branch is not used, but requires an rng
-            }
-        } 
-        // If it's already an array of Plant instances (e.g., from a previous session in memory)
-        else {
-             this.plants = data.plants;
+        } else {
+            // This path handles new plantings (where data.plants is an array of Plant instances)
+            // or loading a planting with no plants.
+            this.plants = data.plants || [];
         }
+
+        // The source of truth for quantity is always the length of the plants array,
+        // ensuring data consistency.
+        this.quantity = this.plants.length;
     }
 
     update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
