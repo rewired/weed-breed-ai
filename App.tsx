@@ -10,7 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
-import { Planting, Plant, AlertLocation, Alert, Employee, JobRole, PlantingPlan } from './game/types';
+import { Planting, Plant, AlertLocation, Alert, Employee, JobRole, PlantingPlan, Room } from './game/types';
 
 const App = () => {
   const { 
@@ -477,7 +477,7 @@ const App = () => {
   }, [gameState, updateGameState]);
 
   const handleHarvest = useCallback((plantId?: string) => {
-    if (!gameState || !selectedZone || !selectedStructure) return;
+    if (!gameState || !selectedZone || !selectedStructure || !selectedRoom) return;
 
     let plantsToHarvest: {plant: Plant, planting: Planting}[];
 
@@ -499,6 +499,23 @@ const App = () => {
 
     const result = gameState.company.harvestPlants(plantsToHarvest, negotiationBonus);
     selectedZone.cleanupEmptyPlantings();
+    
+    if (selectedZone.getTotalPlantedCount() === 0) {
+        selectedZone.cyclesUsed = (selectedZone.cyclesUsed || 0) + 1;
+        selectedZone.status = 'Harvested';
+        gameState.company.alerts.push({
+            id: `alert-${selectedZone.id}-harvested-${gameState.ticks}`,
+            type: 'zone_harvested',
+            message: `Zone '${selectedZone.name}' is harvested and needs cleaning.`,
+            location: {
+                structureId: selectedStructure.id,
+                roomId: selectedRoom.id,
+                zoneId: selectedZone.id
+            },
+            tickGenerated: gameState.ticks
+        });
+    }
+    
     updateGameState();
 
     if (result.count > 0) {
@@ -510,7 +527,7 @@ const App = () => {
       }
       alert(alertMessage);
     }
-  }, [gameState, selectedZone, selectedStructure, updateGameState]);
+  }, [gameState, selectedZone, selectedStructure, selectedRoom, updateGameState]);
 
   const handleResetConfirm = useCallback(() => {
     resetGame();
@@ -585,6 +602,29 @@ const App = () => {
         alert.isAcknowledged = true;
         updateGameState();
     }
+  }, [gameState, updateGameState]);
+
+  const handleToggleAutoReplant = useCallback((zoneId: string) => {
+    if (!gameState) return;
+    const zone = Object.values(gameState.company.structures)
+        .flatMap(s => Object.values(s.rooms))
+        .flatMap(r => Object.values(r.zones))
+        .find(z => z.id === zoneId);
+
+    if (zone && zone.plantingPlan) {
+        const newPlan = {
+            ...zone.plantingPlan,
+            autoReplant: !zone.plantingPlan.autoReplant
+        };
+        gameState.company.setPlantingPlanForZone(zoneId, newPlan);
+        updateGameState();
+    }
+  }, [gameState, updateGameState]);
+
+  const handleDeletePlantingPlan = useCallback((zoneId: string) => {
+    if (!gameState) return;
+    gameState.company.setPlantingPlanForZone(zoneId, null);
+    updateGameState();
   }, [gameState, updateGameState]);
 
 
@@ -665,6 +705,8 @@ const App = () => {
                   onRenameZone={handleRenameZone}
                   onNavigateToZone={handleNavigateToZone}
                   onAssignEmployeeRole={handleAssignEmployeeRole}
+                  onToggleAutoReplant={handleToggleAutoReplant}
+                  onDeletePlantingPlan={handleDeletePlantingPlan}
               />
             </main>
           ) : (

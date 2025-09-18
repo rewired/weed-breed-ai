@@ -17,9 +17,11 @@ interface ZoneDetailProps {
   onOpenModal: (type: any, context?: any) => void;
   onHarvest: (plantId?: string) => void;
   onNavigateToZone: (direction: 'next' | 'prev') => void;
+  onToggleAutoReplant: (zoneId: string) => void;
+  onDeletePlantingPlan: (zoneId: string) => void;
 }
 
-const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room, onRenameZoneClick, onDeleteZoneClick, onAddDeviceClick, onOpenModal, onToggleDeviceGroupStatus, onHarvest, onNavigateToZone }) => {
+const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room, onRenameZoneClick, onDeleteZoneClick, onAddDeviceClick, onOpenModal, onToggleDeviceGroupStatus, onHarvest, onNavigateToZone, onToggleAutoReplant, onDeletePlantingPlan }) => {
   if (!zone) {
     return <div className="content-panel">Zone not found.</div>;
   }
@@ -77,6 +79,8 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
                     zone={zone}
                     company={company}
                     onOpenModal={onOpenModal}
+                    onToggleAutoReplant={onToggleAutoReplant}
+                    onDeletePlantingPlan={onDeletePlantingPlan}
                 />
                 <ZoneDeviceList 
                     zone={zone}

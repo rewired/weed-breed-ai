@@ -26,6 +26,8 @@ interface MainViewProps {
     onRenameZone: (zoneId: string, newName: string) => void;
     onNavigateToZone: (direction: 'next' | 'prev') => void;
     onAssignEmployeeRole: (employeeId: string, role: JobRole) => void;
+    onToggleAutoReplant: (zoneId: string) => void;
+    onDeletePlantingPlan: (zoneId: string) => void;
     ticks: number;
 }
 
@@ -48,6 +50,8 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onRenameZone,
         onNavigateToZone,
         onAssignEmployeeRole,
+        onToggleAutoReplant,
+        onDeletePlantingPlan,
         ticks,
     } = props;
 
@@ -72,6 +76,8 @@ const MainView: React.FC<MainViewProps> = (props) => {
             onOpenModal={onOpenModal}
             onHarvest={onHarvest}
             onNavigateToZone={onNavigateToZone}
+            onToggleAutoReplant={onToggleAutoReplant}
+            onDeletePlantingPlan={onDeletePlantingPlan}
         />
     }
     

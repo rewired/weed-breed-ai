@@ -1,5 +1,6 @@
 import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting, ZoneStatus, PlantingPlan as IPlantingPlan } from '../types';
-import { getBlueprints } from '../blueprints';
+// FIX: Add getAvailableStrains to imports for use in getSupplyConsumptionRates
+import { getBlueprints, getAvailableStrains } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
 
@@ -62,7 +63,7 @@ export class Zone {
     this.waterLevel_L = data.waterLevel_L || 0;
     this.nutrientLevel_g = data.nutrientLevel_g || 0;
     this.cyclesUsed = data.cyclesUsed || 0;
-    this.status = data.status || 'Growing';
+    this.status = data.status || 'Ready';
     this.plantingPlan = data.plantingPlan || null;
     
     // --- MIGRATION & INITIALIZATION LOGIC ---
@@ -447,6 +448,46 @@ export class Zone {
     };
   }
 
+  // FIX: Add getSupplyConsumptionRates to calculate water and nutrient usage.
+  getSupplyConsumptionRates(company: Company): { waterPerDay: number; nutrientsPerDay: number } {
+    let waterPerTick = 0;
+    let nutrientsPerTick = 0;
+    const allStrains = getAvailableStrains(company);
+    const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
+    if (!cultivationMethod || !cultivationMethod.areaPerPlant) {
+      return { waterPerDay: 0, nutrientsPerDay: 0 };
+    }
+
+    const areaPerPlant = cultivationMethod.areaPerPlant;
+
+    for (const planting of Object.values(this.plantings)) {
+      const strain = allStrains[planting.strainId];
+      if (!strain) continue;
+
+      // Calculate nutrient consumption from existing method
+      nutrientsPerTick += planting.getTotalNutrientDemandPerTick(strain);
+
+      // Calculate water consumption
+      if (strain.waterDemand?.dailyWaterUsagePerSquareMeter) {
+        for (const plant of planting.plants) {
+          let stage = plant.growthStage;
+          if (stage === GrowthStage.Dead) continue;
+          if (stage === GrowthStage.Harvestable) stage = GrowthStage.Flowering; // Assume flowering consumption
+
+          const waterUsagePerSqmPerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage];
+          if (waterUsagePerSqmPerDay) {
+            const waterUsagePerPlantPerDay = waterUsagePerSqmPerDay * areaPerPlant;
+            waterPerTick += waterUsagePerPlantPerDay / 24; // convert to per tick
+          }
+        }
+      }
+    }
+    return {
+      waterPerDay: waterPerTick * 24,
+      nutrientsPerDay: nutrientsPerTick * 24,
+    };
+  }
+
   updateEnvironment(structure: Structure, isLightOn: boolean) {
     let tempDelta = 0;
     let humidityDelta = 0;
@@ -546,77 +587,30 @@ export class Zone {
       const isLightOn = hourOfDay < this.lightCycle.on;
 
       this.updateEnvironment(structure, isLightOn);
-
-      const allStrains = { ...getBlueprints().strains, ...company.customStrains };
       
-      // Calculate and consume supplies
-      let totalWaterDemandL = 0;
-      let totalNutrientDemandG = 0;
+      const allStrains = getAvailableStrains(company);
 
+      // Base disease chance per tick, can be modified by cleanliness, etc. later
+      const baseDiseaseChance = BASE_DISEASE_CHANCE_PER_TICK; 
+      
       for (const plantingId in this.plantings) {
-          const planting = this.plantings[plantingId];
-          const strain = allStrains[planting.strainId];
-          if (strain) {
-              let stage = planting.getGrowthStage(); // Now returns dominant stage
-
-              if (stage !== GrowthStage.Dead) {
-                  // Harvestable plants should still consume resources at the flowering rate.
-                  if (stage === GrowthStage.Harvestable) {
-                      stage = GrowthStage.Flowering;
-                  }
-                  const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
-                  const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
-                  
-                  // Water demand is based on the area this specific planting occupies
-                  const plantingArea = areaPerPlant * planting.quantity;
-                  const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
-                  totalWaterDemandL += (waterDemandPerM2PerDay * plantingArea) / 24;
-              }
-              
-              // Nutrient demand is now correctly calculated for N, P, and K
-              totalNutrientDemandG += planting.getTotalNutrientDemandPerTick(strain);
-          }
-      }
-      
-      const hasWater = this.waterLevel_L >= totalWaterDemandL;
-      const hasNutrients = this.nutrientLevel_g >= totalNutrientDemandG;
-
-      if(hasWater) this.waterLevel_L -= totalWaterDemandL;
-      if(hasNutrients) this.nutrientLevel_g -= totalNutrientDemandG;
-      
-      const { averagePPFD } = this.getLightingDetails();
-      const environmentForPlants = {
-          ...this.currentEnvironment,
-          averagePPFD,
-      };
-      
-      // --- Passive Employee Effects ---
-      const avgMaintenanceSkill = structure.getAverageSkill(company, 'Maintenance', 'Technician');
-      const maintenanceModifier = 1 - (avgMaintenanceSkill / 10) * 0.75; // Max 75% reduction
-      
-      for(const device of Object.values(this.devices)) {
-        if (device.status === 'on') {
-            device.durability -= BASE_DURABILITY_DECAY_PER_TICK * maintenanceModifier;
-            if (device.durability <= 0) {
-                device.durability = 0;
-                device.status = 'broken';
-            }
+        const planting = this.plantings[plantingId];
+        const strain = allStrains[planting.strainId];
+        if (strain) {
+            const hasWater = this.waterLevel_L > 0;
+            const hasNutrients = this.nutrientLevel_g > 0;
+            const lightingDetails = this.getLightingDetails();
+            const environment = {
+                temperature_C: this.currentEnvironment.temperature_C,
+                averagePPFD: lightingDetails.averagePPFD,
+            };
+            
+            planting.update(strain, environment, rng, isLightOn, hasWater, hasNutrients, this.lightCycle.on, baseDiseaseChance);
         }
-      }
-      
-      const avgCleanlinessSkill = structure.getAverageSkill(company, 'Cleanliness', 'Janitor');
-      const cleanlinessModifier = 1 - (avgCleanlinessSkill / 10) * 0.9; // Max 90% reduction
-      const diseaseChance = BASE_DISEASE_CHANCE_PER_TICK * cleanlinessModifier;
-
-      for (const plantingId in this.plantings) {
-          const planting = this.plantings[plantingId];
-          const strain = allStrains[planting.strainId];
-          if (strain) {
-              planting.update(strain, environmentForPlants, rng, isLightOn, hasWater, hasNutrients, this.lightCycle.on, diseaseChance);
-          }
       }
   }
 
+  // FIX: Add toJSON method for serialization.
   toJSON() {
     return {
       id: this.id,
@@ -624,50 +618,15 @@ export class Zone {
       area_m2: this.area_m2,
       cultivationMethodId: this.cultivationMethodId,
       devices: this.devices,
+      plantings: Object.fromEntries(Object.entries(this.plantings).map(([id, planting]) => [id, planting.toJSON()])),
       deviceGroupSettings: this.deviceGroupSettings,
-      plantings: Object.fromEntries(Object.entries(this.plantings).map(([id, p]) => [id, p.toJSON()])),
-      currentEnvironment: this.currentEnvironment,
       lightCycle: this.lightCycle,
       waterLevel_L: this.waterLevel_L,
       nutrientLevel_g: this.nutrientLevel_g,
       cyclesUsed: this.cyclesUsed,
       status: this.status,
       plantingPlan: this.plantingPlan,
-    };
-  }
-
-  public getSupplyConsumptionRates(company: Company) {
-    const allStrains = { ...getBlueprints().strains, ...company.customStrains };
-    
-    let waterDemandPerTick = 0;
-    let nutrientDemandPerTick = 0;
-
-    for (const plantingId in this.plantings) {
-        const planting = this.plantings[plantingId];
-        const strain = allStrains[planting.strainId];
-        if (strain) {
-            let stage = planting.getGrowthStage(); // Now returns dominant stage
-            
-            if (stage !== GrowthStage.Dead) {
-                // Harvestable plants should still consume resources at the flowering rate.
-                if (stage === GrowthStage.Harvestable) {
-                    stage = GrowthStage.Flowering;
-                }
-                const cultivationMethod = getBlueprints().cultivationMethods[this.cultivationMethodId];
-                const areaPerPlant = cultivationMethod?.areaPerPlant || 0;
-                
-                const plantingArea = areaPerPlant * planting.quantity;
-                const waterDemandPerM2PerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage] || 0;
-                waterDemandPerTick += (waterDemandPerM2PerDay * plantingArea) / 24;
-            }
-            
-            nutrientDemandPerTick += planting.getTotalNutrientDemandPerTick(strain);
-        }
-    }
-
-    return {
-        waterPerDay: waterDemandPerTick * 24,
-        nutrientsPerDay: nutrientDemandPerTick * 24,
+      currentEnvironment: this.currentEnvironment,
     };
   }
 }

@@ -6,20 +6,13 @@ interface ZonePlantingPlanProps {
     zone: Zone;
     company: Company;
     onOpenModal: (type: any, context?: any) => void;
+    onToggleAutoReplant: (zoneId: string) => void;
+    onDeletePlantingPlan: (zoneId: string) => void;
 }
 
-const ZonePlantingPlan: React.FC<ZonePlantingPlanProps> = ({ zone, company, onOpenModal }) => {
+const ZonePlantingPlan: React.FC<ZonePlantingPlanProps> = ({ zone, company, onOpenModal, onToggleAutoReplant, onDeletePlantingPlan }) => {
     const { plantingPlan } = zone;
     const allStrains = getAvailableStrains(company);
-    
-    const handleToggleAutoReplant = () => {
-        if (zone.plantingPlan) {
-            company.setPlantingPlanForZone(zone.id, {
-                ...zone.plantingPlan,
-                autoReplant: !zone.plantingPlan.autoReplant,
-            });
-        }
-    };
 
     return (
         <div className="card">
@@ -40,7 +33,7 @@ const ZonePlantingPlan: React.FC<ZonePlantingPlanProps> = ({ zone, company, onOp
                                 type="checkbox"
                                 id="autoReplantToggle"
                                 checked={plantingPlan.autoReplant}
-                                onChange={handleToggleAutoReplant}
+                                onChange={() => onToggleAutoReplant(zone.id)}
                             />
                             Auto-Replant
                         </label>
@@ -54,7 +47,7 @@ const ZonePlantingPlan: React.FC<ZonePlantingPlanProps> = ({ zone, company, onOp
                             </button>
                              <button 
                                 className="btn-action-icon delete"
-                                onClick={() => company.setPlantingPlanForZone(zone.id, null)}
+                                onClick={() => onDeletePlantingPlan(zone.id)}
                                 title="Delete Plan"
                             >
                                 <span className="material-symbols-outlined">delete</span>
