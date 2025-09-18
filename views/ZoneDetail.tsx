@@ -15,7 +15,7 @@ interface ZoneDetailProps {
   onAddDeviceClick: (zoneId: string) => void;
   onToggleDeviceGroupStatus: (zoneId: string, blueprintId: string) => void;
   onOpenModal: (type: any, context?: any) => void;
-  onHarvest: (plantId?: string) => void;
+  onHarvest: (zoneId: string, plantId?: string) => void;
   onNavigateToZone: (direction: 'next' | 'prev') => void;
   onToggleAutoReplant: (zoneId: string) => void;
   onDeletePlantingPlan: (zoneId: string) => void;
@@ -92,7 +92,7 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
                     zone={zone}
                     company={company}
                     onOpenModal={onOpenModal}
-                    onHarvest={onHarvest}
+                    onHarvest={(plantId?: string) => onHarvest(zone.id, plantId)}
                 />
             </div>
        </div>

@@ -19,7 +19,7 @@ interface MainViewProps {
     onZoneClick: (id: string) => void;
     onOpenModal: (type: any, context?: any) => void;
     onToggleDeviceGroupStatus: (zoneId: string, blueprintId: string) => void;
-    onHarvest: (plantId?: string) => void;
+    onHarvest: (zoneId: string, plantId?: string) => void;
     onDuplicateRoom: (structureId: string, roomId: string) => void;
     onDuplicateZone: (roomId: string, zoneId: string) => void;
     onRenameRoom: (roomId: string, newName: string) => void;
