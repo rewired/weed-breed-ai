@@ -1,5 +1,4 @@
 import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting, ZoneStatus, PlantingPlan as IPlantingPlan } from '../types';
-// FIX: Add getAvailableStrains to imports for use in getSupplyConsumptionRates
 import { getBlueprints, getAvailableStrains } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
@@ -99,7 +98,6 @@ export class Zone {
     this.plantings = {};
     if (data.plantings) {
         for (const plantingId in data.plantings) {
-            // FIX: Check if the data is already an instance to prevent re-hydration issues.
             if (data.plantings[plantingId] instanceof Planting) {
                 this.plantings[plantingId] = data.plantings[plantingId];
             } else {
@@ -363,6 +361,7 @@ export class Zone {
         });
         
         this.plantings[newPlantingId] = newPlanting;
+        this.status = 'Growing';
     }
 
     return { germinatedCount: germinatedPlants.length };
@@ -448,7 +447,6 @@ export class Zone {
     };
   }
 
-  // FIX: Add getSupplyConsumptionRates to calculate water and nutrient usage.
   getSupplyConsumptionRates(company: Company): { waterPerDay: number; nutrientsPerDay: number } {
     let waterPerTick = 0;
     let nutrientsPerTick = 0;
@@ -464,20 +462,18 @@ export class Zone {
       const strain = allStrains[planting.strainId];
       if (!strain) continue;
 
-      // Calculate nutrient consumption from existing method
       nutrientsPerTick += planting.getTotalNutrientDemandPerTick(strain);
 
-      // Calculate water consumption
       if (strain.waterDemand?.dailyWaterUsagePerSquareMeter) {
         for (const plant of planting.plants) {
           let stage = plant.growthStage;
           if (stage === GrowthStage.Dead) continue;
-          if (stage === GrowthStage.Harvestable) stage = GrowthStage.Flowering; // Assume flowering consumption
+          if (stage === GrowthStage.Harvestable) stage = GrowthStage.Flowering;
 
           const waterUsagePerSqmPerDay = strain.waterDemand.dailyWaterUsagePerSquareMeter[stage];
           if (waterUsagePerSqmPerDay) {
             const waterUsagePerPlantPerDay = waterUsagePerSqmPerDay * areaPerPlant;
-            waterPerTick += waterUsagePerPlantPerDay / 24; // convert to per tick
+            waterPerTick += waterUsagePerPlantPerDay / 24;
           }
         }
       }
@@ -497,7 +493,6 @@ export class Zone {
     const zoneVolume = this.area_m2 * structure.height_m;
     if (zoneVolume <= 0) return;
 
-    // --- Calculate total airflow and resulting air changes per hour (tick) ---
     let totalAirflow = 0;
     for (const deviceId in this.devices) {
         const device = this.devices[deviceId];
@@ -510,7 +505,6 @@ export class Zone {
     const airChangesPerTick = zoneVolume > 0 ? totalAirflow / zoneVolume : 0;
     const airExchangeMultiplier = 1.0 + (airChangesPerTick / RECOMMENDED_ACH);
 
-    // 1. Device Effects
     for (const deviceId in this.devices) {
         const device = this.devices[deviceId];
         if (device.status !== 'on') continue;
@@ -535,7 +529,7 @@ export class Zone {
                 break;
             case 'Dehumidifier':
                 if (settings.latentRemovalKgPerTick && settings.power) {
-                    const airMass = zoneVolume * 1.225; // kg of air
+                    const airMass = zoneVolume * 1.225;
                     humidityDelta -= (settings.latentRemovalKgPerTick / airMass);
                     tempDelta += settings.power * DEHUMIDIFIER_HEAT_FACTOR;
                 }
@@ -556,31 +550,27 @@ export class Zone {
         }
     }
 
-    // 2. Plant Effects
     const totalPlantCount = this.getTotalPlantedCount();
     if (totalPlantCount > 0) {
         humidityDelta += totalPlantCount * PLANT_TRANSPIRATION_RH_PER_PLANT;
         co2Delta -= totalPlantCount * PLANT_CO2_CONSUMPTION_PPM_PER_PLANT;
     }
 
-    // 3. Normalization towards Ambient, modified by ventilation
     tempDelta += (AMBIENT_TEMP_C - this.currentEnvironment.temperature_C) * TEMP_NORMALIZATION_FACTOR * airExchangeMultiplier;
     humidityDelta += (AMBIENT_HUMIDITY_RH - this.currentEnvironment.humidity_rh) * HUMIDITY_NORMALIZATION_FACTOR * airExchangeMultiplier;
     co2Delta += (AMBIENT_CO2_PPM - this.currentEnvironment.co2_ppm) * CO2_NORMALIZATION_FACTOR * airExchangeMultiplier;
 
-    // 4. Apply Deltas
     this.currentEnvironment.temperature_C += tempDelta;
     this.currentEnvironment.humidity_rh += humidityDelta;
     this.currentEnvironment.co2_ppm += co2Delta;
 
-    // 5. Clamp values
     this.currentEnvironment.humidity_rh = Math.max(0, Math.min(1, this.currentEnvironment.humidity_rh));
     this.currentEnvironment.co2_ppm = Math.max(0, this.currentEnvironment.co2_ppm);
   }
 
   update(company: Company, structure: Structure, rng: () => number, ticks: number) {
       if (this.status !== 'Growing') {
-        return; // Don't update environment or plants if not in a growing state
+        return;
       }
 
       const hourOfDay = ticks % 24;
@@ -590,7 +580,6 @@ export class Zone {
       
       const allStrains = getAvailableStrains(company);
 
-      // Base disease chance per tick, can be modified by cleanliness, etc. later
       const baseDiseaseChance = BASE_DISEASE_CHANCE_PER_TICK; 
       
       for (const plantingId in this.plantings) {
@@ -609,8 +598,7 @@ export class Zone {
         }
       }
   }
-
-  // FIX: Add toJSON method for serialization.
+  
   toJSON() {
     return {
       id: this.id,

@@ -29,7 +29,6 @@ export class Plant {
     this.stageStartTick = 0;
   }
 
-  // FIX: Added diseaseChance parameter to match the arguments passed from Planting.update.
   update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
     this.ageInTicks++;
 
@@ -37,7 +36,6 @@ export class Plant {
     this.calculateStress(strain, environment, hasWater, hasNutrients, lightOnHours);
     
     // 2. Update Health
-    // FIX: Pass rng and diseaseChance to updateHealth to implement disease logic.
     this.updateHealth(strain, isLightOn, rng, diseaseChance);
 
     // 3. Update Biomass (Growth)
@@ -107,7 +105,6 @@ export class Plant {
       this.stress = Math.max(0, Math.min(1, currentStress));
   }
 
-  // FIX: Added rng and diseaseChance parameters to implement disease simulation logic.
   private updateHealth(strain: StrainBlueprint, isLightOn: boolean, rng: () => number, diseaseChance: number) {
       const STRESS_IMPACT_FACTOR = 0.05;
       const RECOVERY_FACTOR = 0.003;
@@ -116,7 +113,6 @@ export class Plant {
       const resilienceFactor = strain.generalResilience || 0;
       const modifiedRecoveryFactor = RECOVERY_FACTOR * (1 + resilienceFactor * 0.5);
 
-      // FIX: Apply disease chance, reduced by the plant's natural resilience.
       if (rng() < (diseaseChance * (1 - resilienceFactor * 0.5))) {
         this.health -= DISEASE_IMPACT;
       }

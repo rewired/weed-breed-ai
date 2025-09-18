@@ -1,8 +1,10 @@
+/* --- From styles/global.css --- */
 :root {
   --background-color: #1a1a1a;
   --surface-color: #2c2c2c;
   --primary-color: #4caf50;
   --primary-hover-color: #5cb85c;
+  --primary-light-color: #81c784;
   --text-color: #e0e0e0;
   --text-secondary-color: #a0a0a0;
   --border-color: #444;
@@ -10,6 +12,7 @@
   --danger-hover-color: #c82333;
   --warning-color: #ffc107;
   --warning-hover-color: #e0a800;
+  --warning-light-color: #ffd54f;
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
@@ -22,11 +25,22 @@ body {
   color: var(--text-color);
 }
 
-#root {
+.app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
+
+.content-area {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  transition: filter 0.2s ease-in-out;
+}
+.content-area.blurred {
+  filter: blur(3px);
+}
+
 
 main {
   padding: 2rem;
@@ -38,10 +52,24 @@ h1, h2, h3 {
   margin-top: 0;
 }
 
-.loading-screen {
+.loading-screen, .start-screen {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  font-size: 2rem;
+  flex-grow: 1;
+  gap: 1rem;
+}
+.start-screen h1 {
+  font-size: 3rem;
+  color: var(--primary-color);
+}
+.start-screen p {
+  font-size: 1.2rem;
+  color: var(--text-secondary-color);
+  margin-bottom: 2rem;
+}
+.start-screen-actions {
+  display: flex;
+  gap: 1rem;
 }

@@ -11,6 +11,11 @@ const PAUSING_MODALS: ModalType[] = [
   'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary', 'plantingPlan'
 ];
 
+const MODALS_WITH_FORMS: ModalType[] = [
+  'rent', 'addRoom', 'addZone', 'addDevice', 'addSupply', 'rename', 'breedStrain',
+  'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee', 'plantingPlan'
+];
+
 
 interface ModalState {
   rent: boolean;
@@ -156,7 +161,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
       }
     }
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary', 'plantingPlan'].includes(type)) {
+    if (MODALS_WITH_FORMS.includes(type)) {
         resetForm();
     }
   }, [resetForm, setIsSimRunning]);
