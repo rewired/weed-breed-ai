@@ -100,7 +100,7 @@ const App = () => {
 
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
-  const selectedZone = selectedRoom && selectedRoomId ? selectedRoom.zones[selectedRoomId] : null;
+  const selectedZone = selectedRoom && selectedZoneId ? selectedRoom.zones[selectedZoneId] : null;
   
   const { modalState, formState, openModal, closeModal, updateForm, resetForm } = useModals({
     selectedStructure,
