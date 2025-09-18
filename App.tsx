@@ -10,7 +10,7 @@ import { Modals } from './components/modals';
 import { getAvailableStrains, getBlueprints } from './game/blueprints';
 import StartScreen from './views/StartScreen';
 import { mulberry32 } from './game/utils';
-import { Planting, Plant, AlertLocation, Alert, Employee, JobRole } from './game/types';
+import { Planting, Plant, AlertLocation, Alert, Employee, JobRole, PlantingPlan } from './game/types';
 
 const App = () => {
   const { 
@@ -59,7 +59,7 @@ const App = () => {
     }
 
     const currentAlertKeys = new Set(
-        gameState.company.alerts.map(a => `${a.location.zoneId || a.context?.employeeId}-${a.type}`)
+        gameState.company.alerts.map(a => a.id)
     );
 
     const previousAlertKeys = previousAlertsRef.current;
@@ -67,8 +67,11 @@ const App = () => {
     let isNewAlertTriggered = false;
     for (const key of currentAlertKeys) {
         if (!previousAlertKeys.has(key)) {
-            isNewAlertTriggered = true;
-            break;
+            const alert = gameState.company.alerts.find(a => a.id === key);
+            if (alert && !alert.isAcknowledged) {
+              isNewAlertTriggered = true;
+              break;
+            }
         }
     }
 
@@ -313,6 +316,24 @@ const App = () => {
         closeModal('negotiateSalary');
     }, [gameState, modalState.itemToNegotiate, updateGameState, closeModal]);
 
+    const handleSetPlantingPlan = useCallback((isDelete: boolean = false) => {
+        if (!gameState || !modalState.activeZoneId) return;
+        
+        let plan: PlantingPlan | null = null;
+        if (!isDelete) {
+            if (!formState.plantStrainId || formState.plantQuantity <= 0) return;
+            plan = {
+                strainId: formState.plantStrainId,
+                quantity: formState.plantQuantity,
+                autoReplant: formState.plantingPlanAutoReplant,
+            };
+        }
+        
+        gameState.company.setPlantingPlanForZone(modalState.activeZoneId, plan);
+        updateGameState();
+        closeModal('plantingPlan');
+    }, [gameState, modalState.activeZoneId, formState, updateGameState, closeModal]);
+
   const handleRenameItem = useCallback(() => {
     if (!gameState || !modalState.itemToRename) return;
     const { type, id } = modalState.itemToRename;
@@ -539,6 +560,7 @@ const App = () => {
 
   const handleNavigateToAlert = useCallback((alert: Alert) => {
     if (!gameState) return;
+    handleAcknowledgeAlert(alert.id);
 
     if (alert.type === 'raise_request' && alert.context) {
         const { employeeId, newSalary } = alert.context;
@@ -548,7 +570,6 @@ const App = () => {
             openModal('negotiateSalary', { itemToNegotiate: { employee, newSalary, bonus } });
         }
     } else if (alert.type === 'employee_quit') {
-        handleAcknowledgeAlert(alert.id);
         setCurrentView('personnel');
     } else {
         setSelectedStructureId(alert.location.structureId);
@@ -686,6 +707,7 @@ const App = () => {
           handleAcceptRaise,
           handleOfferBonus,
           handleDeclineRaise,
+          handleSetPlantingPlan,
         }}
         dynamicData={{
             saveGames: getSaveGames()

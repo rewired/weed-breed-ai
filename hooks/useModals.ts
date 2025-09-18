@@ -3,12 +3,12 @@ import { RoomPurpose } from '../game/roomPurposes';
 import { getBlueprints, getAvailableStrains } from '../game/blueprints';
 import { Structure, Room, Company, GameState, Employee } from '../game/types';
 
-type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle' | 'hireEmployee' | 'negotiateSalary';
+type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle' | 'hireEmployee' | 'negotiateSalary' | 'plantingPlan';
 
 const PAUSING_MODALS: ModalType[] = [
   'rent', 'addRoom', 'addZone', 'addDevice', 'addSupply', 'reset', 'rename',
   'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'load',
-  'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary'
+  'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary', 'plantingPlan'
 ];
 
 
@@ -30,6 +30,7 @@ interface ModalState {
   editLightCycle: boolean;
   hireEmployee: boolean;
   negotiateSalary: boolean;
+  plantingPlan: boolean;
   itemToRename: { type: 'structure' | 'room' | 'zone', id: string, currentName: string } | null;
   itemToDelete: { type: 'structure' | 'room' | 'zone' | 'device' | 'plant' | 'planting' | 'employee', id: string, name: string, context?: any } | null;
   itemToEdit: { type: 'deviceGroup', blueprintId: string, name: string, context: { zoneId: string } } | null;
@@ -63,6 +64,7 @@ interface FormState {
   seed: string;
   saveGameName: string;
   hireStructureId: string | null;
+  plantingPlanAutoReplant: boolean;
 }
 
 const initialModalState: ModalState = {
@@ -83,6 +85,7 @@ const initialModalState: ModalState = {
   editLightCycle: false,
   hireEmployee: false,
   negotiateSalary: false,
+  plantingPlan: false,
   itemToRename: null,
   itemToDelete: null,
   itemToEdit: null,
@@ -115,6 +118,7 @@ const initialFormState: FormState = {
   seed: '',
   saveGameName: '',
   hireStructureId: null,
+  plantingPlanAutoReplant: true,
 };
 
 interface UseModalsProps {
@@ -152,7 +156,7 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
       }
     }
     setModalState(prev => ({ ...prev, [type]: false }));
-    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary'].includes(type)) {
+    if (['addRoom', 'addZone', 'addSupply', 'rename', 'delete', 'breedStrain', 'plantStrain', 'newGame', 'save', 'editDevice', 'editLightCycle', 'hireEmployee', 'negotiateSalary', 'plantingPlan'].includes(type)) {
         resetForm();
     }
   }, [resetForm, setIsSimRunning]);
@@ -195,6 +199,21 @@ export const useModals = ({ selectedStructure, selectedRoom, gameState, isSimRun
         const firstId = Object.keys(strains)[0];
         updateForm('plantStrainId', firstId || null);
         updateForm('plantQuantity', 1);
+    }
+     if (modalState.plantingPlan && gameState && selectedRoom && modalState.activeZoneId) {
+        const zone = selectedRoom.zones[modalState.activeZoneId];
+        const strains = getAvailableStrains(gameState.company);
+        const firstId = Object.keys(strains)[0];
+
+        if (zone.plantingPlan) {
+            updateForm('plantStrainId', zone.plantingPlan.strainId);
+            updateForm('plantQuantity', zone.plantingPlan.quantity);
+            updateForm('plantingPlanAutoReplant', zone.plantingPlan.autoReplant);
+        } else {
+            updateForm('plantStrainId', firstId || null);
+            updateForm('plantQuantity', zone.getPlantCapacity());
+            updateForm('plantingPlanAutoReplant', true);
+        }
     }
     if (modalState.hireEmployee && gameState) {
         const structureIds = Object.keys(gameState.company.structures);

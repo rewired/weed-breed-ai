@@ -1,4 +1,4 @@
-import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting } from '../types';
+import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting, ZoneStatus, PlantingPlan as IPlantingPlan } from '../types';
 import { getBlueprints } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
@@ -40,6 +40,8 @@ export class Zone {
   waterLevel_L: number;
   nutrientLevel_g: number;
   cyclesUsed: number;
+  status: ZoneStatus;
+  plantingPlan: IPlantingPlan | null;
   currentEnvironment: {
     temperature_C: number;
     humidity_rh: number; // 0-1
@@ -60,6 +62,8 @@ export class Zone {
     this.waterLevel_L = data.waterLevel_L || 0;
     this.nutrientLevel_g = data.nutrientLevel_g || 0;
     this.cyclesUsed = data.cyclesUsed || 0;
+    this.status = data.status || 'Growing';
+    this.plantingPlan = data.plantingPlan || null;
     
     // --- MIGRATION & INITIALIZATION LOGIC ---
     const blueprints = getBlueprints();
@@ -116,6 +120,10 @@ export class Zone {
         humidity_rh: typeof loadedEnv.humidity_rh === 'number' && !isNaN(loadedEnv.humidity_rh) ? loadedEnv.humidity_rh : defaults.humidity_rh,
         co2_ppm: typeof loadedEnv.co2_ppm === 'number' && !isNaN(loadedEnv.co2_ppm) ? loadedEnv.co2_ppm : defaults.co2_ppm,
     };
+  }
+  
+  setPlantingPlan(plan: IPlantingPlan | null) {
+    this.plantingPlan = plan;
   }
   
   toggleDeviceGroupStatus(blueprintId: string): void {
@@ -530,6 +538,10 @@ export class Zone {
   }
 
   update(company: Company, structure: Structure, rng: () => number, ticks: number) {
+      if (this.status !== 'Growing') {
+        return; // Don't update environment or plants if not in a growing state
+      }
+
       const hourOfDay = ticks % 24;
       const isLightOn = hourOfDay < this.lightCycle.on;
 
@@ -619,6 +631,8 @@ export class Zone {
       waterLevel_L: this.waterLevel_L,
       nutrientLevel_g: this.nutrientLevel_g,
       cyclesUsed: this.cyclesUsed,
+      status: this.status,
+      plantingPlan: this.plantingPlan,
     };
   }
 

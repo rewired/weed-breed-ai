@@ -62,6 +62,14 @@ const AlertIcon = ({ type }: { type: string }) => {
             iconName = 'person_remove';
             className = 'danger';
             break;
+        case 'zone_harvested':
+            iconName = 'construction';
+            className = 'warning';
+            break;
+        case 'zone_ready':
+            iconName = 'restart_alt';
+            className = 'success';
+            break;
     }
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
 }

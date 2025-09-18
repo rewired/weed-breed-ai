@@ -3,6 +3,7 @@ import { Company, Zone, Structure, Room } from '../game/types';
 import ZoneInfoPanel from '../components/ZoneInfoPanel';
 import ZoneDeviceList from '../components/ZoneDeviceList';
 import ZonePlantingList from '../components/ZonePlantingList';
+import ZonePlantingPlan from '../components/ZonePlantingPlan';
 
 interface ZoneDetailProps {
   zone: Zone;
@@ -72,6 +73,11 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
             />
         
             <div className="zone-detail-lists-panel">
+                <ZonePlantingPlan
+                    zone={zone}
+                    company={company}
+                    onOpenModal={onOpenModal}
+                />
                 <ZoneDeviceList 
                     zone={zone}
                     onAddDeviceClick={onAddDeviceClick}

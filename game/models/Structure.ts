@@ -263,64 +263,72 @@ export class Structure {
           for(const zone of Object.values(room.zones)) {
               const location = { roomId: room.id, zoneId: zone.id, itemId: '' };
 
-              // Device tasks
-              for(const device of Object.values(zone.devices)) {
-                  const deviceLocation = { ...location, itemId: device.id };
-                  if (device.status === 'broken') {
-                      createTask('repair_device', 10, 'Technician', 'Maintenance', 0, deviceLocation, `Repair ${device.name} in ${zone.name}`);
-                  } else if (device.durability < 0.8) {
-                      createTask('maintain_device', 3, 'Technician', 'Maintenance', 4, deviceLocation, `Maintain ${device.name} in ${zone.name}`);
-                  }
-              }
-
-              // Harvest task
-              if (zone.getHarvestablePlants().length > 0) {
-                  createTask('harvest_plants', 9, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Harvest plants in ${zone.name}`);
-              }
-              
-              // Supply tasks
-              const consumption = zone.getSupplyConsumptionRates(company);
-              const waterDaysLeft = consumption.waterPerDay > 0 ? (zone.waterLevel_L / consumption.waterPerDay) : Infinity;
-              const nutrientDaysLeft = consumption.nutrientsPerDay > 0 ? (zone.nutrientLevel_g / consumption.nutrientsPerDay) : Infinity;
-              if (waterDaysLeft < 1.0) {
-                  createTask('refill_supplies_water', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-water'}, `Refill water in ${zone.name}`);
-              }
-              if (nutrientDaysLeft < 1.0) {
-                  createTask('refill_supplies_nutrients', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-nutrients'}, `Refill nutrients in ${zone.name}`);
-              }
-              
-              // Overhaul task
-              const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
-              if (method && (zone.cyclesUsed || 0) >= method.maxCycles && zone.getTotalPlantedCount() === 0) {
-                   createTask('overhaul_zone', 7, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Overhaul substrate in ${zone.name}`);
-              }
-              
-              // Proactive Gardener tasks
-              for (const planting of Object.values(zone.plantings)) {
-                  const strain = allStrains[planting.strainId];
-                  if (!strain) continue;
-
-                  // Check for light cycle adjustment
-                  const idealVegCycle = strain.environmentalPreferences.lightCycle.vegetation;
-                  if (zone.lightCycle.on === idealVegCycle[0]) {
-                      const vegDays = strain.photoperiod.vegetationDays;
-                      const needsFlip = planting.plants.some(plant => 
-                          plant.growthStage === GrowthStage.Vegetative &&
-                          ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2) // Within 2 days of flipping
-                      );
-
-                      if (needsFlip) {
-                          createTask(
-                              'adjust_light_cycle',
-                              8, // High priority
-                              'Gardener',
-                              'Gardening',
-                              3, // Min skill level
-                              {...location, itemId: zone.id}, // Task is for the whole zone
-                              `Adjust light cycle for ${strain.name} in ${zone.name}`
-                          );
+              switch(zone.status) {
+                  case 'Growing':
+                      // Device tasks
+                      for(const device of Object.values(zone.devices)) {
+                          const deviceLocation = { ...location, itemId: device.id };
+                          if (device.status === 'broken') {
+                              createTask('repair_device', 10, 'Technician', 'Maintenance', 0, deviceLocation, `Repair ${device.name} in ${zone.name}`);
+                          } else if (device.durability < 0.8) {
+                              createTask('maintain_device', 3, 'Technician', 'Maintenance', 4, deviceLocation, `Maintain ${device.name} in ${zone.name}`);
+                          }
                       }
-                  }
+
+                      // Harvest task
+                      if (zone.getHarvestablePlants().length > 0) {
+                          createTask('harvest_plants', 9, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Harvest plants in ${zone.name}`);
+                      }
+                      
+                      // Supply tasks
+                      const consumption = zone.getSupplyConsumptionRates(company);
+                      const waterDaysLeft = consumption.waterPerDay > 0 ? (zone.waterLevel_L / consumption.waterPerDay) : Infinity;
+                      const nutrientDaysLeft = consumption.nutrientsPerDay > 0 ? (zone.nutrientLevel_g / consumption.nutrientsPerDay) : Infinity;
+                      if (waterDaysLeft < 1.0) {
+                          createTask('refill_supplies_water', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-water'}, `Refill water in ${zone.name}`);
+                      }
+                      if (nutrientDaysLeft < 1.0) {
+                          createTask('refill_supplies_nutrients', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-nutrients'}, `Refill nutrients in ${zone.name}`);
+                      }
+                      
+                      // Proactive Gardener tasks
+                      for (const planting of Object.values(zone.plantings)) {
+                          const strain = allStrains[planting.strainId];
+                          if (!strain) continue;
+
+                          const idealVegCycle = strain.environmentalPreferences.lightCycle.vegetation;
+                          if (zone.lightCycle.on === idealVegCycle[0]) {
+                              const vegDays = strain.photoperiod.vegetationDays;
+                              const needsFlip = planting.plants.some(plant => 
+                                  plant.growthStage === GrowthStage.Vegetative &&
+                                  ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2) // Within 2 days of flipping
+                              );
+
+                              if (needsFlip) {
+                                  createTask(
+                                      'adjust_light_cycle', 8, 'Gardener', 'Gardening', 3, 
+                                      {...location, itemId: zone.id}, `Adjust light cycle for ${strain.name} in ${zone.name}`
+                                  );
+                              }
+                          }
+                      }
+                      break;
+
+                  case 'Harvested':
+                      const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
+                      if (method && (zone.cyclesUsed || 0) >= method.maxCycles) {
+                           createTask('overhaul_zone_substrate', 7, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Overhaul substrate in ${zone.name}`);
+                      } else {
+                           createTask('clean_zone', 6, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Clean ${zone.name}`);
+                      }
+                      break;
+
+                  case 'Ready':
+                       createTask('reset_light_cycle', 5, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Reset light cycle in ${zone.name}`);
+                       if (zone.plantingPlan?.autoReplant) {
+                           createTask('execute_planting_plan', 4, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Execute planting plan in ${zone.name}`);
+                       }
+                      break;
               }
           }
       }

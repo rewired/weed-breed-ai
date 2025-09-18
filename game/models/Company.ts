@@ -1,4 +1,4 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation } from '../types';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation, PlantingPlan } from '../types';
 import { getAvailableStrains, getBlueprints } from '../blueprints';
 import { mulberry32 } from '../utils';
 import { GrowthStage } from './Plant';
@@ -330,8 +330,8 @@ export class Company {
 
     // Combine existing non-zone alerts
     this.alerts.forEach(alert => {
-        if (alert.type === 'raise_request' || alert.type === 'employee_quit') {
-            const key = `${alert.context?.employeeId}-${alert.type}`;
+        if (alert.type === 'raise_request' || alert.type === 'employee_quit' || alert.type === 'zone_harvested' || alert.type === 'zone_ready') {
+            const key = `${alert.location.zoneId || alert.context?.employeeId}-${alert.type}`;
             if(!newAlertKeys.has(key)) {
                 newAlerts.push(alert);
                 newAlertKeys.add(key);
@@ -533,7 +533,17 @@ export class Company {
       this.jobMarketCandidates = newCandidates;
   }
 
-  resolveTask(employee: Employee, task: Task) {
+    setPlantingPlanForZone(zoneId: string, plan: PlantingPlan | null) {
+        for (const structure of Object.values(this.structures)) {
+            const zone = structure.rooms[Object.keys(structure.rooms).find(roomId => structure.rooms[roomId].zones[zoneId]) || '']?.zones[zoneId];
+            if (zone) {
+                zone.setPlantingPlan(plan);
+                break;
+            }
+        }
+    }
+
+  resolveTask(employee: Employee, task: Task, ticks: number, rng: () => number) {
     const structure = this.structures[task.location.structureId];
     if (!structure) return;
     const room = structure.rooms[task.location.roomId];
@@ -559,6 +569,8 @@ export class Company {
                 zone.cleanupEmptyPlantings();
                 if (zone.getTotalPlantedCount() === 0) {
                     zone.cyclesUsed = (zone.cyclesUsed || 0) + 1;
+                    zone.status = 'Harvested';
+                    this.alerts.push({ id: `alert-${zone.id}-harvested-${ticks}`, type: 'zone_harvested', message: `Zone '${zone.name}' is harvested and needs cleaning.`, location: task.location, tickGenerated: ticks });
                 }
             }
             break;
@@ -568,13 +580,39 @@ export class Company {
         case 'refill_supplies_nutrients':
             this.purchaseSuppliesForZone(zone, 'nutrients', 1000); // Refill 1000g
             break;
-        case 'overhaul_zone':
+        case 'clean_zone':
+            zone.status = 'Ready';
+            this.alerts.push({ id: `alert-${zone.id}-ready-${ticks}`, type: 'zone_ready', message: `Zone '${zone.name}' is clean and ready for planting.`, location: task.location, tickGenerated: ticks });
+            break;
+        case 'overhaul_zone_substrate':
             const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
             if (method) {
                 const cost = (method.setupCost || 0) * zone.area_m2;
                 if (this.spendCapital(cost)) {
                     this.logExpense('supplies', cost);
                     zone.cyclesUsed = 0;
+                    zone.status = 'Ready';
+                    this.alerts.push({ id: `alert-${zone.id}-ready-${ticks}`, type: 'zone_ready', message: `Zone '${zone.name}' is overhauled and ready.`, location: task.location, tickGenerated: ticks });
+                }
+            }
+            break;
+        case 'reset_light_cycle':
+            // Reset to a default veg cycle. If there's a planting plan, it might be more specific.
+            const strainId = zone.plantingPlan?.strainId;
+            const strain = strainId ? getAvailableStrains(this)[strainId] : null;
+            if (strain) {
+                const [on, off] = strain.environmentalPreferences.lightCycle.vegetation;
+                zone.lightCycle = { on, off };
+            } else {
+                zone.lightCycle = { on: 18, off: 6 }; // Default
+            }
+            break;
+        case 'execute_planting_plan':
+            if (zone.plantingPlan) {
+                const { strainId, quantity } = zone.plantingPlan;
+                if (this.purchaseSeeds(strainId, quantity)) {
+                    zone.plantStrain(strainId, quantity, this, rng);
+                    zone.status = 'Growing';
                 }
             }
             break;
@@ -609,7 +647,7 @@ export class Company {
     }
   }
 
-  updateEmployeesAI() {
+  updateEmployeesAI(ticks: number, rng: () => number) {
       const tasksInProgress = new Set<string>();
       Object.values(this.employees).forEach(emp => {
           if (emp.status === 'Working' && emp.currentTask) {
@@ -626,7 +664,7 @@ export class Company {
               case 'Working':
                   const task = employee.currentTask;
                   if (task) {
-                      this.resolveTask(employee, task);
+                      this.resolveTask(employee, task, ticks, rng);
                       employee.energy -= ENERGY_COST_PER_TASK;
                   }
                   
@@ -768,7 +806,7 @@ export class Company {
     for (const structure of Object.values(this.structures)) {
         structure.generateTasks(this);
     }
-    this.updateEmployeesAI();
+    this.updateEmployeesAI(ticks, rng);
 
     for (const structureId in this.structures) {
         this.structures[structureId].update(this, rng, ticks);

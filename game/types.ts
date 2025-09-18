@@ -161,7 +161,7 @@ export interface FinancialLedger {
   expenses: Record<ExpenseCategory, number>;
 }
 
-export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready' | 'plant_stress' | 'raise_request' | 'employee_quit';
+export type AlertType = 'low_supply' | 'sick_plant' | 'harvest_ready' | 'plant_stress' | 'raise_request' | 'employee_quit' | 'zone_harvested' | 'zone_ready';
 
 export interface AlertLocation {
     structureId: string;
@@ -224,7 +224,7 @@ export interface Employee {
   timeOnMarket?: number;
 }
 
-export type TaskType = 'repair_device' | 'maintain_device' | 'harvest_plants' | 'refill_supplies_water' | 'refill_supplies_nutrients' | 'overhaul_zone' | 'adjust_light_cycle';
+export type TaskType = 'repair_device' | 'maintain_device' | 'harvest_plants' | 'refill_supplies_water' | 'refill_supplies_nutrients' | 'overhaul_zone' | 'adjust_light_cycle' | 'clean_zone' | 'overhaul_zone_substrate' | 'reset_light_cycle' | 'execute_planting_plan';
 
 export interface TaskLocation {
   structureId: string;
@@ -261,4 +261,12 @@ export interface GroupedDeviceInfo {
   name: string;
   count: number;
   status: 'on' | 'off' | 'mixed' | 'broken';
+}
+
+export type ZoneStatus = 'Growing' | 'Harvested' | 'Ready';
+
+export interface PlantingPlan {
+  strainId: string;
+  quantity: number;
+  autoReplant: boolean;
 }
