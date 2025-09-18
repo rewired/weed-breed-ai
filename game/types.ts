@@ -8,7 +8,6 @@ import { Zone } from './models/Zone';
 import { Planting } from './models/Planting';
 import { Plant } from './models/Plant';
 
-// FIX: Export RoomPurpose.
 export { Company, Structure, Room, Zone, Planting, Plant, RoomPurpose };
 
 export interface StructureBlueprint {

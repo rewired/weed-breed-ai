@@ -249,7 +249,6 @@ export class Structure {
       const allStrains = getAvailableStrains(company);
       const definitions = getBlueprints().taskDefinitions;
 
-      // FIX: Refactored addTask to accept room/zone context directly, avoiding buggy lookups.
       const addTask = (type: TaskType, room: Room, zone: Zone, itemId: string, description: string, scaleFactor: number) => {
           const def = definitions[type];
           if (!def || scaleFactor <= 0) return;
@@ -327,12 +326,10 @@ export class Structure {
                           if (device.status === 'broken') {
                               const def = definitions['repair_device'];
                               const desc = def.description.replace('{deviceName}', device.name).replace('{zoneName}', zone.name);
-                              // FIX: Pass room and zone to the refactored addTask function.
                               addTask('repair_device', room, zone, device.id, desc, 1);
                           } else if (device.durability < 0.8) {
                               const def = definitions['maintain_device'];
                               const desc = def.description.replace('{deviceName}', device.name).replace('{zoneName}', zone.name);
-                              // FIX: Pass room and zone to the refactored addTask function.
                               addTask('maintain_device', room, zone, device.id, desc, 1);
                           }
                       }

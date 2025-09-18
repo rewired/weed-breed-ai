@@ -3,6 +3,7 @@
   --background-color: #1a1a1a;
   --surface-color: #2c2c2c;
   --primary-color: #4caf50;
+  --primary-dark-color: #388e3c;
   --primary-hover-color: #5cb85c;
   --primary-light-color: #81c784;
   --text-color: #e0e0e0;
@@ -1157,6 +1158,9 @@ h1, h2, h3 {
     display: flex;
     flex-direction: column;
 }
+.employee-card__header-actions {
+    flex-shrink: 0;
+}
 .employee-card__name {
   font-size: 1.5rem;
   font-weight: bold;
@@ -1282,4 +1286,81 @@ h1, h2, h3 {
   padding-top: 1rem;
   display: flex;
   justify-content: center;
+}
+
+/* Company Policies Toggle */
+.policy-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.policy-label {
+    font-size: 1rem;
+    color: var(--text-secondary-color);
+}
+.policy-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.policy-option-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary-color);
+    transition: all 0.2s ease;
+}
+.policy-option-label.active {
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-color);
+  transition: .2s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: var(--text-color);
+  transition: .2s;
+}
+input:checked + .slider {
+  background-color: var(--primary-color);
+}
+.toggle-switch.policy-toggle input:checked + .slider {
+  background-color: var(--primary-dark-color);
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color);
+}
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+.slider.round {
+  border-radius: 28px;
+}
+.slider.round:before {
+  border-radius: 50%;
 }

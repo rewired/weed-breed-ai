@@ -18,7 +18,6 @@ export class Room {
     this.zones = {};
     if (data.zones) {
       for (const zoneId in data.zones) {
-        // FIX: Check if the data is already an instance to prevent re-hydration issues.
         if (data.zones[zoneId] instanceof Zone) {
             this.zones[zoneId] = data.zones[zoneId];
         } else {

@@ -70,7 +70,7 @@ const EmployeeCard = ({ employee, onHire, onAssignRole, onFire }: { employee: Em
                     <div className="employee-card__salary">${employee.salaryPerDay.toFixed(2)} / day</div>
                 </div>
                 {onFire && (
-                    <div className="card__actions">
+                    <div className="employee-card__header-actions">
                         <button 
                             className="btn-action-icon delete" 
                             onClick={() => onFire(employee)} 
@@ -198,28 +198,24 @@ const PersonnelView: React.FC<PersonnelViewProps> = ({ company, onOpenModal, onA
           }) : <p className="placeholder-text">You have no hired staff.</p>}
           
           <h3 style={{ marginTop: '2rem' }}>Company Policies</h3>
-            <div className="card" style={{ maxWidth: '400px', padding: '1.5rem'}}>
-                <div className="form-group">
-                    <label>Overtime Compensation</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-                        <label>
+            <div className="card" style={{ maxWidth: '500px', padding: '1.5rem'}}>
+                <div className="policy-item">
+                    <span className="policy-label">Overtime Compensation</span>
+                    <div className="policy-control">
+                        <span className={`policy-option-label ${company.overtimePolicy === 'payout' ? 'active' : ''}`}>
+                            Payout (1.5x)
+                        </span>
+                        <label className="toggle-switch policy-toggle">
                             <input
-                                type="radio"
-                                name="overtimePolicy"
-                                value="payout"
-                                checked={company.overtimePolicy === 'payout'}
-                                onChange={() => onSetOvertimePolicy('payout')}
-                            /> Payout (1.5x Hourly Rate)
-                        </label>
-                        <label>
-                            <input
-                                type="radio"
-                                name="overtimePolicy"
-                                value="timeOff"
+                                type="checkbox"
                                 checked={company.overtimePolicy === 'timeOff'}
-                                onChange={() => onSetOvertimePolicy('timeOff')}
-                            /> Time Off (Accrued Leave)
+                                onChange={(e) => onSetOvertimePolicy(e.target.checked ? 'timeOff' : 'payout')}
+                            />
+                            <span className="slider round"></span>
                         </label>
+                        <span className={`policy-option-label ${company.overtimePolicy === 'timeOff' ? 'active' : ''}`}>
+                            Time Off (Accrued)
+                        </span>
                     </div>
                 </div>
             </div>
