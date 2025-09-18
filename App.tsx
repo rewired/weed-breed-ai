@@ -40,6 +40,7 @@ const App = () => {
     offerBonus,
     declineRaise,
     setPlantingPlan,
+    setOvertimePolicy,
     renameItem,
     editDeviceGroupSettings,
     editLightCycle,
@@ -226,6 +227,7 @@ const App = () => {
                   onRenameZone={(id, name) => renameItem('zone', id, name)}
                   onNavigateToZone={handleNavigateToZone}
                   onAssignEmployeeRole={assignEmployeeRole}
+                  onSetOvertimePolicy={setOvertimePolicy}
                   onToggleAutoReplant={toggleAutoReplant}
                   onDeletePlantingPlan={deletePlantingPlan}
               />

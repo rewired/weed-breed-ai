@@ -1,3 +1,6 @@
+
+
+
 import { Room } from './Room';
 import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
@@ -244,90 +247,133 @@ export class Structure {
   generateTasks(company: Company) {
       const newTasks: Task[] = [];
       const allStrains = getAvailableStrains(company);
-      
-      const createTask = (type: TaskType, priority: number, requiredRole: JobRole, requiredSkill: SkillName, minSkillLevel: number, location: { roomId: string; zoneId: string; itemId: string; }, description: string) => {
-          const key = `${type}-${location.itemId}`;
+      const definitions = getBlueprints().taskDefinitions;
+
+      // FIX: Refactored addTask to accept room/zone context directly, avoiding buggy lookups.
+      const addTask = (type: TaskType, room: Room, zone: Zone, itemId: string, description: string, scaleFactor: number) => {
+          const def = definitions[type];
+          if (!def || scaleFactor <= 0) return;
+
+          const totalMinutes = def.costModel.laborMinutes * scaleFactor;
+          
           newTasks.push({
-              id: `task-${this.id}-${key}`,
+              id: `task-${this.id}-${type}-${itemId}`,
               type,
-              priority,
-              requiredRole,
-              requiredSkill,
-              minSkillLevel,
-              location: { structureId: this.id, ...location },
-              description
+              location: { structureId: this.id, roomId: room.id, zoneId: zone.id, itemId: itemId },
+              description: description,
+              priority: def.priority,
+              requiredRole: def.requiredRole,
+              requiredSkill: def.requiredSkill,
+              minSkillLevel: def.minSkillLevel,
+              durationTicks: totalMinutes / 60,
+              progressTicks: 0,
           });
       };
+      
+      for (const room of Object.values(this.rooms)) {
+          for (const zone of Object.values(room.zones)) {
+              
+              // Common task generation logic
+              const generateTask = (type: TaskType, itemId: string) => {
+                  const def = definitions[type];
+                  if (!def) return;
 
-      for(const room of Object.values(this.rooms)) {
-          for(const zone of Object.values(room.zones)) {
-              const location = { roomId: room.id, zoneId: zone.id, itemId: '' };
+                  let scaleFactor = 1;
+                  let description = def.description.replace('{zoneName}', zone.name);
 
-              switch(zone.status) {
+                  switch (def.costModel.basis) {
+                      case 'perSquareMeter':
+                          scaleFactor = zone.area_m2;
+                          description = description.replace('{area}', zone.area_m2.toFixed(0));
+                          break;
+                      case 'perPlant':
+                          if (type === 'harvest_plants') {
+                              const plantCount = zone.getHarvestablePlants().length;
+                              if (plantCount === 0) return;
+                              scaleFactor = plantCount;
+                              description = description.replace('{plantCount}', plantCount.toString());
+                          } else if (type === 'execute_planting_plan' && zone.plantingPlan) {
+                              const plantCount = zone.plantingPlan.quantity;
+                              if (plantCount === 0) return;
+                              scaleFactor = plantCount;
+                              description = description.replace('{plantCount}', plantCount.toString());
+                          } else {
+                              return; // Can't calculate scale factor
+                          }
+                          break;
+                  }
+                  
+                  const totalMinutes = def.costModel.laborMinutes * scaleFactor;
+                  if (totalMinutes > 0) {
+                      newTasks.push({
+                          id: `task-${this.id}-${type}-${itemId}`,
+                          type,
+                          location: { structureId: this.id, roomId: room.id, zoneId: zone.id, itemId: itemId },
+                          description,
+                          priority: def.priority,
+                          requiredRole: def.requiredRole,
+                          requiredSkill: def.requiredSkill,
+                          minSkillLevel: def.minSkillLevel,
+                          durationTicks: totalMinutes / 60,
+                          progressTicks: 0,
+                      });
+                  }
+              };
+
+
+              switch (zone.status) {
                   case 'Growing':
-                      // Device tasks
-                      for(const device of Object.values(zone.devices)) {
-                          const deviceLocation = { ...location, itemId: device.id };
+                      for (const device of Object.values(zone.devices)) {
                           if (device.status === 'broken') {
-                              createTask('repair_device', 10, 'Technician', 'Maintenance', 0, deviceLocation, `Repair ${device.name} in ${zone.name}`);
+                              const def = definitions['repair_device'];
+                              const desc = def.description.replace('{deviceName}', device.name).replace('{zoneName}', zone.name);
+                              // FIX: Pass room and zone to the refactored addTask function.
+                              addTask('repair_device', room, zone, device.id, desc, 1);
                           } else if (device.durability < 0.8) {
-                              createTask('maintain_device', 3, 'Technician', 'Maintenance', 4, deviceLocation, `Maintain ${device.name} in ${zone.name}`);
+                              const def = definitions['maintain_device'];
+                              const desc = def.description.replace('{deviceName}', device.name).replace('{zoneName}', zone.name);
+                              // FIX: Pass room and zone to the refactored addTask function.
+                              addTask('maintain_device', room, zone, device.id, desc, 1);
                           }
                       }
 
-                      // Harvest task
-                      if (zone.getHarvestablePlants().length > 0) {
-                          createTask('harvest_plants', 9, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Harvest plants in ${zone.name}`);
-                      }
+                      generateTask('harvest_plants', zone.id);
                       
-                      // Supply tasks
                       const consumption = zone.getSupplyConsumptionRates(company);
-                      const waterDaysLeft = consumption.waterPerDay > 0 ? (zone.waterLevel_L / consumption.waterPerDay) : Infinity;
-                      const nutrientDaysLeft = consumption.nutrientsPerDay > 0 ? (zone.nutrientLevel_g / consumption.nutrientsPerDay) : Infinity;
-                      if (waterDaysLeft < 1.0) {
-                          createTask('refill_supplies_water', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-water'}, `Refill water in ${zone.name}`);
+                      if (consumption.waterPerDay > 0 && zone.waterLevel_L / consumption.waterPerDay < 1.0) {
+                          generateTask('refill_supplies_water', zone.id + '-water');
                       }
-                      if (nutrientDaysLeft < 1.0) {
-                          createTask('refill_supplies_nutrients', 8, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id + '-nutrients'}, `Refill nutrients in ${zone.name}`);
+                      if (consumption.nutrientsPerDay > 0 && zone.nutrientLevel_g / consumption.nutrientsPerDay < 1.0) {
+                          generateTask('refill_supplies_nutrients', zone.id + '-nutrients');
                       }
                       
-                      // Proactive Gardener tasks
-                      for (const planting of Object.values(zone.plantings)) {
-                          const strain = allStrains[planting.strainId];
-                          if (!strain) continue;
-
+                      const needsFlip = Object.values(zone.plantings).some(p => {
+                          const strain = allStrains[p.strainId];
+                          if (!strain) return false;
                           const idealVegCycle = strain.environmentalPreferences.lightCycle.vegetation;
-                          if (zone.lightCycle.on === idealVegCycle[0]) {
-                              const vegDays = strain.photoperiod.vegetationDays;
-                              const needsFlip = planting.plants.some(plant => 
-                                  plant.growthStage === GrowthStage.Vegetative &&
-                                  ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2) // Within 2 days of flipping
-                              );
-
-                              if (needsFlip) {
-                                  createTask(
-                                      'adjust_light_cycle', 8, 'Gardener', 'Gardening', 3, 
-                                      {...location, itemId: zone.id}, `Adjust light cycle for ${strain.name} in ${zone.name}`
-                                  );
-                              }
-                          }
+                          if (zone.lightCycle.on !== idealVegCycle[0]) return false; // Already flipped
+                          const vegDays = strain.photoperiod.vegetationDays;
+                          return p.plants.some(plant => plant.growthStage === GrowthStage.Vegetative && ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2));
+                      });
+                      if (needsFlip) {
+                          generateTask('adjust_light_cycle', zone.id);
                       }
                       break;
 
                   case 'Harvested':
                       const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
                       if (method && (zone.cyclesUsed || 0) >= method.maxCycles) {
-                           createTask('overhaul_zone_substrate', 7, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Overhaul substrate in ${zone.name}`);
+                          generateTask('overhaul_zone_substrate', zone.id);
                       } else {
-                           createTask('clean_zone', 6, 'Janitor', 'Cleanliness', 0, {...location, itemId: zone.id}, `Clean ${zone.name}`);
+                          generateTask('clean_zone', zone.id);
                       }
                       break;
 
                   case 'Ready':
-                       createTask('reset_light_cycle', 5, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Reset light cycle in ${zone.name}`);
-                       if (zone.plantingPlan?.autoReplant) {
-                           createTask('execute_planting_plan', 4, 'Gardener', 'Gardening', 0, {...location, itemId: zone.id}, `Execute planting plan in ${zone.name}`);
-                       }
+                      generateTask('reset_light_cycle', zone.id);
+                      if (zone.plantingPlan?.autoReplant) {
+                          generateTask('execute_planting_plan', zone.id);
+                      }
                       break;
               }
           }

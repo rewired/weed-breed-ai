@@ -1,5 +1,5 @@
 import React from 'react';
-import { Company, Structure, Room, Zone, JobRole } from '../game/types';
+import { Company, Structure, Room, Zone, JobRole, OvertimePolicy } from '../game/types';
 import Structures from '../components/Structures';
 import StructureDetail from '../components/StructureDetail';
 import RoomDetail from '../components/RoomDetail';
@@ -26,6 +26,7 @@ interface MainViewProps {
     onRenameZone: (zoneId: string, newName: string) => void;
     onNavigateToZone: (direction: 'next' | 'prev') => void;
     onAssignEmployeeRole: (employeeId: string, role: JobRole) => void;
+    onSetOvertimePolicy: (policy: OvertimePolicy) => void;
     onToggleAutoReplant: (zoneId: string) => void;
     onDeletePlantingPlan: (zoneId: string) => void;
     ticks: number;
@@ -50,6 +51,7 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onRenameZone,
         onNavigateToZone,
         onAssignEmployeeRole,
+        onSetOvertimePolicy,
         onToggleAutoReplant,
         onDeletePlantingPlan,
         ticks,
@@ -60,7 +62,12 @@ const MainView: React.FC<MainViewProps> = (props) => {
     }
     
     if (currentView === 'personnel') {
-        return <PersonnelView company={company} onOpenModal={onOpenModal} onAssignEmployeeRole={onAssignEmployeeRole} />;
+        return <PersonnelView 
+            company={company} 
+            onOpenModal={onOpenModal} 
+            onAssignEmployeeRole={onAssignEmployeeRole} 
+            onSetOvertimePolicy={onSetOvertimePolicy}
+        />;
     }
 
     if (selectedStructure && selectedRoom && selectedZone) {

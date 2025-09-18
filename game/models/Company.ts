@@ -1,4 +1,5 @@
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation, PlantingPlan } from '../types';
+
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation, PlantingPlan, OvertimePolicy } from '../types';
 import { getAvailableStrains, getBlueprints } from '../blueprints';
 import { mulberry32 } from '../utils';
 import { GrowthStage } from './Plant';
@@ -14,9 +15,11 @@ const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
 };
 const XP_PER_LEVEL = 100;
 const TASK_XP_REWARD = 10;
-const ENERGY_COST_PER_TASK = 25;
-const ENERGY_REGEN_PER_TICK = 0.5;
+const ENERGY_COST_PER_TICK_WORKING = 10.0;
+const ENERGY_REGEN_PER_TICK_RESTING = 10; // Resting in breakroom
+const IDLE_ENERGY_REGEN_PER_TICK = 2.5;
 const ENERGY_REST_THRESHOLD = 20;
+const OFF_DUTY_DURATION_TICKS = 16;
 
 
 export class Company {
@@ -31,6 +34,7 @@ export class Company {
   cumulativeYield_g: number;
   alerts: Alert[];
   alertCooldowns: Record<string, number>; // Key: `${zoneId}-${type}`, Value: Expiry tick
+  overtimePolicy: OvertimePolicy;
 
   constructor(data: any) {
     this.id = data.id;
@@ -53,6 +57,7 @@ export class Company {
     this.cumulativeYield_g = data.cumulativeYield_g || 0;
     this.alerts = data.alerts || [];
     this.alertCooldowns = data.alertCooldowns || {};
+    this.overtimePolicy = data.overtimePolicy || 'payout';
 
     // --- MIGRATION: Handle old save format where revenue was a single number ---
     if (data.ledger && typeof data.ledger.revenue === 'number') {
@@ -527,6 +532,7 @@ export class Company {
               structureId: null,
               status: 'Idle',
               currentTask: null,
+              leaveHours: 0,
           };
       });
 
@@ -661,19 +667,57 @@ export class Company {
           if (!structure) continue;
 
           switch(employee.status) {
+              case 'OffDuty':
+                  if (ticks >= (employee.offDutyUntilTick || 0)) {
+                      employee.status = 'Idle';
+                      employee.energy = 100;
+                      employee.offDutyUntilTick = undefined;
+                      employee.morale = Math.min(100, employee.morale + 2); // Morale boost for a good rest
+                  }
+                  break;
+
               case 'Working':
                   const task = employee.currentTask;
-                  if (task) {
-                      this.resolveTask(employee, task, ticks, rng);
-                      employee.energy -= ENERGY_COST_PER_TASK;
+                  if (!task) {
+                      employee.status = 'Idle';
+                      break;
                   }
                   
-                  employee.currentTask = null;
-                  employee.status = 'Idle'; // Always go to idle to decide next action
+                  employee.energy -= ENERGY_COST_PER_TICK_WORKING; // Can go negative for overtime
+                  task.progressTicks = (task.progressTicks || 0) + 1;
+
+                  if (task.progressTicks >= task.durationTicks) {
+                      this.resolveTask(employee, task, ticks, rng);
+                      employee.currentTask = null;
+                      
+                      // Handle overtime if energy is negative
+                      if (employee.energy < 0) {
+                          const overtimeHours = -employee.energy / ENERGY_COST_PER_TICK_WORKING;
+                          if (this.overtimePolicy === 'timeOff') {
+                              employee.leaveHours = (employee.leaveHours || 0) + overtimeHours;
+                          } else { // 'payout' policy
+                              const hourlyRate = employee.salaryPerDay / 8; // Assume 8-hour day for rate calculation
+                              const overtimePay = overtimeHours * hourlyRate * 1.5; // Time and a half
+                              if (this.capital >= overtimePay) {
+                                  this.capital -= overtimePay;
+                                  this.logExpense('salaries', overtimePay);
+                              }
+                          }
+                      }
+                      
+                      // After task, if energy is low, go off-duty. Otherwise, become idle.
+                      if (employee.energy < ENERGY_REST_THRESHOLD) {
+                        employee.energy = 0; // Reset energy for recovery
+                        employee.status = 'OffDuty';
+                        employee.offDutyUntilTick = ticks + OFF_DUTY_DURATION_TICKS;
+                      } else {
+                        employee.status = 'Idle';
+                      }
+                  }
                   break;
 
               case 'Resting':
-                  employee.energy += ENERGY_REGEN_PER_TICK;
+                  employee.energy += ENERGY_REGEN_PER_TICK_RESTING;
                   if (employee.energy >= 100) {
                       employee.energy = 100;
                       employee.status = 'Idle';
@@ -681,29 +725,33 @@ export class Company {
                   break;
 
               case 'Idle':
-                  // First, check if employee needs to rest
+                  if (employee.offDutyUntilTick && ticks < employee.offDutyUntilTick) {
+                    employee.status = 'OffDuty';
+                    break;
+                  }
+
+                  // If idle but energy is low, try to rest in a breakroom
                   if (employee.energy < ENERGY_REST_THRESHOLD) {
                       if (structure.getRestingEmployeeCount(this) < structure.getBreakroomCapacity()) {
                           employee.status = 'Resting';
-                          continue; // Skip task search for this tick
+                          break; // Skip task search for this tick
                       }
-                      // If no spot, they remain Idle (Low Energy), and can't take tasks
                   }
                   
-                  // An employee can only take a task if they have enough energy
-                  if (employee.energy >= ENERGY_REST_THRESHOLD) {
-                      const tasks = [...structure.tasks].sort((a, b) => b.priority - a.priority);
-                      const suitableTask = tasks.find(task => 
-                          !tasksInProgress.has(task.id) &&
-                          task.requiredRole === employee.role &&
-                          employee.skills[task.requiredSkill].level >= task.minSkillLevel
-                      );
+                  const tasks = [...structure.tasks].sort((a, b) => b.priority - a.priority);
+                  const suitableTask = tasks.find(task => 
+                      !tasksInProgress.has(task.id) &&
+                      task.requiredRole === employee.role &&
+                      employee.skills[task.requiredSkill].level >= task.minSkillLevel
+                  );
 
-                      if (suitableTask) {
-                          employee.status = 'Working';
-                          employee.currentTask = suitableTask;
-                          tasksInProgress.add(suitableTask.id);
-                      }
+                  if (suitableTask) {
+                      employee.status = 'Working';
+                      employee.currentTask = suitableTask;
+                      tasksInProgress.add(suitableTask.id);
+                  } else {
+                      // If idle with no tasks, regenerate a small amount of energy
+                      employee.energy = Math.min(100, employee.energy + IDLE_ENERGY_REGEN_PER_TICK);
                   }
                   break;
           }
@@ -883,6 +931,7 @@ export class Company {
       cumulativeYield_g: this.cumulativeYield_g,
       alerts: this.alerts,
       alertCooldowns: this.alertCooldowns,
+      overtimePolicy: this.overtimePolicy,
     };
   }
 }

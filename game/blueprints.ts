@@ -1,7 +1,9 @@
-import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice, UtilityPrices, PersonnelData, Trait } from './types';
+
+import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice, UtilityPrices, PersonnelData, Trait, TaskDefinition, TaskType } from './types';
 
 const BLUEPRINT_BASE_PATH = '/data/blueprints/';
 const PERSONNEL_BASE_PATH = '/data/personnel/';
+const CONFIG_BASE_PATH = '/data/configs/';
 
 type BlueprintWithId = { id: string };
 
@@ -89,6 +91,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
         lastNames: [],
         traits: [],
       },
+      taskDefinitions: {} as Record<TaskType, TaskDefinition>,
     };
     
     const devicePricesPromise = fetch('/data/prices/devicePrices.json')
@@ -118,6 +121,15 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
         throw e;
       });
 
+    const taskDefinitionsPromise = fetch(`${CONFIG_BASE_PATH}task_definitions.json`)
+        .then(res => res.json())
+        .then((data: Record<TaskType, TaskDefinition>) => {
+            db.taskDefinitions = data;
+        }).catch(e => {
+            console.error("Failed to load task definitions", e);
+            throw e;
+        });
+
     // Load personnel data
     const personnelPromises = Object.entries(personnelFiles).map(async ([key, fileName]) => {
         try {
@@ -142,6 +154,7 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       devicePricesPromise,
       strainPricesPromise,
       utilityPricesPromise,
+      taskDefinitionsPromise,
       ...personnelPromises,
     ]);
     

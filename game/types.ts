@@ -1,3 +1,5 @@
+
+
 import { RoomPurpose } from './roomPurposes';
 import { Company } from './models/Company';
 import { Structure } from './models/Structure';
@@ -143,6 +145,18 @@ export interface PersonnelData {
   traits: Trait[];
 }
 
+export interface TaskDefinition {
+  costModel: {
+    basis: 'perAction' | 'perPlant' | 'perSquareMeter';
+    laborMinutes: number;
+  };
+  priority: number;
+  requiredRole: JobRole;
+  minSkillLevel: number;
+  requiredSkill: SkillName;
+  description: string;
+}
+
 export interface BlueprintDB {
   structures: Record<string, StructureBlueprint>;
   strains: Record<string, StrainBlueprint>;
@@ -152,6 +166,7 @@ export interface BlueprintDB {
   strainPrices: Record<string, StrainPrice>;
   utilityPrices: UtilityPrices;
   personnelData: PersonnelData;
+  taskDefinitions: Record<TaskType, TaskDefinition>;
 }
 
 export type ExpenseCategory = 'rent' | 'maintenance' | 'power' | 'structures' | 'devices' | 'supplies' | 'seeds' | 'salaries';
@@ -205,7 +220,8 @@ export interface Trait {
   effects?: Record<string, any>; // For future programmatic effects
 }
 
-export type EmployeeStatus = 'Idle' | 'Working' | 'Resting';
+export type EmployeeStatus = 'Idle' | 'Working' | 'Resting' | 'OffDuty';
+export type OvertimePolicy = 'timeOff' | 'payout';
 
 export interface Employee {
   id: string;
@@ -223,6 +239,8 @@ export interface Employee {
   lastRaiseTick?: number;
   // For job market
   timeOnMarket?: number;
+  leaveHours: number;
+  offDutyUntilTick?: number;
 }
 
 export type TaskType = 'repair_device' | 'maintain_device' | 'harvest_plants' | 'refill_supplies_water' | 'refill_supplies_nutrients' | 'overhaul_zone' | 'adjust_light_cycle' | 'clean_zone' | 'overhaul_zone_substrate' | 'reset_light_cycle' | 'execute_planting_plan';
@@ -238,11 +256,13 @@ export interface Task {
   id: string;
   type: TaskType;
   location: TaskLocation;
-  priority: number; // Higher is more important
+  priority: number;
   requiredRole: JobRole;
   minSkillLevel: number;
   requiredSkill: SkillName;
   description: string;
+  durationTicks: number;
+  progressTicks: number;
 }
 
 

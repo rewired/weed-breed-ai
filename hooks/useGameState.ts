@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState, GameSpeed, StructureBlueprint, RoomPurpose, JobRole, Planting, Plant, Alert, Employee, PlantingPlan } from '../game/types';
+import { GameState, GameSpeed, StructureBlueprint, RoomPurpose, JobRole, Planting, Plant, Alert, Employee, PlantingPlan, OvertimePolicy } from '../game/types';
 import { initialGameState, gameTick } from '../game/engine';
 import { getBlueprints, getAvailableStrains, loadAllBlueprints } from '../game/blueprints';
 import { Company } from '../game/models/Company';
@@ -249,6 +249,10 @@ export const useGameState = () => {
     gs.company.setPlantingPlanForZone(zoneId, plan);
   });
 
+  const setOvertimePolicy = createAction((gs, policy: OvertimePolicy) => {
+    gs.company.overtimePolicy = policy;
+  });
+
   const renameItem = createAction((gs, type: 'structure' | 'room' | 'zone', id: string, newName: string) => {
     let item: any = null;
     if (type === 'structure') item = gs.company.structures[id];
@@ -383,6 +387,6 @@ export const useGameState = () => {
     rentStructure, addRoom, addZone, purchaseDevicesForZone, purchaseSuppliesForZone, purchaseSeedsAndPlant, breedStrain,
     hireEmployee, assignEmployeeRole, acceptRaise, offerBonus, declineRaise, setPlantingPlan, renameItem,
     editDeviceGroupSettings, editLightCycle, deleteItem, toggleDeviceGroupStatus, harvest, duplicateRoom,
-    duplicateZone, acknowledgeAlert, toggleAutoReplant, deletePlantingPlan,
+    duplicateZone, acknowledgeAlert, toggleAutoReplant, deletePlantingPlan, setOvertimePolicy,
   };
 };

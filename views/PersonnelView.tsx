@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Company, Employee, SkillName, Trait, JobRole } from '../game/types';
+import { Company, Employee, SkillName, Trait, JobRole, OvertimePolicy } from '../game/types';
 
 const ALL_ROLES: JobRole[] = ['Gardener', 'Technician', 'Janitor', 'Botanist', 'Salesperson', 'Generalist'];
 
@@ -7,6 +8,7 @@ interface PersonnelViewProps {
   company: Company;
   onOpenModal: (type: any, context?: any) => void;
   onAssignEmployeeRole: (employeeId: string, role: JobRole) => void;
+  onSetOvertimePolicy: (policy: OvertimePolicy) => void;
 }
 
 const SkillBar = ({ name, level }: { name: string, level: number }) => (
@@ -36,6 +38,9 @@ const EmployeeCard = ({ employee, onHire, onAssignRole, onFire }: { employee: Em
         case 'Resting':
             statusText = <span style={{color: 'var(--warning-color)'}}>Resting</span>;
             break;
+        case 'OffDuty':
+            statusText = <span style={{color: 'var(--text-secondary-color)'}}>Off Duty</span>;
+            break;
         default: // Idle
             if (employee.energy < 20) {
                 statusText = <span style={{color: 'var(--danger-color)'}}>Idle (Low Energy)</span>;
@@ -43,6 +48,18 @@ const EmployeeCard = ({ employee, onHire, onAssignRole, onFire }: { employee: Em
                 statusText = <span style={{color: 'var(--text-secondary-color)'}}>Idle</span>;
             }
             break;
+    }
+
+    let taskDescription = null;
+    if (employee.status === 'Working' && employee.currentTask) {
+        const task = employee.currentTask;
+        const progress = (task.progressTicks / task.durationTicks) * 100;
+        const overtimeText = employee.energy < 0 ? ' (Overtime)' : '';
+        taskDescription = `${task.description} (${progress.toFixed(0)}%)${overtimeText}`;
+    } else if (employee.status === 'OffDuty') {
+        taskDescription = 'Recovering from shift.';
+    } else if (employee.status === 'Idle' && employee.energy < 20) {
+        taskDescription = 'Needs rest, no breakroom available.';
     }
 
     return (
@@ -86,18 +103,23 @@ const EmployeeCard = ({ employee, onHire, onAssignRole, onFire }: { employee: Em
             <div className="employee-card__status-grid">
                 <span>Energy</span>
                 <div className="employee-card__status-bar">
-                    <div className="energy" style={{ width: `${employee.energy}%` }}></div>
+                    <div className="energy" style={{ width: `${Math.max(0, employee.energy)}%` }}></div>
                 </div>
                  <span>Morale</span>
                 <div className="employee-card__status-bar">
                     <div className="morale" style={{ width: `${employee.morale}%` }}></div>
                 </div>
+                {(employee.leaveHours || 0) > 0.1 && (
+                    <>
+                        <span>Leave</span>
+                        <span style={{ color: 'var(--primary-light-color)', fontWeight: 'bold' }}>{employee.leaveHours.toFixed(1)} hrs</span>
+                    </>
+                )}
             </div>
 
             <div className="employee-card__current-task">
                 Status: {statusText} <br />
-                {employee.status === 'Working' && employee.currentTask?.description}
-                {employee.status === 'Idle' && employee.energy < 20 && 'Needs rest, no breakroom available.'}
+                {taskDescription}
             </div>
             
             <div className="employee-card__skills">
@@ -122,7 +144,7 @@ const EmployeeCard = ({ employee, onHire, onAssignRole, onFire }: { employee: Em
     );
 }
 
-const PersonnelView: React.FC<PersonnelViewProps> = ({ company, onOpenModal, onAssignEmployeeRole }) => {
+const PersonnelView: React.FC<PersonnelViewProps> = ({ company, onOpenModal, onAssignEmployeeRole, onSetOvertimePolicy }) => {
   const [activeTab, setActiveTab] = useState<'staff' | 'market'>('staff');
   const [roleFilter, setRoleFilter] = useState<JobRole | 'All'>('All');
 
@@ -174,6 +196,33 @@ const PersonnelView: React.FC<PersonnelViewProps> = ({ company, onOpenModal, onA
                   </div>
               )
           }) : <p className="placeholder-text">You have no hired staff.</p>}
+          
+          <h3 style={{ marginTop: '2rem' }}>Company Policies</h3>
+            <div className="card" style={{ maxWidth: '400px', padding: '1.5rem'}}>
+                <div className="form-group">
+                    <label>Overtime Compensation</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <label>
+                            <input
+                                type="radio"
+                                name="overtimePolicy"
+                                value="payout"
+                                checked={company.overtimePolicy === 'payout'}
+                                onChange={() => onSetOvertimePolicy('payout')}
+                            /> Payout (1.5x Hourly Rate)
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                name="overtimePolicy"
+                                value="timeOff"
+                                checked={company.overtimePolicy === 'timeOff'}
+                                onChange={() => onSetOvertimePolicy('timeOff')}
+                            /> Time Off (Accrued Leave)
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
 
