@@ -16,11 +16,12 @@ import type {
 } from '@/src/game/api';
 
 const App = () => {
-  const { 
-    gameState, 
-    isLoading, 
-    isSimRunning, 
-    setIsSimRunning, 
+  const {
+    gameState,
+    telemetry,
+    isLoading,
+    isSimRunning,
+    setIsSimRunning,
     gameSpeed,
     setGameSpeed,
     // Game Actions from Hook
@@ -203,15 +204,20 @@ const App = () => {
       }))
     : [];
 
+  const latestSimTick = telemetry.simTick;
+  const dashboardCapital = latestSimTick?.companyCapital ?? gameState?.company.capital ?? 0;
+  const dashboardYield = latestSimTick?.cumulativeYield_g ?? gameState?.company.cumulativeYield_g ?? 0;
+  const dashboardTicks = latestSimTick?.tick ?? gameState?.ticks ?? 0;
+
   return (
     <>
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json,application/json" onChange={handleFileSelect} />
       <div className="app-container">
         {gameState && (
           <Dashboard
-            capital={gameState.company.capital}
-            cumulativeYield_g={gameState.company.cumulativeYield_g}
-            ticks={gameState.ticks}
+            capital={dashboardCapital}
+            cumulativeYield_g={dashboardYield}
+            ticks={dashboardTicks}
             isSimRunning={isSimRunning}
             onStart={() => setIsSimRunning(true)}
             onPause={() => setIsSimRunning(false)}

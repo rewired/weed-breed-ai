@@ -15,236 +15,19 @@ import type {
   WorldSummaryDTO,
   ZoneTreatmentId,
 } from '../api/dto';
+import {
+  createEventSnapshot,
+  mapAlertEventsFromSnapshot,
+  mapFinanceEventsFromSnapshot,
+  mapHealthEvent,
+  mapSimTickEventFromSnapshot,
+  mapWorldSummary,
+  type EventSnapshot,
+} from '../api/eventMappers';
 
 const DEFAULT_TICK_DURATION_MS = 5000;
 const DEFAULT_COMPANY_NAME = 'Weedbreed';
 const MIN_TICK_INTERVAL_MS = 100; // 10 Hz maximum
-
-function mapSimTickEvent(
-  state: GameState,
-  speed: GameSpeed,
-  previousState: GameState | null,
-  summary: WorldSummaryDTO,
-  health: HealthEventDTO,
-  timestamp: number
-): SimTickEventDTO {
-  const capitalDelta = previousState
-    ? state.company.capital - previousState.company.capital
-    : 0;
-
-  return {
-    tick: state.ticks,
-    timestamp,
-    speed,
-    seed: state.seed,
-    companyCapital: state.company.capital,
-    capitalDelta,
-    cumulativeYield_g: state.company.cumulativeYield_g ?? 0,
-    totals: summary.totals,
-    plantHealth: {
-      plantCount: health.plantCount,
-      averageHealth: health.averageHealth,
-      averageStress: health.averageStress,
-      minimumHealth: health.minimumHealth,
-    },
-    activeAlertCount: summary.alerts.length,
-  };
-}
-
-function mapFinanceEvents(
-  previousState: GameState | null,
-  nextState: GameState,
-  timestamp: number
-): FinanceUpdateEventDTO[] {
-  if (!previousState) {
-    return [];
-  }
-
-  const events: FinanceUpdateEventDTO[] = [];
-  const prevLedger = previousState.company.ledger;
-  const nextLedger = nextState.company.ledger;
-  const revenueCategories = new Set([
-    ...Object.keys(prevLedger.revenue ?? {}),
-    ...Object.keys(nextLedger.revenue ?? {}),
-  ]);
-  const expenseCategories = new Set([
-    ...Object.keys(prevLedger.expenses ?? {}),
-    ...Object.keys(nextLedger.expenses ?? {}),
-  ]);
-
-  let runningCapital = previousState.company.capital;
-
-  revenueCategories.forEach(category => {
-    const previousValue = prevLedger.revenue?.[category] ?? 0;
-    const nextValue = nextLedger.revenue?.[category] ?? 0;
-    const delta = nextValue - previousValue;
-    if (delta !== 0) {
-      runningCapital += delta;
-      events.push({
-        tick: nextState.ticks,
-        timestamp,
-        reason: `revenue:${category}`,
-        delta,
-        newCapital: runningCapital,
-      });
-    }
-  });
-
-  expenseCategories.forEach(category => {
-    const previousValue = prevLedger.expenses?.[category] ?? 0;
-    const nextValue = nextLedger.expenses?.[category] ?? 0;
-    const delta = nextValue - previousValue;
-    if (delta !== 0) {
-      runningCapital -= delta;
-      events.push({
-        tick: nextState.ticks,
-        timestamp,
-        reason: `expense:${category}`,
-        delta: -delta,
-        newCapital: runningCapital,
-      });
-    }
-  });
-
-  const adjustment = nextState.company.capital - runningCapital;
-  if (Math.abs(adjustment) > 1e-6) {
-    const newCapital = runningCapital + adjustment;
-    events.push({
-      tick: nextState.ticks,
-      timestamp,
-      reason: 'capital:adjustment',
-      delta: adjustment,
-      newCapital,
-    });
-  }
-
-  return events;
-}
-
-function mapHealthEvent(state: GameState, timestamp: number): HealthEventDTO {
-  const structures = Object.values(state.company.structures);
-  const allPlants = structures.flatMap(structure =>
-    Object.values(structure.rooms).flatMap(room =>
-      Object.values(room.zones).flatMap(zone =>
-        Object.values(zone.plantings).flatMap(planting => planting.plants)
-      )
-    )
-  );
-
-  if (allPlants.length === 0) {
-    return {
-      tick: state.ticks,
-      timestamp,
-      plantCount: 0,
-      averageHealth: 0,
-      averageStress: 0,
-      minimumHealth: 0,
-      criticalPlantIds: [],
-    };
-  }
-
-  const totalHealth = allPlants.reduce((sum, plant) => sum + plant.health, 0);
-  const totalStress = allPlants.reduce((sum, plant) => sum + plant.stress, 0);
-  const minimumHealth = allPlants.reduce((min, plant) => Math.min(min, plant.health), 1);
-  const criticalPlantIds = allPlants.filter(plant => plant.health < 0.25).map(plant => plant.id);
-
-  return {
-    tick: state.ticks,
-    timestamp,
-    plantCount: allPlants.length,
-    averageHealth: totalHealth / allPlants.length,
-    averageStress: totalStress / allPlants.length,
-    minimumHealth,
-    criticalPlantIds,
-  };
-}
-
-function mapAlertEvents(
-  previousState: GameState | null,
-  nextState: GameState,
-  timestamp: number
-): AlertEventDTO[] {
-  if (!previousState) {
-    return [];
-  }
-
-  const previousAlertIds = new Set(
-    previousState.company.alerts.map(alert => alert.id)
-  );
-
-  return nextState.company.alerts
-    .filter(alert => !previousAlertIds.has(alert.id))
-    .map(alert => ({
-      tick: nextState.ticks,
-      timestamp,
-      alertId: alert.id,
-      type: alert.type,
-      message: alert.message,
-      location: {
-        structureId: alert.location?.structureId ?? '',
-        roomId: alert.location?.roomId ?? '',
-        zoneId: alert.location?.zoneId ?? '',
-      },
-    }));
-}
-
-function mapWorldSummary(state: GameState): WorldSummaryDTO {
-  const structures = Object.values(state.company.structures);
-  let roomCount = 0;
-  let zoneCount = 0;
-  let plantingCount = 0;
-  let plantCount = 0;
-  let deviceCount = 0;
-
-  structures.forEach(structure => {
-    const rooms = Object.values(structure.rooms);
-    roomCount += rooms.length;
-    rooms.forEach(room => {
-      const zones = Object.values(room.zones);
-      zoneCount += zones.length;
-      zones.forEach(zone => {
-        deviceCount += Object.keys(zone.devices).length;
-        const plantings = Object.values(zone.plantings);
-        plantingCount += plantings.length;
-        plantings.forEach(planting => {
-          plantCount += planting.plants.length;
-        });
-      });
-    });
-  });
-
-  return {
-    tick: state.ticks,
-    company: {
-      id: state.company.id,
-      name: state.company.name,
-      capital: state.company.capital,
-      cumulativeYield_g: state.company.cumulativeYield_g ?? 0,
-    },
-    totals: {
-      structures: structures.length,
-      rooms: roomCount,
-      zones: zoneCount,
-      plantings: plantingCount,
-      plants: plantCount,
-      devices: deviceCount,
-    },
-    alerts: state.company.alerts.map(alert => ({
-      id: alert.id,
-      type: alert.type,
-      message: alert.message,
-      location: alert.location
-        ? {
-            structureId: alert.location.structureId,
-            roomId: alert.location.roomId,
-            zoneId: alert.location.zoneId,
-          }
-        : undefined,
-      isAcknowledged: alert.isAcknowledged,
-      context: alert.context,
-    })),
-  };
-}
 
 export class EngineAdapter {
   private readonly bus: EventBus<SimulationEventMap>;
@@ -254,6 +37,7 @@ export class EngineAdapter {
   private speed: GameSpeed = 1;
   private readonly tickDurationMs: number;
   private lastSummary: WorldSummaryDTO | null = null;
+  private lastSnapshot: EventSnapshot | null = null;
 
   constructor(bus: EventBus<SimulationEventMap>, tickDurationMs: number = DEFAULT_TICK_DURATION_MS) {
     this.bus = bus;
@@ -346,6 +130,7 @@ export class EngineAdapter {
     const health = mapHealthEvent(initialState, timestamp);
 
     this.state = initialState;
+    this.lastSnapshot = createEventSnapshot(initialState);
     this.emitState(summary, health);
   }
 
@@ -370,21 +155,32 @@ export class EngineAdapter {
     }
 
     const previousState = this.state;
+    const previousSnapshot = this.lastSnapshot ?? createEventSnapshot(previousState);
     const nextState = gameTick(previousState);
     const timestamp = Date.now();
     const summary = mapWorldSummary(nextState);
     const health = mapHealthEvent(nextState, timestamp);
+    const nextSnapshot = createEventSnapshot(nextState);
 
-    const tickEvent = mapSimTickEvent(nextState, this.speed, previousState, summary, health, timestamp);
+    const tickEvent = mapSimTickEventFromSnapshot(
+      nextState,
+      this.speed,
+      summary,
+      health,
+      nextSnapshot,
+      previousSnapshot,
+      timestamp,
+    );
     this.bus.emit('sim:tick', tickEvent);
 
-    const financeEvents = mapFinanceEvents(previousState, nextState, timestamp);
+    const financeEvents = mapFinanceEventsFromSnapshot(previousSnapshot, nextSnapshot, timestamp);
     financeEvents.forEach(event => this.bus.emit('finance:update', event));
 
-    const alertEvents = mapAlertEvents(previousState, nextState, timestamp);
+    const alertEvents = mapAlertEventsFromSnapshot(previousSnapshot, nextState, timestamp);
     alertEvents.forEach(event => this.bus.emit('alert:event', event));
 
     this.state = nextState;
+    this.lastSnapshot = nextSnapshot;
     this.emitState(summary, health);
 
     return tickEvent;
