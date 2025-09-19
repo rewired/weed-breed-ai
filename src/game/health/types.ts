@@ -107,6 +107,43 @@ export interface RangeDescriptor {
 
 export type NumericTuple = [number, number];
 
+export interface DiseaseDefinition {
+  id: string;
+  kind: string;
+  name: string;
+  pathogenType: string;
+  targets: string[];
+  environmentalRisk: Record<string, number | NumericTuple | boolean | string | undefined>;
+  transmission: string[];
+  contagious: boolean;
+  model: Record<string, number>;
+  detection: {
+    symptoms?: string[];
+    scoutingHints?: string[];
+    [key: string]: unknown;
+  };
+  treatments?: Record<string, string[]>;
+  [key: string]: unknown;
+}
+
+export interface PestDefinition {
+  id: string;
+  kind: string;
+  name: string;
+  category: string;
+  targets: string[];
+  environmentalRisk: Record<string, number | NumericTuple | boolean | string | undefined>;
+  populationDynamics: Record<string, number>;
+  damageModel: Record<string, number | boolean>;
+  detection: {
+    symptoms?: string[];
+    monitoring?: string[];
+    [key: string]: unknown;
+  };
+  controlOptions?: Record<string, string[]>;
+  [key: string]: unknown;
+}
+
 export interface DiseaseBalancingGlobalConfig {
   baseDailyInfectionMultiplier: number;
   baseRecoveryMultiplier: number;
@@ -245,4 +282,6 @@ export interface HealthDefinitionData {
   diseaseBalancing: DiseaseBalancingConfig;
   pestBalancing: PestBalancingConfig;
   treatmentCatalog: TreatmentCatalog;
+  diseases: DiseaseDefinition[];
+  pests: PestDefinition[];
 }
