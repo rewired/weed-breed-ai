@@ -11,7 +11,7 @@
         "mtbfMultiplier": 1.5
       },
       "economics": {
-        "initialCapital": 20000,
+        "initialCapital": 2000000,
         "itemPriceMultiplier": 0.9,
         "harvestPriceMultiplier": 1.1,
         "rentPerSqmStructurePerTick": 0.1,
@@ -31,7 +31,7 @@
         "mtbfMultiplier": 1.0
       },
       "economics": {
-        "initialCapital": 15000,
+        "initialCapital": 1500000,
         "itemPriceMultiplier": 1.0,
         "harvestPriceMultiplier": 1.0,
         "rentPerSqmStructurePerTick": 0.15,
@@ -51,7 +51,7 @@
         "mtbfMultiplier": 0.75
       },
       "economics": {
-        "initialCapital": 10000,
+        "initialCapital": 1000000,
         "itemPriceMultiplier": 1.1,
         "harvestPriceMultiplier": 0.9,
         "rentPerSqmStructurePerTick": 0.2,
