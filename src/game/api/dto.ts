@@ -10,6 +10,21 @@ export interface HealthEventDTO {
   criticalPlantIds: string[];
 }
 
+export interface AlertLocationDTO {
+  structureId: string;
+  roomId: string;
+  zoneId: string;
+}
+
+export interface AlertSummaryDTO {
+  id: string;
+  type: string;
+  message: string;
+  location?: AlertLocationDTO;
+  isAcknowledged?: boolean;
+  context?: unknown;
+}
+
 export interface WorldSummaryDTO {
   tick: number;
   company: {
@@ -26,16 +41,7 @@ export interface WorldSummaryDTO {
     plants: number;
     devices: number;
   };
-  alerts: Array<{
-    id: string;
-    type: string;
-    message: string;
-    location?: {
-      structureId: string;
-      roomId: string;
-      zoneId: string;
-    };
-  }>;
+  alerts: AlertSummaryDTO[];
 }
 
 export interface SimTickEventDTO {
@@ -68,11 +74,24 @@ export interface AlertEventDTO {
   alertId: string;
   type: string;
   message: string;
-  location: {
-    structureId: string;
-    roomId: string;
-    zoneId: string;
-  };
+  location: AlertLocationDTO;
+}
+
+export interface StructureSummaryDTO {
+  id: string;
+  name: string;
+}
+
+export interface RoomSummaryDTO {
+  id: string;
+  name: string;
+  structureId: string;
+}
+
+export interface ZoneSummaryDTO {
+  id: string;
+  name: string;
+  roomId: string;
 }
 
 export type SimulationEventMap = {

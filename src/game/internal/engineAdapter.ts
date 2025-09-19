@@ -239,6 +239,8 @@ function mapWorldSummary(state: GameState): WorldSummaryDTO {
             zoneId: alert.location.zoneId,
           }
         : undefined,
+      isAcknowledged: alert.isAcknowledged,
+      context: alert.context,
     })),
   };
 }

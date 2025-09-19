@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameSpeed, Alert, AlertLocation } from '../game/types';
+import type { GameSpeed, AlertSummaryDTO } from '@/src/game/api';
 
 interface DashboardProps {
   capital: number;
@@ -17,8 +17,8 @@ interface DashboardProps {
   gameSpeed: GameSpeed;
   onSetGameSpeed: (speed: GameSpeed) => void;
   currentView: 'structures' | 'finances' | 'personnel';
-  alerts: Alert[];
-  onNavigateToAlert: (alert: Alert) => void;
+  alerts: AlertSummaryDTO[];
+  onNavigateToAlert: (alert: AlertSummaryDTO) => void;
   onAcknowledgeAlert: (alertId: string) => void;
   onGameMenuToggle: (isOpen: boolean) => void;
 }

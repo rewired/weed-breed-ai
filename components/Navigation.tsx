@@ -1,10 +1,14 @@
 import React from 'react';
-import { Structure, Room, Zone } from '../game/types';
+import type {
+  StructureSummaryDTO,
+  RoomSummaryDTO,
+  ZoneSummaryDTO,
+} from '@/src/game/api';
 
 interface NavigationProps {
-  structure: Structure | null;
-  room: Room | null;
-  zone: Zone | null;
+  structure: StructureSummaryDTO | null;
+  room: RoomSummaryDTO | null;
+  zone: ZoneSummaryDTO | null;
   onBack: () => void;
   onRootClick: () => void;
   onStructureClick: () => void;
