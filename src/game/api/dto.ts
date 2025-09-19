@@ -1,25 +1,8 @@
 import type { GameSpeed } from '@/game/types';
 
-export interface SimTickEventDTO {
-  tick: number;
-  timestamp: number;
-  speed: GameSpeed;
-  seed: number;
-  companyCapital: number;
-}
-
-export interface FinanceUpdateEventDTO {
-  tick: number;
-  capital: number;
-  ledger: {
-    revenue: Record<string, number>;
-    expenses: Record<string, number>;
-  };
-  cumulativeYield_g: number;
-}
-
 export interface HealthEventDTO {
   tick: number;
+  timestamp: number;
   plantCount: number;
   averageHealth: number;
   averageStress: number;
@@ -47,14 +30,57 @@ export interface WorldSummaryDTO {
     id: string;
     type: string;
     message: string;
+    location?: {
+      structureId: string;
+      roomId: string;
+      zoneId: string;
+    };
   }>;
+}
+
+export interface SimTickEventDTO {
+  tick: number;
+  timestamp: number;
+  speed: GameSpeed;
+  seed: number;
+  companyCapital: number;
+  capitalDelta: number;
+  cumulativeYield_g: number;
+  totals: WorldSummaryDTO['totals'];
+  plantHealth: Pick<
+    HealthEventDTO,
+    'plantCount' | 'averageHealth' | 'averageStress' | 'minimumHealth'
+  >;
+  activeAlertCount: number;
+}
+
+export interface FinanceUpdateEventDTO {
+  tick: number;
+  timestamp: number;
+  reason: string;
+  delta: number;
+  newCapital: number;
+}
+
+export interface AlertEventDTO {
+  tick: number;
+  timestamp: number;
+  alertId: string;
+  type: string;
+  message: string;
+  location: {
+    structureId: string;
+    roomId: string;
+    zoneId: string;
+  };
 }
 
 export type SimulationEventMap = {
   'sim:tick': SimTickEventDTO;
   'finance:update': FinanceUpdateEventDTO;
-  'health:update': HealthEventDTO;
+  'health:event': HealthEventDTO;
   'world:summary': WorldSummaryDTO;
+  'alert:event': AlertEventDTO;
 };
 
 export type SimulationEventName = keyof SimulationEventMap;
