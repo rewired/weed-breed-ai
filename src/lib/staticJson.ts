@@ -1,6 +1,6 @@
 import { z, ZodError, ZodIssue } from 'zod';
 
-const RAW_JSON_FILES = import.meta.glob('../data/**/*.json', {
+const RAW_JSON_FILES = import.meta.glob('../../data/**/*.json', {
   eager: true,
   as: 'raw',
 }) as Record<string, string>;
@@ -12,26 +12,28 @@ for (const [key, value] of Object.entries(RAW_JSON_FILES)) {
 }
 
 function normalizeGlobKey(key: string): string {
-  if (key.startsWith('../')) {
-    return `/${key.slice(3)}`;
+  let normalized = key;
+
+  while (normalized.startsWith('../')) {
+    normalized = normalized.slice(3);
   }
-  if (key.startsWith('./')) {
-    return key.slice(1);
+
+  if (normalized.startsWith('./')) {
+    normalized = normalized.slice(2);
   }
-  if (!key.startsWith('/')) {
-    return `/${key}`;
+
+  if (!normalized.startsWith('/')) {
+    normalized = `/${normalized}`;
   }
-  return key;
+
+  return normalized;
 }
 
 function normalizeRequestedPath(path: string): string {
   let normalized = path.trim();
-  if (normalized.startsWith('./')) {
-    normalized = normalized.slice(2);
-  }
-  if (normalized.startsWith('../')) {
-    normalized = normalized.replace(/^\.\.\//, '/');
-  }
+  normalized = normalized.replace(/^(\.\/)+/, '');
+  normalized = normalized.replace(/^(\.\.\/)+/, '/');
+
   if (normalized.startsWith('data/')) {
     normalized = `/${normalized}`;
   }
