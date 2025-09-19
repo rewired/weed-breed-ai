@@ -1,25 +1,11 @@
 
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation, PlantingPlan, OvertimePolicy } from '../types';
-import { getAvailableStrains, getBlueprints } from '../blueprints';
+import { Structure, StructureBlueprint, StrainBlueprint, Zone, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, Task, PlantingPlan, OvertimePolicy } from '../types';
+import { getBlueprints } from '../blueprints';
 import { mulberry32 } from '../utils';
-import { GrowthStage } from './Plant';
-
-const ALL_SKILLS: SkillName[] = ['Gardening', 'Maintenance', 'Technical', 'Botanical', 'Cleanliness', 'Negotiation'];
-const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
-    Gardening: 'Gardener',
-    Maintenance: 'Technician',
-    Technical: 'Technician',
-    Cleanliness: 'Janitor',
-    Botanical: 'Botanist',
-    Negotiation: 'Salesperson',
-};
-const XP_PER_LEVEL = 100;
-const TASK_XP_REWARD = 10;
-const ENERGY_COST_PER_TICK_WORKING = 10.0;
-const ENERGY_REGEN_PER_TICK_RESTING = 10; // Resting in breakroom
-const IDLE_ENERGY_REGEN_PER_TICK = 2.5;
-const ENERGY_REST_THRESHOLD = 20;
-const OFF_DUTY_DURATION_TICKS = 16;
+import { FinanceService } from './company/FinanceService';
+import { HRService } from './company/HRService';
+import { TaskEngine } from './company/TaskEngine';
+import { MarketService } from './company/MarketService';
 
 
 export class Company {
@@ -36,6 +22,10 @@ export class Company {
   alertCooldowns: Record<string, number>; // Key: `${zoneId}-${type}`, Value: Expiry tick
   overtimePolicy: OvertimePolicy;
   actionRngNonce: number;
+  private financeService: FinanceService;
+  private hrService: HRService;
+  private taskEngine: TaskEngine;
+  private marketService: MarketService;
 
   constructor(data: any) {
     this.id = data.id;
@@ -66,19 +56,19 @@ export class Company {
         const oldRevenue = data.ledger.revenue as number;
         this.ledger.revenue = { harvests: oldRevenue, other: 0 };
     }
+
+    this.financeService = new FinanceService(this);
+    this.hrService = new HRService(this, this.financeService);
+    this.taskEngine = new TaskEngine(this);
+    this.marketService = new MarketService(this);
   }
 
   logExpense(category: ExpenseCategory, amount: number) {
-    if (amount > 0) {
-      this.ledger.expenses[category] = (this.ledger.expenses[category] || 0) + amount;
-    }
+    this.financeService.logExpense(category, amount);
   }
 
   logRevenue(category: RevenueCategory, amount: number) {
-    if (amount > 0) {
-      this.ledger.revenue[category] = (this.ledger.revenue[category] || 0) + amount;
-      this.capital += amount;
-    }
+    this.financeService.logRevenue(category, amount);
   }
 
   rentStructure(blueprint: StructureBlueprint): boolean {
@@ -109,12 +99,7 @@ export class Company {
   }
 
   spendCapital(amount: number): boolean {
-    if (this.capital < amount) {
-      alert("Not enough capital for this purchase!");
-      return false;
-    }
-    this.capital -= amount;
-    return true;
+    return this.financeService.spendCapital(amount);
   }
 
   purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number, rng: () => number): boolean {
@@ -364,181 +349,27 @@ export class Company {
   }
   
   hireEmployee(employee: Employee, structureId: string, ticks: number): boolean {
-    if (this.employees[employee.id]) {
-        alert("This employee is already hired.");
-        return false;
-    }
-    const salaryCost = employee.salaryPerDay;
-    if (this.capital < salaryCost * 7) { // Ensure at least a week's salary
-        alert("Not enough capital to securely hire this employee.");
-        return false;
-    }
-    
-    employee.structureId = structureId;
-    employee.status = 'Idle';
-    employee.lastRaiseTick = ticks;
-    this.employees[employee.id] = employee;
-    this.structures[structureId].employeeIds.push(employee.id);
-
-    this.jobMarketCandidates = this.jobMarketCandidates.filter(c => c.id !== employee.id);
-    return true;
+    return this.hrService.hireEmployee(employee, structureId, ticks);
   }
-  
-    fireEmployee(employeeId: string): Employee | null {
-        const employee = this.employees[employeeId];
-        if (!employee) return null;
 
-        const severance = employee.salaryPerDay * 7;
-        if (this.capital < severance) {
-            alert("Not enough capital to pay severance.");
-            return null;
-        }
+  fireEmployee(employeeId: string): Employee | null {
+    return this.hrService.fireEmployee(employeeId);
+  }
 
-        this.capital -= severance;
-        this.logExpense('salaries', severance);
+  acceptRaise(employeeId: string, newSalary: number, ticks: number) {
+    this.hrService.acceptRaise(employeeId, newSalary, ticks);
+  }
 
-        // Morale penalty
-        if (employee.structureId) {
-            const structure = this.structures[employee.structureId];
-            if (structure) {
-                structure.employeeIds
-                    .filter(id => id !== employeeId)
-                    .forEach(id => {
-                        const otherEmployee = this.employees[id];
-                        if (otherEmployee) {
-                            otherEmployee.morale = Math.max(0, otherEmployee.morale - 10);
-                        }
-                    });
-                structure.employeeIds = structure.employeeIds.filter(id => id !== employeeId);
-            }
-        }
+  offerBonus(employeeId: string, bonus: number, ticks: number) {
+    this.hrService.offerBonus(employeeId, bonus, ticks);
+  }
 
-        delete this.employees[employeeId];
-        
-        // Return to job market
-        employee.structureId = null;
-        employee.status = 'Idle';
-        this.jobMarketCandidates.unshift(employee);
-
-        return employee;
-    }
-
-    acceptRaise(employeeId: string, newSalary: number, ticks: number) {
-        const employee = this.employees[employeeId];
-        if (employee) {
-            employee.salaryPerDay = newSalary;
-            employee.morale = Math.min(100, employee.morale + 25);
-            employee.lastRaiseTick = ticks;
-            this.alerts = this.alerts.filter(a => !(a.type === 'raise_request' && a.context?.employeeId === employeeId));
-        }
-    }
-
-    offerBonus(employeeId: string, bonus: number, ticks: number) {
-        const employee = this.employees[employeeId];
-        if (employee && this.capital >= bonus) {
-            this.capital -= bonus;
-            this.logExpense('salaries', bonus);
-            employee.morale = Math.min(100, employee.morale + 15);
-            employee.lastRaiseTick = ticks;
-            this.alerts = this.alerts.filter(a => !(a.type === 'raise_request' && a.context?.employeeId === employeeId));
-        }
-    }
-
-    declineRaise(employeeId: string) {
-        const employee = this.employees[employeeId];
-        if (employee) {
-            employee.morale = Math.max(0, employee.morale - 20);
-            this.alerts = this.alerts.filter(a => !(a.type === 'raise_request' && a.context?.employeeId === employeeId));
-        }
-    }
+  declineRaise(employeeId: string) {
+    this.hrService.declineRaise(employeeId);
+  }
 
   async updateJobMarket(rng: () => number, ticks: number, seed: number) {
-      const { personnelData } = getBlueprints();
-      const { traits } = personnelData;
-      let names: { firstName: string, lastName: string }[] = [];
-
-      // API First Approach
-      try {
-          const week = Math.floor(ticks / (24 * 7));
-          const apiSeed = `weedbreed-${seed}-${week}`;
-          const response = await fetch(`https://randomuser.me/api/?results=12&inc=name&seed=${apiSeed}`);
-          if (!response.ok) throw new Error('API response not ok');
-          const data = await response.json();
-          names = data.results.map((r: any) => ({
-              firstName: r.name.first,
-              lastName: r.name.last
-          }));
-      } catch (error) {
-          console.warn("Could not fetch names from randomuser.me API, using local fallback.", error);
-          // Fallback to local files
-          const { firstNames, lastNames } = personnelData;
-          for (let i = 0; i < 12; i++) {
-              const firstName = firstNames[Math.floor(rng() * firstNames.length)];
-              const lastName = lastNames[Math.floor(rng() * lastNames.length)];
-              names.push({ firstName, lastName });
-          }
-      }
-
-      // Generate candidates from names
-      const newCandidates: Employee[] = names.map(name => {
-          const skills: Record<SkillName, Skill> = {} as any;
-          let totalSkillPoints = 0;
-          let highestSkill: SkillName = 'Gardening';
-          let highestLevel = -1;
-
-          ALL_SKILLS.forEach(skillName => {
-              const level = rng() * 5; // New candidates are not experts
-              skills[skillName] = { name: skillName, level, xp: 0 };
-              totalSkillPoints += level;
-              if (level > highestLevel) {
-                  highestLevel = level;
-                  highestSkill = skillName;
-              }
-          });
-
-          const role = SKILL_TO_ROLE_MAP[highestSkill] || 'Generalist';
-
-          const assignedTraits: Trait[] = [];
-          const traitRoll = rng();
-          if (traitRoll < 0.7) { // 70% chance to have at least one trait
-              assignedTraits.push(traits[Math.floor(rng() * traits.length)]);
-              if (rng() < 0.2) { // 20% of those have a second trait
-                  assignedTraits.push(traits[Math.floor(rng() * traits.length)]);
-              }
-          }
-          
-          const baseSalary = 50;
-          const salaryPerSkillPoint = 8;
-          let salary = baseSalary + (totalSkillPoints * salaryPerSkillPoint);
-
-          let salaryModifier = 1.0;
-          if (assignedTraits.some(t => t.id === 'trait_frugal')) {
-              salaryModifier -= 0.15; // 15% less for frugal
-          }
-          if (assignedTraits.some(t => t.id === 'trait_demanding')) {
-              salaryModifier += 0.20; // 20% more for demanding
-          }
-
-          salary *= salaryModifier;
-
-          return {
-              id: `emp-${Date.now()}-${rng()}`,
-              firstName: name.firstName,
-              lastName: name.lastName,
-              role,
-              skills,
-              traits: assignedTraits,
-              salaryPerDay: salary,
-              energy: 100,
-              morale: 75,
-              structureId: null,
-              status: 'Idle',
-              currentTask: null,
-              leaveHours: 0,
-          };
-      });
-
-      this.jobMarketCandidates = newCandidates;
+    await this.marketService.updateJobMarket(rng, ticks, seed);
   }
 
     setPlantingPlanForZone(zoneId: string, plan: PlantingPlan | null) {
@@ -552,212 +383,11 @@ export class Company {
     }
 
   resolveTask(employee: Employee, task: Task, ticks: number, rng: () => number) {
-    const structure = this.structures[task.location.structureId];
-    if (!structure) return;
-    const room = structure.rooms[task.location.roomId];
-    if (!room) return;
-    const zone = room.zones[task.location.zoneId];
-    if (!zone) return;
-
-    switch (task.type) {
-        case 'repair_device':
-        case 'maintain_device':
-            const device = zone.devices[task.location.itemId];
-            if (device) {
-                device.durability = 1.0;
-                if (device.status === 'broken') device.status = 'on';
-            }
-            break;
-        case 'harvest_plants':
-            const plantsToHarvest = zone.getHarvestablePlants();
-            if (plantsToHarvest.length > 0) {
-                const negotiationSkill = structure.getMaxSkill(this, 'Negotiation', 'Salesperson');
-                const negotiationBonus = (negotiationSkill / 10) * 0.10;
-                this.harvestPlants(plantsToHarvest, negotiationBonus);
-                zone.cleanupEmptyPlantings();
-                if (zone.getTotalPlantedCount() === 0) {
-                    zone.cyclesUsed = (zone.cyclesUsed || 0) + 1;
-                    zone.status = 'Harvested';
-                    this.alerts.push({ id: `alert-${zone.id}-harvested-${ticks}`, type: 'zone_harvested', message: `Zone '${zone.name}' is harvested and needs cleaning.`, location: task.location, tickGenerated: ticks });
-                }
-            }
-            break;
-        case 'refill_supplies_water':
-            this.purchaseSuppliesForZone(zone, 'water', 1000); // Refill 1000L
-            break;
-        case 'refill_supplies_nutrients':
-            this.purchaseSuppliesForZone(zone, 'nutrients', 1000); // Refill 1000g
-            break;
-        case 'clean_zone':
-            zone.status = 'Ready';
-            this.alerts.push({ id: `alert-${zone.id}-ready-${ticks}`, type: 'zone_ready', message: `Zone '${zone.name}' is clean and ready for planting.`, location: task.location, tickGenerated: ticks });
-            break;
-        case 'overhaul_zone_substrate':
-            const method = getBlueprints().cultivationMethods[zone.cultivationMethodId];
-            if (method) {
-                const cost = (method.setupCost || 0) * zone.area_m2;
-                if (this.spendCapital(cost)) {
-                    this.logExpense('supplies', cost);
-                    zone.cyclesUsed = 0;
-                    zone.status = 'Ready';
-                    this.alerts.push({ id: `alert-${zone.id}-ready-${ticks}`, type: 'zone_ready', message: `Zone '${zone.name}' is overhauled and ready.`, location: task.location, tickGenerated: ticks });
-                }
-            }
-            break;
-        case 'reset_light_cycle':
-            // Reset to a default veg cycle. If there's a planting plan, it might be more specific.
-            const strainId = zone.plantingPlan?.strainId;
-            const strain = strainId ? getAvailableStrains(this)[strainId] : null;
-            if (strain) {
-                const [on, off] = strain.environmentalPreferences.lightCycle.vegetation;
-                zone.lightCycle = { on, off };
-            } else {
-                zone.lightCycle = { on: 18, off: 6 }; // Default
-            }
-            break;
-        case 'execute_planting_plan':
-            if (zone.plantingPlan) {
-                const { strainId, quantity } = zone.plantingPlan;
-                if (this.purchaseSeeds(strainId, quantity)) {
-                    zone.plantStrain(strainId, quantity, this, rng);
-                    zone.status = 'Growing';
-                }
-            }
-            break;
-        case 'adjust_light_cycle':
-            const plantingToFlip = Object.values(zone.plantings).find(p => {
-                const strain = getAvailableStrains(this)[p.strainId];
-                if (!strain) return false;
-                const vegDays = strain.photoperiod.vegetationDays;
-                return p.plants.some(plant => 
-                    plant.growthStage === GrowthStage.Vegetative &&
-                    ((plant.ageInTicks - plant.stageStartTick) / 24) >= (vegDays - 2)
-                );
-            });
-            if (plantingToFlip) {
-                const strain = getAvailableStrains(this)[plantingToFlip.strainId];
-                if (strain) {
-                    const [on, off] = strain.environmentalPreferences.lightCycle.flowering;
-                    zone.lightCycle = { on, off };
-                }
-            }
-            break;
-    }
-    
-    // Grant XP for completing task
-    const skill = employee.skills[task.requiredSkill];
-    if (skill && skill.level < 10) {
-        skill.xp += TASK_XP_REWARD;
-        if (skill.xp >= XP_PER_LEVEL) {
-            skill.level = Math.min(10, skill.level + 1);
-            skill.xp = 0;
-        }
-    }
+    this.taskEngine.resolveTask(employee, task, ticks, rng);
   }
 
   updateEmployeesAI(ticks: number, rng: () => number) {
-      const tasksInProgress = new Set<string>();
-      Object.values(this.employees).forEach(emp => {
-          if (emp.status === 'Working' && emp.currentTask) {
-              tasksInProgress.add(emp.currentTask.id);
-          }
-      });
-
-      for(const employee of Object.values(this.employees)) {
-          if (!employee.structureId) continue;
-          const structure = this.structures[employee.structureId];
-          if (!structure) continue;
-
-          switch(employee.status) {
-              case 'OffDuty':
-                  if (ticks >= (employee.offDutyUntilTick || 0)) {
-                      employee.status = 'Idle';
-                      employee.energy = 100;
-                      employee.offDutyUntilTick = undefined;
-                      employee.morale = Math.min(100, employee.morale + 2); // Morale boost for a good rest
-                  }
-                  break;
-
-              case 'Working':
-                  const task = employee.currentTask;
-                  if (!task) {
-                      employee.status = 'Idle';
-                      break;
-                  }
-                  
-                  employee.energy -= ENERGY_COST_PER_TICK_WORKING; // Can go negative for overtime
-                  task.progressTicks = (task.progressTicks || 0) + 1;
-
-                  if (task.progressTicks >= task.durationTicks) {
-                      this.resolveTask(employee, task, ticks, rng);
-                      employee.currentTask = null;
-                      
-                      // Handle overtime if energy is negative
-                      if (employee.energy < 0) {
-                          const overtimeHours = -employee.energy / ENERGY_COST_PER_TICK_WORKING;
-                          if (this.overtimePolicy === 'timeOff') {
-                              employee.leaveHours = (employee.leaveHours || 0) + overtimeHours;
-                          } else { // 'payout' policy
-                              const hourlyRate = employee.salaryPerDay / 8; // Assume 8-hour day for rate calculation
-                              const overtimePay = overtimeHours * hourlyRate * 1.5; // Time and a half
-                              if (this.capital >= overtimePay) {
-                                  this.capital -= overtimePay;
-                                  this.logExpense('salaries', overtimePay);
-                              }
-                          }
-                      }
-                      
-                      // After task, if energy is low, go off-duty. Otherwise, become idle.
-                      if (employee.energy < ENERGY_REST_THRESHOLD) {
-                        employee.energy = 0; // Reset energy for recovery
-                        employee.status = 'OffDuty';
-                        employee.offDutyUntilTick = ticks + OFF_DUTY_DURATION_TICKS;
-                      } else {
-                        employee.status = 'Idle';
-                      }
-                  }
-                  break;
-
-              case 'Resting':
-                  employee.energy += ENERGY_REGEN_PER_TICK_RESTING;
-                  if (employee.energy >= 100) {
-                      employee.energy = 100;
-                      employee.status = 'Idle';
-                  }
-                  break;
-
-              case 'Idle':
-                  if (employee.offDutyUntilTick && ticks < employee.offDutyUntilTick) {
-                    employee.status = 'OffDuty';
-                    break;
-                  }
-
-                  // If idle but energy is low, try to rest in a breakroom
-                  if (employee.energy < ENERGY_REST_THRESHOLD) {
-                      if (structure.getRestingEmployeeCount(this) < structure.getBreakroomCapacity()) {
-                          employee.status = 'Resting';
-                          break; // Skip task search for this tick
-                      }
-                  }
-                  
-                  const tasks = [...structure.tasks].sort((a, b) => b.priority - a.priority);
-                  const suitableTask = tasks.find(task => 
-                      !tasksInProgress.has(task.id) &&
-                      task.requiredRole === employee.role &&
-                      employee.skills[task.requiredSkill].level >= task.minSkillLevel
-                  );
-
-                  if (suitableTask) {
-                      employee.status = 'Working';
-                      employee.currentTask = suitableTask;
-                      tasksInProgress.add(suitableTask.id);
-                  } else {
-                      // If idle with no tasks, regenerate a small amount of energy
-                      employee.energy = Math.min(100, employee.energy + IDLE_ENERGY_REGEN_PER_TICK);
-                  }
-                  break;
-          }
-      }
+    this.taskEngine.updateEmployeesAI(ticks, rng);
   }
 
   update(rng: () => number, ticks: number, seed: number) {
@@ -769,87 +399,8 @@ export class Company {
 
     // Daily updates
     if (ticks > 0 && ticks % 24 === 0) {
-        let totalSalaries = 0;
-        const employeesToQuit: string[] = [];
-
-        Object.values(this.employees).forEach(emp => {
-            totalSalaries += emp.salaryPerDay;
-            
-            // Check for quitting
-            if (emp.morale < 20 && rng() < 0.05) { // 5% chance to quit each day if morale is low
-                employeesToQuit.push(emp.id);
-            }
-
-            // Check for raise request
-            const ticksSinceRaise = ticks - (emp.lastRaiseTick || emp.timeOnMarket || 0);
-            const hasExistingRequest = this.alerts.some(a => a.type === 'raise_request' && a.context?.employeeId === emp.id);
-
-            if (!hasExistingRequest && ticksSinceRaise > 365 * 24) { // 1 year cooldown
-                // Simple trigger: at least 1 full skill point gained since last raise
-                const totalSkillPoints = Object.values(emp.skills).reduce((sum, s) => sum + s.level, 0);
-                const baseSalary = 50 + (totalSkillPoints * 8);
-                
-                if (baseSalary > emp.salaryPerDay * 1.05) { // Only ask if new salary is at least 5% higher
-                    const newSalary = baseSalary * (1 + (rng() - 0.5) * 0.1); // +/- 5% negotiation margin
-                    const alertKey = `${emp.id}-raise_request`;
-                    const existingAlert = this.alerts.find(a => a.id.startsWith(`alert-${alertKey}`));
-                    if (!existingAlert) {
-                        this.alerts.push({
-                            id: `alert-${alertKey}-${ticks}`,
-                            type: 'raise_request',
-                            message: `${emp.firstName} ${emp.lastName} is requesting a salary review.`,
-                            location: { structureId: emp.structureId || '', roomId: '', zoneId: '' },
-                            tickGenerated: ticks,
-                            context: { employeeId: emp.id, newSalary: newSalary }
-                        });
-                    }
-                }
-            }
-
-            // Learning by Doing (Role-based general XP)
-            const roleToSkillMap: Record<JobRole, SkillName> = {
-                'Gardener': 'Gardening',
-                'Technician': 'Maintenance',
-                'Janitor': 'Cleanliness',
-                'Botanist': 'Botanical',
-                'Salesperson': 'Negotiation',
-                'Generalist': 'Gardening',
-            };
-            const skillToLevel = roleToSkillMap[emp.role];
-            if (skillToLevel) {
-                const skill = emp.skills[skillToLevel];
-                if (skill.level < 10) {
-                    skill.xp += 2; // Reduced base XP per day
-                    if (skill.xp >= XP_PER_LEVEL) {
-                        skill.level = Math.min(10, skill.level + 1);
-                        skill.xp = 0;
-                    }
-                }
-            }
-        });
-        
-        employeesToQuit.forEach(empId => {
-            const emp = this.employees[empId];
-            if (emp) {
-                delete this.employees[empId];
-                if (emp.structureId) {
-                    this.structures[emp.structureId].employeeIds = this.structures[emp.structureId].employeeIds.filter(id => id !== empId);
-                }
-                emp.structureId = null;
-                this.jobMarketCandidates.unshift(emp);
-                this.alerts.push({
-                    id: `alert-${emp.id}-employee_quit-${ticks}`,
-                    type: 'employee_quit',
-                    message: `${emp.firstName} ${emp.lastName} has quit due to low morale.`,
-                    location: { structureId: '', roomId: '', zoneId: ''},
-                    tickGenerated: ticks,
-                    context: { employeeId: emp.id }
-                });
-            }
-        });
-
-        this.logExpense('salaries', totalSalaries);
-        this.capital -= totalSalaries;
+      const totalSalaries = this.hrService.processDailyCycle(ticks, rng);
+      this.financeService.recordSalaries(totalSalaries);
     }
 
     // Generate tasks and run AI before structure updates
@@ -862,62 +413,7 @@ export class Company {
         this.structures[structureId].update(this, rng, ticks);
     }
 
-    let totalRent = 0;
-    let totalMaintenance = 0;
-    let totalPower = 0;
-    
-    const blueprints = getBlueprints();
-    const pricePerKwh = blueprints.utilityPrices.pricePerKwh;
-
-    for (const structureId in this.structures) {
-        const structure = this.structures[structureId];
-        const structureBlueprint = blueprints.structures[structure.blueprintId];
-        
-        if (structureBlueprint) {
-            totalRent += structure.getRentalCostPerTick(structureBlueprint);
-        }
-
-        for (const roomId in structure.rooms) {
-            const room = structure.rooms[roomId];
-            for (const zoneId in room.zones) {
-                const zone = room.zones[zoneId];
-                
-                const hourOfDay = ticks % 24;
-                const isLightOnInZone = hourOfDay < zone.lightCycle.on;
-
-                for (const deviceId in zone.devices) {
-                    const device = zone.devices[deviceId];
-                    
-                    const devicePrice = blueprints.devicePrices[device.blueprintId];
-                    if (devicePrice) {
-                        totalMaintenance += devicePrice.baseMaintenanceCostPerTick;
-                    }
-                    
-                    if (device.status === 'on') {
-                        const deviceBlueprint = blueprints.devices[device.blueprintId];
-                        const powerKw = deviceBlueprint?.settings?.power;
-                        
-                        if (powerKw) {
-                            let shouldIncurPowerCost = true;
-                            if (deviceBlueprint.kind === 'Lamp') {
-                                shouldIncurPowerCost = isLightOnInZone;
-                            }
-                            
-                            if (shouldIncurPowerCost) {
-                                totalPower += powerKw * pricePerKwh;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    this.logExpense('rent', totalRent);
-    this.logExpense('maintenance', totalMaintenance);
-    this.logExpense('power', totalPower);
-    
-    this.capital -= (totalRent + totalMaintenance + totalPower);
+    this.financeService.applyOperatingCosts(this.structures, ticks);
   }
   
   toJSON() {
