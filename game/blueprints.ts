@@ -1,5 +1,21 @@
 
 import { BlueprintDB, StructureBlueprint, StrainBlueprint, DeviceBlueprint, CultivationMethodBlueprint, DevicePrice, Company, StrainPrice, UtilityPrices, PersonnelData, Trait, TaskDefinition, TaskType } from './types';
+import {
+  assertHasString,
+  assertObject,
+  assertStringArray,
+  assertUniqueId,
+  validateCultivationMethodBlueprint,
+  validateDeviceBlueprint,
+  validateDevicePriceRecord,
+  validatePersonnelData,
+  validateStrainBlueprint,
+  validateStrainPriceRecord,
+  validateStructureBlueprint,
+  validateTaskDefinitions,
+  validateTraitList,
+  validateUtilityPrices,
+} from '../src/game/blueprints/validation';
 
 const BLUEPRINT_BASE_PATH = '/data/blueprints/';
 const PERSONNEL_BASE_PATH = '/data/personnel/';
@@ -16,8 +32,14 @@ interface StrainPricesFile {
   strainPrices: Record<string, StrainPrice>;
 }
 
+type BlueprintValidator = (blueprint: Record<string, unknown>, context: string) => void;
 
-async function fetchAndStore<T extends BlueprintWithId>(basePath: string, files: string[], store: Record<string, T>): Promise<void> {
+async function fetchAndStore<T extends BlueprintWithId>(
+  basePath: string,
+  files: string[],
+  store: Record<string, T>,
+  validator?: BlueprintValidator,
+): Promise<void> {
   if (!files || files.length === 0) {
     return;
   }
@@ -28,11 +50,19 @@ async function fetchAndStore<T extends BlueprintWithId>(basePath: string, files:
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const bp = await response.json() as T;
-      if (typeof bp.id !== 'string') {
-        throw new Error(`Blueprint at ${file} is missing a string 'id' property.`);
+      const json = await response.json();
+      if (!assertObject(json, file)) {
+        return;
       }
-      store[bp.id] = bp;
+      if (!assertHasString(json, 'id', file)) {
+        return;
+      }
+      const context = `${file} (id=${json.id})`;
+      if (!assertUniqueId(store, json.id, context)) {
+        return;
+      }
+      validator?.(json, context);
+      store[json.id] = json as T;
     } catch (e) {
       console.error(`Failed to load blueprint: ${file}`, e);
       throw e;
@@ -95,35 +125,76 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
     };
     
     const devicePricesPromise = fetch('/data/prices/devicePrices.json')
-      .then(res => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data: DevicePricesFile) => {
-        db.devicePrices = data.devicePrices;
+        const context = '/data/prices/devicePrices.json';
+        if (!assertObject(data, context)) {
+          return;
+        }
+        if (!assertObject(data.devicePrices, `${context}.devicePrices`)) {
+          return;
+        }
+        validateDevicePriceRecord(data.devicePrices, `${context}.devicePrices`);
+        db.devicePrices = data.devicePrices as Record<string, DevicePrice>;
       }).catch(e => {
         console.error("Failed to load device prices", e);
         throw e;
       });
-      
+
     const strainPricesPromise = fetch('/data/prices/strainPrices.json')
-      .then(res => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data: StrainPricesFile) => {
-        db.strainPrices = data.strainPrices;
+        const context = '/data/prices/strainPrices.json';
+        if (!assertObject(data, context)) {
+          return;
+        }
+        if (!assertObject(data.strainPrices, `${context}.strainPrices`)) {
+          return;
+        }
+        validateStrainPriceRecord(data.strainPrices, `${context}.strainPrices`);
+        db.strainPrices = data.strainPrices as Record<string, StrainPrice>;
       }).catch(e => {
         console.error("Failed to load strain prices", e);
         throw e;
       });
 
     const utilityPricesPromise = fetch('/data/prices/utilityPrices.json')
-      .then(res => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data: UtilityPrices) => {
-        db.utilityPrices = data;
+        const context = '/data/prices/utilityPrices.json';
+        if (validateUtilityPrices(data, context)) {
+          db.utilityPrices = data;
+        }
       }).catch(e => {
         console.error("Failed to load utility prices", e);
         throw e;
       });
 
     const taskDefinitionsPromise = fetch(`${CONFIG_BASE_PATH}task_definitions.json`)
-        .then(res => res.json())
+        .then((res) => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
         .then((data: Record<TaskType, TaskDefinition>) => {
+            const context = `${CONFIG_BASE_PATH}task_definitions.json`;
+            validateTaskDefinitions(data, context);
             db.taskDefinitions = data;
         }).catch(e => {
             console.error("Failed to load task definitions", e);
@@ -131,13 +202,28 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
         });
 
     // Load personnel data
-    const personnelPromises = Object.entries(personnelFiles).map(async ([key, fileName]) => {
+    const personnelPromises = Object.entries(personnelFiles).map(async ([, fileName]) => {
+        const filePath = `${PERSONNEL_BASE_PATH}${fileName}`;
         try {
-            const response = await fetch(`${PERSONNEL_BASE_PATH}${fileName}`);
+            const response = await fetch(filePath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
-            const dataKey = (fileName as string).replace('.json', ''); // e.g., 'firstNames'
-            if (db.personnelData[dataKey as keyof PersonnelData]) {
-                (db.personnelData[dataKey as keyof PersonnelData] as any) = data;
+            const dataKey = (fileName as string).replace('.json', '');
+            if (dataKey === 'firstNames') {
+                if (assertStringArray(data, filePath)) {
+                    db.personnelData.firstNames = data;
+                }
+            } else if (dataKey === 'lastNames') {
+                if (assertStringArray(data, filePath)) {
+                    db.personnelData.lastNames = data;
+                }
+            } else if (dataKey === 'traits') {
+                validateTraitList(data, filePath);
+                if (Array.isArray(data)) {
+                    db.personnelData.traits = data as Trait[];
+                }
             }
         } catch(e) {
             console.error(`Failed to load personnel data: ${fileName}`, e);
@@ -147,10 +233,10 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
 
     // Load all blueprints based on the manifest
     await Promise.all([
-      fetchAndStore<StructureBlueprint>(`${BLUEPRINT_BASE_PATH}structures/`, structureFiles, db.structures),
-      fetchAndStore<StrainBlueprint>(`${BLUEPRINT_BASE_PATH}strains/`, strainFiles, db.strains),
-      fetchAndStore<DeviceBlueprint>(`${BLUEPRINT_BASE_PATH}devices/`, deviceFiles, db.devices),
-      fetchAndStore<CultivationMethodBlueprint>(`${BLUEPRINT_BASE_PATH}cultivationMethods/`, cultivationMethodFiles, db.cultivationMethods),
+      fetchAndStore<StructureBlueprint>(`${BLUEPRINT_BASE_PATH}structures/`, structureFiles, db.structures, validateStructureBlueprint),
+      fetchAndStore<StrainBlueprint>(`${BLUEPRINT_BASE_PATH}strains/`, strainFiles, db.strains, validateStrainBlueprint),
+      fetchAndStore<DeviceBlueprint>(`${BLUEPRINT_BASE_PATH}devices/`, deviceFiles, db.devices, validateDeviceBlueprint),
+      fetchAndStore<CultivationMethodBlueprint>(`${BLUEPRINT_BASE_PATH}cultivationMethods/`, cultivationMethodFiles, db.cultivationMethods, validateCultivationMethodBlueprint),
       devicePricesPromise,
       strainPricesPromise,
       utilityPricesPromise,
@@ -158,6 +244,8 @@ export function loadAllBlueprints(): Promise<BlueprintDB> {
       ...personnelPromises,
     ]);
     
+    validatePersonnelData(db.personnelData, 'personnelData');
+
     blueprintDB = db;
     return db;
   })();
