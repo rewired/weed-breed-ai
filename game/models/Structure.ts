@@ -3,11 +3,21 @@
 
 import { Room } from './Room';
 import { Zone } from './Zone';
-import { RoomPurpose } from '../roomPurposes';
-import { StructureBlueprint, Company, StrainBlueprint, Device, Employee, SkillName, JobRole, Task, TaskType } from '../types';
+import type { RoomPurpose } from '../roomPurposes';
+import type {
+  StructureBlueprint,
+  StrainBlueprint,
+  Device,
+  Employee,
+  SkillName,
+  JobRole,
+  Task,
+  TaskType,
+} from '../types';
 import { GrowthStage } from './Plant';
 import { getAvailableStrains, getBlueprints } from '../blueprints';
 import { RandomGenerator } from '../utils';
+import type { Company } from './Company';
 
 const TICKS_PER_MONTH = 30;
 

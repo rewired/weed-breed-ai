@@ -1,5 +1,17 @@
 
-import { Structure, StructureBlueprint, StrainBlueprint, Zone, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, Task, PlantingPlan, OvertimePolicy } from '../types';
+import type {
+  StructureBlueprint,
+  StrainBlueprint,
+  FinancialLedger,
+  ExpenseCategory,
+  RevenueCategory,
+  Alert,
+  AlertType,
+  Employee,
+  Task,
+  PlantingPlan,
+  OvertimePolicy,
+} from '../types';
 import { getBlueprints } from '../blueprints';
 import { createSeededRandom, RandomGenerator } from '../utils';
 import { FinanceService } from './company/FinanceService';
@@ -7,6 +19,10 @@ import { HRService } from './company/HRService';
 import { TaskEngine } from './company/TaskEngine';
 import { MarketService } from './company/MarketService';
 import { MUTATION_FACTOR, ALERT_COOLDOWN_TICKS } from '../constants/balance';
+import { Structure } from './Structure';
+import type { Zone } from './Zone';
+import type { Plant } from './Plant';
+import type { Planting } from './Planting';
 
 
 export class Company {

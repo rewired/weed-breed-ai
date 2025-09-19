@@ -1,4 +1,4 @@
-import { StrainBlueprint } from '../types';
+import type { StrainBlueprint } from '../types';
 import { RandomGenerator } from '../utils';
 
 export enum GrowthStage {

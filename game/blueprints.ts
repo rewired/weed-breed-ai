@@ -1,6 +1,5 @@
 import type {
   BlueprintDB,
-  Company,
   CultivationMethodBlueprint,
   DeviceBlueprint,
   PersonnelData,
@@ -9,6 +8,7 @@ import type {
   TaskDefinition,
   TaskType,
 } from './types';
+import type { Company } from './models/Company';
 import {
   BlueprintManifestSchema,
   CultivationMethodBlueprintSchema,

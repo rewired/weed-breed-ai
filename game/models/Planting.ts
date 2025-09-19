@@ -1,5 +1,5 @@
 import { Plant, GrowthStage } from './Plant';
-import { StrainBlueprint } from '../types';
+import type { StrainBlueprint } from '../types';
 import { RandomGenerator } from '../utils';
 
 interface Environment {
