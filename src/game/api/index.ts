@@ -23,8 +23,15 @@ export type {
   SimulationSnapshot,
   SimulationStartOptions,
   SimTickEventDTO,
+  AlertSummaryDTO,
+  AlertLocationDTO,
+  StructureSummaryDTO,
+  RoomSummaryDTO,
+  ZoneSummaryDTO,
   WorldSummaryDTO,
 };
+
+export type { GameSpeed };
 
 export async function start(options?: SimulationStartOptions): Promise<WorldSummaryDTO | null> {
   return adapter.start(options);

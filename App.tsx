@@ -8,7 +8,12 @@ import Navigation from './components/Navigation';
 import MainView from './views/MainView';
 import { Modals } from './components/modals';
 import StartScreen from './views/StartScreen';
-import { Alert } from './game/types';
+import type {
+  AlertSummaryDTO,
+  StructureSummaryDTO,
+  RoomSummaryDTO,
+  ZoneSummaryDTO,
+} from '@/src/game/api';
 
 const App = () => {
   const { 
@@ -102,6 +107,16 @@ const App = () => {
   const selectedStructure = selectedStructureId && gameState ? gameState.company.structures[selectedStructureId] : null;
   const selectedRoom = selectedStructure && selectedRoomId ? selectedStructure.rooms[selectedRoomId] : null;
   const selectedZone = selectedRoom && selectedZoneId ? selectedRoom.zones[selectedZoneId] : null;
+
+  const selectedStructureSummary: StructureSummaryDTO | null = selectedStructure
+    ? { id: selectedStructure.id, name: selectedStructure.name }
+    : null;
+  const selectedRoomSummary: RoomSummaryDTO | null = selectedRoom
+    ? { id: selectedRoom.id, name: selectedRoom.name, structureId: selectedStructure?.id ?? '' }
+    : null;
+  const selectedZoneSummary: ZoneSummaryDTO | null = selectedZone
+    ? { id: selectedZone.id, name: selectedZone.name, roomId: selectedRoom?.id ?? '' }
+    : null;
   
   const { modalState, formState, openModal, closeModal, updateForm, resetForm } = useModals({
     selectedStructure,
@@ -131,20 +146,22 @@ const App = () => {
     event.target.value = '';
   }, [importGame]);
 
-  const handleNavigateToAlert = useCallback((alert: Alert) => {
+  const handleNavigateToAlert = useCallback((alert: AlertSummaryDTO) => {
     if (!gameState) return;
     acknowledgeAlert(alert.id);
 
-    if (alert.type === 'raise_request' && alert.context) {
-        const { employeeId, newSalary } = alert.context;
-        const employee = gameState.company.employees[employeeId];
-        if (employee) {
-            const bonus = (newSalary - employee.salaryPerDay) * 45;
-            openModal('negotiateSalary', { itemToNegotiate: { employee, newSalary, bonus } });
+    if (alert.type === 'raise_request' && alert.context && typeof alert.context === 'object') {
+        const { employeeId, newSalary } = alert.context as { employeeId?: string; newSalary?: number };
+        if (employeeId) {
+            const employee = gameState.company.employees[employeeId];
+            if (employee && typeof newSalary === 'number') {
+                const bonus = (newSalary - employee.salaryPerDay) * 45;
+                openModal('negotiateSalary', { itemToNegotiate: { employee, newSalary, bonus } });
+            }
         }
     } else if (alert.type === 'employee_quit') {
         setCurrentView('personnel');
-    } else {
+    } else if (alert.location) {
         setSelectedStructureId(alert.location.structureId);
         setSelectedRoomId(alert.location.roomId);
         setSelectedZoneId(alert.location.zoneId);
@@ -169,12 +186,29 @@ const App = () => {
   const isAnyModalOpen = Object.values(modalState).some(v => typeof v === 'boolean' && v);
   const isBlurred = isGameMenuOpen || isAnyModalOpen;
 
+  const dashboardAlerts: AlertSummaryDTO[] = gameState
+    ? gameState.company.alerts.map(alert => ({
+        id: alert.id,
+        type: alert.type,
+        message: alert.message,
+        location: alert.location
+          ? {
+              structureId: alert.location.structureId,
+              roomId: alert.location.roomId,
+              zoneId: alert.location.zoneId,
+            }
+          : undefined,
+        isAcknowledged: alert.isAcknowledged,
+        context: alert.context,
+      }))
+    : [];
+
   return (
     <>
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json,application/json" onChange={handleFileSelect} />
       <div className="app-container">
         {gameState && (
-          <Dashboard 
+          <Dashboard
             capital={gameState.company.capital}
             cumulativeYield_g={gameState.company.cumulativeYield_g}
             ticks={gameState.ticks}
@@ -190,7 +224,7 @@ const App = () => {
             gameSpeed={gameSpeed}
             onSetGameSpeed={setGameSpeed}
             currentView={currentView}
-            alerts={gameState.company.alerts}
+            alerts={dashboardAlerts}
             onNavigateToAlert={handleNavigateToAlert}
             onAcknowledgeAlert={acknowledgeAlert}
             onGameMenuToggle={setGameMenuOpen}
@@ -200,9 +234,9 @@ const App = () => {
           {gameState ? (
             <main>
               <Navigation
-                structure={selectedStructure}
-                room={selectedRoom}
-                zone={selectedZone}
+                structure={selectedStructureSummary}
+                room={selectedRoomSummary}
+                zone={selectedZoneSummary}
                 onBack={handleBack}
                 onRootClick={goToRoot}
                 onStructureClick={goToStructureView}
