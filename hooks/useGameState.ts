@@ -9,6 +9,79 @@ const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';
 const SAVE_PREFIX = 'weedbreed-save-';
 const TICK_INTERVAL = 5000;
+const SAVEGAME_VERSION = 1;
+
+type SerializedCompany = ReturnType<Company['toJSON']>;
+type PersistedGameState = Omit<GameState, 'company'> & { company: SerializedCompany };
+
+interface SaveGameEnvelope {
+  version: number;
+  createdAt: string;
+  seed: number;
+  payload: PersistedGameState;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isSaveGameEnvelope = (value: unknown): value is SaveGameEnvelope => {
+  if (!isRecord(value)) return false;
+  if (typeof value.version !== 'number') return false;
+  if (typeof value.createdAt !== 'string') return false;
+  if (typeof value.seed !== 'number') return false;
+  if (!('payload' in value)) return false;
+
+  const { payload } = value as { payload: unknown };
+  return isRecord(payload);
+};
+
+const deserializeSaveGame = (
+  value: unknown,
+): { state: PersistedGameState; envelope: SaveGameEnvelope | null } => {
+  if (isSaveGameEnvelope(value)) {
+    if (value.version !== SAVEGAME_VERSION) {
+      console.warn(
+        `Loading save with unsupported version ${value.version}. Attempting to migrate using payload data.`,
+      );
+    }
+    return { state: value.payload, envelope: value };
+  }
+
+  return { state: value as PersistedGameState, envelope: null };
+};
+
+const parseSaveGameString = (
+  jsonString: string,
+): { state: PersistedGameState; envelope: SaveGameEnvelope | null } => {
+  const raw = JSON.parse(jsonString);
+  return deserializeSaveGame(raw);
+};
+
+const serializeGameState = (state: GameState): PersistedGameState => {
+  const { company, ...rest } = state;
+  return {
+    ...rest,
+    company: company.toJSON(),
+  };
+};
+
+const hydrateGameState = (state: PersistedGameState): GameState => {
+  const { company: companyData, ...rest } = state;
+  return {
+    ...rest,
+    company: new Company(companyData),
+  };
+};
+
+const createEnvelope = (
+  state: PersistedGameState,
+  previousEnvelope?: SaveGameEnvelope | null,
+): SaveGameEnvelope => ({
+  version: SAVEGAME_VERSION,
+  createdAt: previousEnvelope?.createdAt ?? new Date().toISOString(),
+  seed: state.seed,
+  payload: state,
+});
 
 export const useGameState = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -31,9 +104,9 @@ export const useGameState = () => {
     try {
       const savedStateJSON = localStorage.getItem(`${SAVE_PREFIX}${saveName}`);
       if (savedStateJSON) {
-        const savedState = JSON.parse(savedStateJSON);
-        const company = new Company(savedState.company);
-        setGameState({ ...savedState, company });
+        const { state } = parseSaveGameString(savedStateJSON);
+        const hydratedState = hydrateGameState(state);
+        setGameState(hydratedState);
         localStorage.setItem(LAST_PLAYED_KEY, saveName);
       } else {
         console.error(`Save game "${saveName}" not found.`);
@@ -86,9 +159,25 @@ export const useGameState = () => {
     const state = stateToSaveOverride || gameStateRef.current;
     if (!state) return;
     try {
-      const stateToSave = { ...state, company: state.company.toJSON() };
-      localStorage.setItem(`${SAVE_PREFIX}${saveName}`, JSON.stringify(stateToSave));
-      
+      const stateToSave = serializeGameState(state);
+      let previousEnvelope: SaveGameEnvelope | null = null;
+
+      const existingJSON = localStorage.getItem(`${SAVE_PREFIX}${saveName}`);
+      if (existingJSON) {
+        try {
+          const { envelope } = parseSaveGameString(existingJSON);
+          previousEnvelope = envelope;
+        } catch (parseError) {
+          console.warn(
+            `Existing save "${saveName}" is not in a recognized format. Overwriting with a new envelope.`,
+            parseError,
+          );
+        }
+      }
+
+      const envelope = createEnvelope(stateToSave, previousEnvelope);
+      localStorage.setItem(`${SAVE_PREFIX}${saveName}`, JSON.stringify(envelope));
+
       const saves = getSaveGames();
       if (!saves.includes(saveName)) {
         saves.push(saveName);
@@ -131,8 +220,24 @@ export const useGameState = () => {
     const gs = gameStateRef.current;
     if (!gs) return alert("No active game to export.");
     try {
-      const stateToSave = { ...gs, company: gs.company.toJSON() };
-      const jsonString = JSON.stringify(stateToSave, null, 2);
+      const stateToSave = serializeGameState(gs);
+      let previousEnvelope: SaveGameEnvelope | null = null;
+
+      const lastPlayed = localStorage.getItem(LAST_PLAYED_KEY);
+      if (lastPlayed) {
+        const existingJSON = localStorage.getItem(`${SAVE_PREFIX}${lastPlayed}`);
+        if (existingJSON) {
+          try {
+            const { envelope } = parseSaveGameString(existingJSON);
+            previousEnvelope = envelope;
+          } catch (error) {
+            console.warn('Failed to read existing save metadata for export. Generating new envelope.', error);
+          }
+        }
+      }
+
+      const envelope = createEnvelope(stateToSave, previousEnvelope);
+      const jsonString = JSON.stringify(envelope, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -151,9 +256,9 @@ export const useGameState = () => {
   const importGame = useCallback((jsonString: string) => {
     setIsSimRunning(false);
     try {
-      const importedState = JSON.parse(jsonString);
-      const company = new Company(importedState.company);
-      const newGameState = { ...importedState, company };
+      const { state } = parseSaveGameString(jsonString);
+      const newGameState = hydrateGameState(state);
+      const { company } = newGameState;
       setGameState(newGameState);
       const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
       const saveName = `(Imported) ${company.name} - ${timestamp}`;
