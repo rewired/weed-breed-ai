@@ -1,5 +1,6 @@
 import React from 'react';
-import { getAvailableStrains, StrainBlueprint } from '@/src/game/api';
+import { getAvailableStrains } from '@/src/game/api';
+import type { StrainBlueprint } from '@/game/types';
 
 const TraitDisplay = ({ strain }: { strain: StrainBlueprint | null }) => {
     if (!strain) return <div className="trait-display"></div>;

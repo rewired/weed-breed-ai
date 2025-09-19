@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAvailableStrains, getBlueprints, StrainBlueprint } from '@/src/game/api';
+import { getAvailableStrains, getBlueprints } from '@/src/game/api';
+import type { StrainBlueprint } from '@/game/types';
 
 const getNestedProperty = (obj: any, path: string) => {
   return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj);

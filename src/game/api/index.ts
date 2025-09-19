@@ -1,10 +1,15 @@
-import type { GameSpeed } from '@/game/types';
 import { EventBus } from './eventBus';
 import type {
   ApplyTreatmentResult,
   AlertLocationDTO,
   AlertSummaryDTO,
+  DashboardStatusDTO,
+  ExpenseBreakdownDTO,
+  ExpenseCategory,
+  FinanceSummaryDTO,
   PlantTreatmentId,
+  RevenueBreakdownDTO,
+  RevenueCategory,
   RoomSummaryDTO,
   SimulationEventMap,
   SimulationEventName,
@@ -15,8 +20,11 @@ import type {
   WorldSummaryDTO,
   ZoneSummaryDTO,
   ZoneTreatmentId,
+  GameSpeed,
+  ZoneInfoDTO,
 } from './dto';
 import { EngineAdapter } from '../internal/engineAdapter';
+import { getDashboardStatus, getFinanceSummary, getZoneInfo } from './selectors';
 
 const bus = new EventBus<SimulationEventMap>();
 const adapter = new EngineAdapter(bus);
@@ -30,15 +38,21 @@ export type {
   SimTickEventDTO,
   AlertSummaryDTO,
   AlertLocationDTO,
+  DashboardStatusDTO,
+  ExpenseBreakdownDTO,
+  ExpenseCategory,
+  FinanceSummaryDTO,
   StructureSummaryDTO,
   RoomSummaryDTO,
   ZoneSummaryDTO,
   WorldSummaryDTO,
   ZoneTreatmentId,
   PlantTreatmentId,
+  RevenueBreakdownDTO,
+  RevenueCategory,
+  GameSpeed,
+  ZoneInfoDTO,
 };
-
-export type { GameSpeed };
 
 export async function start(
   seedOrOptions?: number | SimulationStartOptions,
@@ -87,40 +101,9 @@ export function applyTreatmentToPlant(
   return adapter.applyTreatmentToPlant(plantId, treatmentId);
 }
 
-export { Company } from '@/game/models/Company';
-export { Structure } from '@/game/models/Structure';
-export { Room } from '@/game/models/Room';
-export { Zone } from '@/game/models/Zone';
-export { Planting } from '@/game/models/Planting';
-export { Plant } from '@/game/models/Plant';
-
-export type {
-  GameState,
-  StructureBlueprint,
-  RoomPurpose,
-  JobRole,
-  PlantingPlan,
-  Alert,
-  Employee,
-  ExpenseCategory,
-  RevenueCategory,
-  GroupedDeviceInfo,
-  StrainBlueprint,
-  CultivationMethodBlueprint,
-  SkillName,
-  Trait,
-  OvertimePolicy,
-} from '@/game/types';
-export type { Planting } from '@/game/models/Planting';
-export type { Plant } from '@/game/models/Plant';
-
 export { roomPurposes } from '@/game/roomPurposes';
-export {
-  getBlueprints,
-  getAvailableStrains,
-  loadAllBlueprints,
-} from '@/game/blueprints';
+export { getBlueprints, getAvailableStrains, loadAllBlueprints } from '@/game/blueprints';
 export { initialGameState, gameTick } from '@/game/engine';
 export { mulberry32, createSeededRandom, createRandomGenerator } from '@/game/utils';
-export type { RandomGenerator } from '@/game/utils';
-export { GrowthStage } from '@/game/models/Plant';
+
+export { getDashboardStatus, getFinanceSummary, getZoneInfo } from './selectors';

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Zone, GroupedDeviceInfo, getBlueprints } from '@/src/game/api';
+import { getBlueprints } from '@/src/game/api';
+import type { Zone } from '@/game/models/Zone';
+import type { GroupedDeviceInfo } from '@/game/types';
 
 // Props for the new component
 interface ZoneDeviceListProps {

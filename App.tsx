@@ -8,11 +8,17 @@ import Navigation from './components/Navigation';
 import MainView from './views/MainView';
 import { Modals } from './components/modals';
 import StartScreen from './views/StartScreen';
+import {
+  getDashboardStatus,
+  getFinanceSummary,
+} from '@/src/game/api';
 import type {
   AlertSummaryDTO,
   StructureSummaryDTO,
   RoomSummaryDTO,
   ZoneSummaryDTO,
+  FinanceSummaryDTO,
+  DashboardStatusDTO,
 } from '@/src/game/api';
 
 const App = () => {
@@ -205,9 +211,8 @@ const App = () => {
     : [];
 
   const latestSimTick = telemetry.simTick;
-  const dashboardCapital = latestSimTick?.companyCapital ?? gameState?.company.capital ?? 0;
-  const dashboardYield = latestSimTick?.cumulativeYield_g ?? gameState?.company.cumulativeYield_g ?? 0;
-  const dashboardTicks = latestSimTick?.tick ?? gameState?.ticks ?? 0;
+  const dashboardStatus: DashboardStatusDTO = getDashboardStatus(gameState, latestSimTick);
+  const financeSummary: FinanceSummaryDTO | null = getFinanceSummary(gameState);
 
   return (
     <>
@@ -215,9 +220,7 @@ const App = () => {
       <div className="app-container">
         {gameState && (
           <Dashboard
-            capital={dashboardCapital}
-            cumulativeYield_g={dashboardYield}
-            ticks={dashboardTicks}
+            status={dashboardStatus}
             isSimRunning={isSimRunning}
             onStart={() => setIsSimRunning(true)}
             onPause={() => setIsSimRunning(false)}
@@ -248,9 +251,10 @@ const App = () => {
                 onStructureClick={goToStructureView}
                 onRoomClick={goToRoomView}
               />
-              <MainView 
+              <MainView
                   company={gameState.company}
                   ticks={gameState.ticks}
+                  financeSummary={financeSummary}
                   currentView={currentView}
                   selectedStructure={selectedStructure}
                   selectedRoom={selectedRoom}

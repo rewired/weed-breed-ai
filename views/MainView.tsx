@@ -1,12 +1,10 @@
 import React from 'react';
-import {
-  Company,
-  Structure,
-  Room,
-  Zone,
-  JobRole,
-  OvertimePolicy,
-} from '@/src/game/api';
+import type { FinanceSummaryDTO } from '@/src/game/api';
+import type { Company } from '@/game/models/Company';
+import type { Structure } from '@/game/models/Structure';
+import type { Room } from '@/game/models/Room';
+import type { Zone } from '@/game/models/Zone';
+import type { JobRole, OvertimePolicy } from '@/game/types';
 import Structures from '../components/Structures';
 import StructureDetail from '../components/StructureDetail';
 import RoomDetail from '../components/RoomDetail';
@@ -21,6 +19,7 @@ interface MainViewProps {
     selectedStructure: Structure | null;
     selectedRoom: Room | null;
     selectedZone: Zone | null;
+    financeSummary: FinanceSummaryDTO | null;
     onStructureClick: (id: string) => void;
     onRoomClick: (id: string) => void;
     onZoneClick: (id: string) => void;
@@ -36,17 +35,17 @@ interface MainViewProps {
     onSetOvertimePolicy: (policy: OvertimePolicy) => void;
     onToggleAutoReplant: (zoneId: string) => void;
     onDeletePlantingPlan: (zoneId: string) => void;
-    ticks: number;
 }
 
 const MainView: React.FC<MainViewProps> = (props) => {
     const { 
         company, 
         currentView,
-        selectedStructure, 
-        selectedRoom, 
-        selectedZone, 
-        onStructureClick, 
+        selectedStructure,
+        selectedRoom,
+        selectedZone,
+        financeSummary,
+        onStructureClick,
         onRoomClick,
         onZoneClick,
         onOpenModal,
@@ -61,11 +60,10 @@ const MainView: React.FC<MainViewProps> = (props) => {
         onSetOvertimePolicy,
         onToggleAutoReplant,
         onDeletePlantingPlan,
-        ticks,
     } = props;
 
     if (currentView === 'finances') {
-        return <FinancesView company={company} ticks={ticks} />;
+        return <FinancesView summary={financeSummary} />;
     }
     
     if (currentView === 'personnel') {

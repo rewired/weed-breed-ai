@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { GameSpeed, AlertSummaryDTO } from '@/src/game/api';
+import type { AlertSummaryDTO, DashboardStatusDTO, GameSpeed } from '@/src/game/api';
 
 interface DashboardProps {
-  capital: number;
-  cumulativeYield_g: number;
-  ticks: number;
+  status: DashboardStatusDTO;
   isSimRunning: boolean;
   onStart: () => void;
   onPause: () => void;
@@ -74,7 +72,7 @@ const AlertIcon = ({ type }: { type: string }) => {
     return <span className={`material-symbols-outlined alert-item-icon ${className}`}>{iconName}</span>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, onPersonnelClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert, onGameMenuToggle }) => {
+const Dashboard: React.FC<DashboardProps> = ({ status, isSimRunning, onStart, onPause, onReset, onSaveClick, onLoadClick, onExportClick, onFinancesClick, onPersonnelClick, gameSpeed, onSetGameSpeed, currentView, alerts, onNavigateToAlert, onAcknowledgeAlert, onGameMenuToggle }) => {
   const [progress, setProgress] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isGameMenuOpen, setGameMenuOpen] = useState(false);
@@ -88,10 +86,10 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
 
 
   // --- Date and Time Calculation ---
-  const year = Math.floor(ticks / (24 * 365)) + 1;
-  const dayOfYear = Math.floor(ticks / 24) % 365;
+  const year = Math.floor(status.tick / (24 * 365)) + 1;
+  const dayOfYear = Math.floor(status.tick / 24) % 365;
   const day = dayOfYear + 1;
-  const hour = ticks % 24;
+  const hour = status.tick % 24;
   const formattedDate = `Y${year}, D${day}, ${hour.toString().padStart(2, '0')}:00`;
 
   // --- Progress Circle Animation ---
@@ -120,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [ticks, isSimRunning, gameSpeed]);
+  }, [status.tick, isSimRunning, gameSpeed]);
 
   // --- Click Outside Handlers for Popovers ---
   useEffect(() => {
@@ -199,13 +197,13 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
         <div className="dashboard-metric">
           <span className="dashboard-metric__label">Capital</span>
           <span className="dashboard-metric__value">
-            {capital.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
+            {status.capital.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })}
           </span>
         </div>
         <div className="dashboard-metric">
           <span className="dashboard-metric__label">Cumulative Yield</span>
           <span className="dashboard-metric__value">
-            {(cumulativeYield_g || 0).toFixed(2)}g
+            {(status.cumulativeYield_g || 0).toFixed(2)}g
           </span>
         </div>
         <div className="dashboard-metric time-display">
@@ -225,7 +223,7 @@ const Dashboard: React.FC<DashboardProps> = ({ capital, cumulativeYield_g, ticks
           </svg>
           <div className="time-display-text">
             <div className="time-display-date">{formattedDate}</div>
-            <div className="time-display-ticks">{ticks} Ticks</div>
+            <div className="time-display-ticks">{status.tick} Ticks</div>
           </div>
         </div>
       </div>

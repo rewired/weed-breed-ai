@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
-import {
-  Company,
-  Room,
-  Structure,
-  Zone,
-  roomPurposes,
-  getBlueprints,
-  getAvailableStrains,
-} from '@/src/game/api';
+import { roomPurposes, getBlueprints, getAvailableStrains } from '@/src/game/api';
+import type { Company } from '@/game/models/Company';
+import type { Room } from '@/game/models/Room';
+import type { Structure } from '@/game/models/Structure';
+import type { Zone } from '@/game/models/Zone';
 import BreedingStation from './BreedingStation';
 
 interface RoomDetailProps {
