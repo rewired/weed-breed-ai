@@ -1,5 +1,5 @@
 import React from 'react';
-import { Employee, GameState } from '../../../game/types';
+import { Employee, GameState } from '@/src/game/api';
 
 const HireEmployeeModalContent = ({ gameState, modalState, formState, updateForm, handlers, closeModal }: { gameState: GameState, modalState: any, formState: any, updateForm: any, handlers: any, closeModal: any }) => {
     const employeeToHire: Employee | null = modalState.itemToHire;

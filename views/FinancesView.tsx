@@ -1,5 +1,5 @@
 import React from 'react';
-import { Company, ExpenseCategory, RevenueCategory } from '../game/types';
+import { Company, ExpenseCategory, RevenueCategory } from '@/src/game/api';
 
 interface FinancesViewProps {
   company: Company;

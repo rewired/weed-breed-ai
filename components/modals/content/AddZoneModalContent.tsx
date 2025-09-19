@@ -1,6 +1,5 @@
 import React from 'react';
-import { getBlueprints } from '../../../game/blueprints';
-import { CultivationMethodBlueprint } from '../../../game/types';
+import { getBlueprints, CultivationMethodBlueprint } from '@/src/game/api';
 
 const AddZoneModalContent = ({ formState, updateForm, handlers, closeModal, selectedRoom }) => {
     return (

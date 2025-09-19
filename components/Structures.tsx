@@ -1,6 +1,5 @@
 import React from 'react';
-import { Company } from '../game/types';
-import { getAvailableStrains } from '../game/blueprints';
+import { Company, getAvailableStrains } from '@/src/game/api';
 
 interface StructuresProps {
   company: Company;

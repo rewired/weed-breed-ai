@@ -18,9 +18,8 @@ import {
   setSpeed,
   on,
   getSnapshot,
-  applyTreatment,
-  listTreatments,
-  listHealthDefs,
+  applyTreatmentToZone,
+  applyTreatmentToPlant,
 } from '@/game/api';
 ```
 
@@ -28,8 +27,7 @@ import {
 2. **Events abonnieren:** `const off = on('sim:tick', handleTick)` registriert Listener; der Rückgabewert entfernt den Listener wieder.
 3. **Loop steuern:** `setSpeed(speed)` passt die Tickfrequenz an, `pause()` stoppt das Intervall, `await step()` erzwingt genau einen Tick.
 4. **Snapshot ziehen:** `getSnapshot()` liefert den letzten `WorldSummaryDTO`-Stand ohne neuen Tick.
-5. **Behandlungen auslösen:** `applyTreatment()` liefert aktuell nur ein standardisiertes Fehlerobjekt, bleibt aber die Schnittstelle für spätere Maßnahmen.
-6. **Stammdaten laden:** `listTreatments()` und `listHealthDefs()` liefern katalogisierte Optionen bzw. Definitionen aus dem Health-Modul.
+5. **Behandlungen auslösen:** `applyTreatmentToZone()` bzw. `applyTreatmentToPlant()` liefern aktuell standardisierte Fehlerobjekte, bilden aber den Einstieg für spätere Maßnahmen.
 
 ## Events & EventBus
 
@@ -46,7 +44,6 @@ Die Fassade verwendet einen synchronen `EventBus`. Listener werden sofort zur Ti
 | `sim:tick`       | Nach erfolgreichem `gameTick`                             | `SimTickEventDTO`        | Enthält Kapitalveränderungen, aktiven Speed und Health-Aggregate. |
 | `finance:update` | Für jede neue Buchungsdifferenz seit letztem Tick        | `FinanceUpdateEventDTO`  | Liefert Delta pro Einnahmen-/Ausgabenkategorie. |
 | `health:event`   | Bei jedem Tick nach Health-Aggregation                    | `HealthEventDTO`         | Aggregierte Gesundheits- und Stresswerte samt kritischen Pflanzen. |
-| `world:summary`  | Bei jeder Initialisierung sowie nach jedem Tick           | `WorldSummaryDTO`        | Globale Totals und aktive Alerts, geeignet für Dashboard-Header. |
 | `alert:event`    | Für neu erkannte Alerts im Vergleich zum vorherigen Tick | `AlertEventDTO`          | Liefert Standortinformationen für UI-Highlighting. |
 
 ## DTO-Leitfaden
@@ -68,7 +65,7 @@ Alle DTOs verwenden SI-konforme Einheiten wie im Projektstandard festgelegt (z.�
 - `start()` und `step()` initialisieren bei gesetztem `reset` immer einen frischen Zustand (inklusive deterministischer RNG-Seed-Initialisierung via `mulberry32`).
 - `setSpeed()` setzt eine Obergrenze von 10 Hz (`MIN_TICK_INTERVAL_MS`). Höhere Werte werden automatisch auf diese Grenze gekappt.
 - `pause()` stoppt lediglich das Intervall; bereits laufende Ticks werden zu Ende geführt.
-- Der EngineAdapter sendet beim Initialisieren direkt einen `world:summary` und `health:event`, bevor weitere Ticks laufen.
+- Der EngineAdapter aktualisiert beim Initialisieren sofort den Snapshot und sendet einen `health:event`, bevor weitere Ticks laufen.
 
 ## Best Practices
 

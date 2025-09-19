@@ -1,9 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState, GameSpeed, StructureBlueprint, RoomPurpose, JobRole, Planting, Plant, Alert, Employee, PlantingPlan, OvertimePolicy } from '../game/types';
-import { initialGameState, gameTick } from '../game/engine';
-import { getBlueprints, getAvailableStrains, loadAllBlueprints } from '../game/blueprints';
-import { Company } from '../game/models/Company';
-import { mulberry32 } from '../game/utils';
+import {
+  GameState,
+  GameSpeed,
+  StructureBlueprint,
+  RoomPurpose,
+  JobRole,
+  Planting,
+  Plant,
+  Alert,
+  Employee,
+  PlantingPlan,
+  OvertimePolicy,
+  initialGameState,
+  gameTick,
+  getBlueprints,
+  getAvailableStrains,
+  loadAllBlueprints,
+  Company,
+  mulberry32,
+} from '@/src/game/api';
 
 const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';

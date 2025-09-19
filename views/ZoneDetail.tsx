@@ -1,5 +1,5 @@
 import React from 'react';
-import { Company, Zone, Structure, Room } from '../game/types';
+import { Company, Zone, Structure, Room } from '@/src/game/api';
 import ZoneInfoPanel from '../components/ZoneInfoPanel';
 import ZoneDeviceList from '../components/ZoneDeviceList';
 import ZonePlantingList from '../components/ZonePlantingList';

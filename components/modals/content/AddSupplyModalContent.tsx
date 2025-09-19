@@ -1,5 +1,5 @@
 import React from 'react';
-import { getBlueprints } from '../../../game/blueprints';
+import { getBlueprints } from '@/src/game/api';
 
 const AddSupplyModalContent = ({ gameState, formState, updateForm, handlers, closeModal }) => {
     const { utilityPrices } = getBlueprints();

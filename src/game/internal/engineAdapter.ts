@@ -4,15 +4,16 @@ import { mulberry32 } from '@/game/utils';
 import { EventBus } from '../api/eventBus';
 import type {
   AlertEventDTO,
-  ApplyTreatmentOptions,
   ApplyTreatmentResult,
   FinanceUpdateEventDTO,
   HealthEventDTO,
+  PlantTreatmentId,
   SimulationEventMap,
   SimulationSnapshot,
   SimulationStartOptions,
   SimTickEventDTO,
   WorldSummaryDTO,
+  ZoneTreatmentId,
 } from '../api/dto';
 
 const DEFAULT_TICK_DURATION_MS = 5000;
@@ -252,6 +253,7 @@ export class EngineAdapter {
   private isRunning = false;
   private speed: GameSpeed = 1;
   private readonly tickDurationMs: number;
+  private lastSummary: WorldSummaryDTO | null = null;
 
   constructor(bus: EventBus<SimulationEventMap>, tickDurationMs: number = DEFAULT_TICK_DURATION_MS) {
     this.bus = bus;
@@ -267,7 +269,7 @@ export class EngineAdapter {
       this.isRunning = true;
       this.scheduleLoop();
     }
-    return mapWorldSummary(this.state);
+    return this.lastSummary;
   }
 
   pause(): void {
@@ -278,12 +280,23 @@ export class EngineAdapter {
     }
   }
 
-  async step(options?: SimulationStartOptions): Promise<SimTickEventDTO | null> {
-    await this.ensureInitialized(options);
+  async step(steps: number = 1): Promise<SimTickEventDTO | null> {
+    await this.ensureInitialized();
     if (!this.state) {
       return null;
     }
-    return this.advanceTick();
+
+    const normalizedSteps = Number.isFinite(steps) && steps > 0 ? Math.floor(steps) : 1;
+    let lastEvent: SimTickEventDTO | null = null;
+
+    for (let i = 0; i < normalizedSteps; i += 1) {
+      lastEvent = this.advanceTick();
+      if (!lastEvent) {
+        break;
+      }
+    }
+
+    return lastEvent;
   }
 
   setSpeed(speed: GameSpeed): void {
@@ -294,13 +307,20 @@ export class EngineAdapter {
   }
 
   getSnapshot(): SimulationSnapshot {
-    return this.state ? mapWorldSummary(this.state) : null;
+    return this.lastSummary;
   }
 
-  applyTreatment(_: ApplyTreatmentOptions): ApplyTreatmentResult {
+  applyTreatmentToZone(_: string, __: ZoneTreatmentId): ApplyTreatmentResult {
     return {
       success: false,
-      message: 'Treatment handling is not implemented yet.',
+      message: 'Zone treatment handling is not implemented yet.',
+    };
+  }
+
+  applyTreatmentToPlant(_: string, __: PlantTreatmentId): ApplyTreatmentResult {
+    return {
+      success: false,
+      message: 'Plant treatment handling is not implemented yet.',
     };
   }
 
@@ -371,8 +391,8 @@ export class EngineAdapter {
   }
 
   private emitState(summary: WorldSummaryDTO, health: HealthEventDTO): void {
+    this.lastSummary = summary;
     this.emitHealthEvent(health);
-    this.bus.emit('world:summary', summary);
   }
 
   private emitHealthEvent(health: HealthEventDTO): void {
