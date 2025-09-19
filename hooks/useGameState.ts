@@ -16,7 +16,6 @@ import {
   getBlueprints,
   getAvailableStrains,
   loadAllBlueprints,
-  Company,
   createSeededRandom,
 } from '@/src/game/api';
 import type {
@@ -35,12 +34,19 @@ import {
   type EventSnapshot,
 } from '@/src/game/api/eventMappers';
 import { simulationEventBus } from '@/src/lib/simulationEvents';
+import {
+  createEnvelope,
+  encodeSaveGameEnvelope,
+  hydrateGameState,
+  parseSaveGameString,
+  serializeGameState,
+  type SaveGameEnvelope,
+} from '@/src/lib/saveGamePersistence';
 
 const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';
 const SAVE_PREFIX = 'weedbreed-save-';
 const TICK_INTERVAL = 5000;
-const SAVEGAME_VERSION = 1;
 const TELEMETRY_UPDATE_INTERVAL_MS = 250; // 4 Hz update cadence
 const MAX_BUFFERED_EVENTS = 50;
 
@@ -56,78 +62,6 @@ const createInitialTelemetryState = (): SimulationTelemetryState => ({
   health: null,
   financeUpdates: [],
   alertEvents: [],
-});
-
-type SerializedCompany = ReturnType<Company['toJSON']>;
-type PersistedGameState = Omit<GameState, 'company'> & { company: SerializedCompany };
-
-interface SaveGameEnvelope {
-  version: number;
-  createdAt: string;
-  seed: number;
-  payload: PersistedGameState;
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const isSaveGameEnvelope = (value: unknown): value is SaveGameEnvelope => {
-  if (!isRecord(value)) return false;
-  if (typeof value.version !== 'number') return false;
-  if (typeof value.createdAt !== 'string') return false;
-  if (typeof value.seed !== 'number') return false;
-  if (!('payload' in value)) return false;
-
-  const { payload } = value as { payload: unknown };
-  return isRecord(payload);
-};
-
-const deserializeSaveGame = (
-  value: unknown,
-): { state: PersistedGameState; envelope: SaveGameEnvelope | null } => {
-  if (isSaveGameEnvelope(value)) {
-    if (value.version !== SAVEGAME_VERSION) {
-      console.warn(
-        `Loading save with unsupported version ${value.version}. Attempting to migrate using payload data.`,
-      );
-    }
-    return { state: value.payload, envelope: value };
-  }
-
-  return { state: value as PersistedGameState, envelope: null };
-};
-
-const parseSaveGameString = (
-  jsonString: string,
-): { state: PersistedGameState; envelope: SaveGameEnvelope | null } => {
-  const raw = JSON.parse(jsonString);
-  return deserializeSaveGame(raw);
-};
-
-const serializeGameState = (state: GameState): PersistedGameState => {
-  const { company, ...rest } = state;
-  return {
-    ...rest,
-    company: company.toJSON(),
-  };
-};
-
-const hydrateGameState = (state: PersistedGameState): GameState => {
-  const { company: companyData, ...rest } = state;
-  return {
-    ...rest,
-    company: new Company(companyData),
-  };
-};
-
-const createEnvelope = (
-  state: PersistedGameState,
-  previousEnvelope?: SaveGameEnvelope | null,
-): SaveGameEnvelope => ({
-  version: SAVEGAME_VERSION,
-  createdAt: previousEnvelope?.createdAt ?? new Date().toISOString(),
-  seed: state.seed,
-  payload: state,
 });
 
 export const useGameState = () => {
@@ -359,7 +293,8 @@ export const useGameState = () => {
       }
 
       const envelope = createEnvelope(stateToSave, previousEnvelope);
-      localStorage.setItem(`${SAVE_PREFIX}${saveName}`, JSON.stringify(envelope));
+      const storageValue = encodeSaveGameEnvelope(envelope);
+      localStorage.setItem(`${SAVE_PREFIX}${saveName}`, storageValue);
 
       const saves = getSaveGames();
       if (!saves.includes(saveName)) {
