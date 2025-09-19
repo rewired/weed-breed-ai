@@ -7,7 +7,43 @@ export function mulberry32(seed: number) {
     t = Math.imul(t ^ t >>> 15, t | 1);
     t ^= t + Math.imul(t ^ t >>> 7, t | 61);
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
+  };
+}
+
+export type RandomAdapter = {
+  /** Returns a float between 0 (inclusive) and 1 (exclusive). */
+  float(): number;
+  /** Returns an integer between min (inclusive) and max (inclusive). */
+  int(min: number, max: number): number;
+  /** Returns true with a probability of p. */
+  chance(p: number): boolean;
+};
+
+export function createRandomAdapter(rng: () => number): RandomAdapter {
+  return {
+    float(): number {
+      return rng();
+    },
+    int(min: number, max: number): number {
+      if (max < min) {
+        throw new Error('max must be greater than or equal to min');
+      }
+      return Math.floor(rng() * (max - min + 1)) + min;
+    },
+    chance(p: number): boolean {
+      if (p <= 0) {
+        return false;
+      }
+      if (p >= 1) {
+        return true;
+      }
+      return rng() < p;
+    },
+  };
+}
+
+export function createSeededRandomAdapter(seed: number): RandomAdapter {
+  return createRandomAdapter(mulberry32(seed));
 }
 
 /**
@@ -17,27 +53,4 @@ export function mulberry32(seed: number) {
  */
 export function yieldToMainThread(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0));
-}
-
-export class RandomAdapter {
-  private rng: () => number;
-
-  constructor(rng: () => number) {
-    this.rng = rng;
-  }
-
-  /** Returns a float between 0 (inclusive) and 1 (exclusive). */
-  float(): number {
-    return this.rng();
-  }
-
-  /** Returns an integer between min (inclusive) and max (inclusive). */
-  int(min: number, max: number): number {
-    return Math.floor(this.rng() * (max - min + 1)) + min;
-  }
-
-  /** Returns true with a probability of p. */
-  chance(p: number): boolean {
-    return this.rng() < p;
-  }
 }

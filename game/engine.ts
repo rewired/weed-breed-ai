@@ -1,5 +1,5 @@
 import { GameState, Company } from './types';
-import { mulberry32 } from './utils';
+import { createSeededRandomAdapter } from './utils';
 
 export function initialGameState(companyName: string = 'Weedbreed', seed?: number): GameState {
   const gameSeed = seed ?? Date.now();
@@ -36,7 +36,7 @@ export function initialGameState(companyName: string = 'Weedbreed', seed?: numbe
 
 export async function gameTick(currentState: GameState): Promise<GameState> {
   // Create a new deterministic RNG for this specific tick
-  const rng = mulberry32(currentState.seed + currentState.ticks);
+  const rng = createSeededRandomAdapter(currentState.seed + currentState.ticks);
 
   // The company object will be mutated, but we create a new top-level object
   // to ensure React detects the state change.

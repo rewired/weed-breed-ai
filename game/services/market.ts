@@ -1,5 +1,6 @@
 import { Company, Employee, JobRole, Skill, SkillName, Trait } from '../types';
 import { getBlueprints } from '../blueprints';
+import type { RandomAdapter } from '../utils';
 
 const ALL_SKILLS: SkillName[] = ['Gardening', 'Maintenance', 'Technical', 'Botanical', 'Cleanliness', 'Negotiation'];
 const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
@@ -11,7 +12,7 @@ const SKILL_TO_ROLE_MAP: Record<SkillName, JobRole> = {
     Negotiation: 'Salesperson',
 };
 
-export async function updateJobMarket(company: Company, rng: () => number, ticks: number, seed: number) {
+export async function updateJobMarket(company: Company, rng: RandomAdapter, ticks: number, seed: number) {
       const { personnelData } = getBlueprints();
       const { traits } = personnelData;
       let names: { firstName: string, lastName: string }[] = [];
@@ -30,8 +31,8 @@ export async function updateJobMarket(company: Company, rng: () => number, ticks
           console.warn("Could not fetch names from randomuser.me API, using local fallback.", error);
           const { firstNames, lastNames } = personnelData;
           for (let i = 0; i < 12; i++) {
-              const firstName = firstNames[Math.floor(rng() * firstNames.length)];
-              const lastName = lastNames[Math.floor(rng() * lastNames.length)];
+              const firstName = firstNames.length > 0 ? firstNames[rng.int(0, firstNames.length - 1)] : `Candidate${i + 1}`;
+              const lastName = lastNames.length > 0 ? lastNames[rng.int(0, lastNames.length - 1)] : 'Fallback';
               names.push({ firstName, lastName });
           }
       }
@@ -43,7 +44,7 @@ export async function updateJobMarket(company: Company, rng: () => number, ticks
           let highestLevel = -1;
 
           ALL_SKILLS.forEach(skillName => {
-              const level = rng() * 5;
+              const level = rng.float() * 5;
               skills[skillName] = { name: skillName, level, xp: 0 };
               totalSkillPoints += level;
               if (level > highestLevel) {
@@ -55,11 +56,11 @@ export async function updateJobMarket(company: Company, rng: () => number, ticks
           const role = SKILL_TO_ROLE_MAP[highestSkill] || 'Generalist';
 
           const assignedTraits: Trait[] = [];
-          const traitRoll = rng();
-          if (traitRoll < 0.7) {
-              assignedTraits.push(traits[Math.floor(rng() * traits.length)]);
-              if (rng() < 0.2) {
-                  assignedTraits.push(traits[Math.floor(rng() * traits.length)]);
+          const traitRoll = rng.float();
+          if (traitRoll < 0.7 && traits.length > 0) {
+              assignedTraits.push(traits[rng.int(0, traits.length - 1)]);
+              if (rng.chance(0.2)) {
+                  assignedTraits.push(traits[rng.int(0, traits.length - 1)]);
               }
           }
           
@@ -78,7 +79,7 @@ export async function updateJobMarket(company: Company, rng: () => number, ticks
           salary *= salaryModifier;
 
           return {
-              id: `emp-${Date.now()}-${rng()}`,
+              id: `emp-${Date.now()}-${rng.float()}`,
               firstName: name.firstName,
               lastName: name.lastName,
               role,

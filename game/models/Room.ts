@@ -2,6 +2,7 @@ import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
 import { Company, StrainBlueprint, Structure, Device } from '../types';
 import { GrowthStage } from './Plant';
+import type { RandomAdapter } from '../utils';
 
 export class Room {
   id: string;
@@ -59,7 +60,7 @@ export class Room {
     delete this.zones[zoneId];
   }
 
-  duplicateZone(zoneId: string, company: Company, rng: () => number): Zone | null {
+  duplicateZone(zoneId: string, company: Company, rng: RandomAdapter): Zone | null {
     const originalZone = this.zones[zoneId];
     if (!originalZone) {
       console.error(`Zone with id ${zoneId} not found in room ${this.id}`);
@@ -84,7 +85,7 @@ export class Room {
 
     // Create the copy
     const newZoneData = originalZone.toJSON(); // Get a clean data object
-    newZoneData.id = `zone-${Date.now()}-${rng()}`;
+    newZoneData.id = `zone-${Date.now()}-${rng.float()}`;
     newZoneData.name = `${originalZone.name} (Copy)`;
     newZoneData.plantings = {}; // CRITICAL: Do not copy plants
     newZoneData.waterLevel_L = 0;
@@ -94,7 +95,7 @@ export class Room {
     const newDevices: Record<string, Device> = {};
     for (const deviceId in newZoneData.devices) {
       const oldDevice = newZoneData.devices[deviceId];
-      const newDeviceId = `device-${Date.now()}-${rng()}`;
+      const newDeviceId = `device-${Date.now()}-${rng.float()}`;
       newDevices[newDeviceId] = {
         ...oldDevice,
         id: newDeviceId,
@@ -172,7 +173,7 @@ export class Room {
     }, 0);
   }
 
-  async update(company: Company, structure: Structure, rng: () => number, ticks: number) {
+  async update(company: Company, structure: Structure, rng: RandomAdapter, ticks: number) {
     for (const zoneId in this.zones) {
       this.zones[zoneId].update(company, structure, rng, ticks);
     }

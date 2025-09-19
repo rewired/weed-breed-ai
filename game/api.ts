@@ -2,7 +2,7 @@ import { GameState, StructureBlueprint, RoomPurpose, JobRole, Planting, Plant, A
 import { initialGameState, gameTick } from './engine';
 import { getBlueprints, getAvailableStrains, loadAllBlueprints } from './blueprints';
 import { Company } from './models/Company';
-import { mulberry32 } from './utils';
+import { createSeededRandomAdapter } from './utils';
 
 const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';
@@ -156,7 +156,7 @@ class GameAPI extends EventEmitter {
     public async startNewGame(companyName: string, seed?: number) {
         this.pause();
         const newState = initialGameState(companyName, seed);
-        const rng = mulberry32(newState.seed);
+        const rng = createSeededRandomAdapter(newState.seed);
         await newState.company.updateJobMarket(rng, newState.ticks, newState.seed);
         this.gameState = newState;
         const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -286,7 +286,7 @@ class GameAPI extends EventEmitter {
     public purchaseDevicesForZone = (zoneId: string, blueprintId: string, quantity: number) => this.performAction(gs => {
         const zone = Object.values(gs.company.structures).flatMap(s => Object.values(s.rooms)).flatMap(r => Object.values(r.zones)).find(z => z.id === zoneId);
         if (!zone) return false;
-        const rng = mulberry32(gs.seed + gs.ticks);
+        const rng = createSeededRandomAdapter(gs.seed + gs.ticks);
         return gs.company.purchaseDevicesForZone(blueprintId, zone, quantity, rng);
     });
 
@@ -300,7 +300,7 @@ class GameAPI extends EventEmitter {
         if (!this.gameState.company.purchaseSeeds(strainId, quantity)) return null;
         const zone = Object.values(this.gameState.company.structures).flatMap(s => Object.values(s.rooms)).flatMap(r => Object.values(r.zones)).find(z => z.id === zoneId);
         if (!zone) return null;
-        const rng = mulberry32(this.gameState.seed + this.gameState.ticks);
+        const rng = createSeededRandomAdapter(this.gameState.seed + this.gameState.ticks);
         const result = zone.plantStrain(strainId, quantity, this.gameState.company, rng);
         if (result.germinatedCount > 0) {
             zone.status = 'Growing';
@@ -314,7 +314,7 @@ class GameAPI extends EventEmitter {
         const parentA = allStrains[parentAId];
         const parentB = allStrains[parentBId];
         if (!parentA || !parentB) return false;
-        const rng = mulberry32(gs.seed + gs.ticks);
+        const rng = createSeededRandomAdapter(gs.seed + gs.ticks);
         return !!gs.company.breedStrain(parentA, parentB, newName, rng);
     });
 
@@ -443,14 +443,14 @@ class GameAPI extends EventEmitter {
     public duplicateRoom = (structureId: string, roomId: string) => this.performAction(gs => {
         const structure = gs.company.structures[structureId];
         if (!structure) return false;
-        const rng = mulberry32(gs.seed + gs.ticks);
+        const rng = createSeededRandomAdapter(gs.seed + gs.ticks);
         return !!structure.duplicateRoom(roomId, gs.company, rng);
     });
 
     public duplicateZone = (roomId: string, zoneId: string) => this.performAction(gs => {
         const room = Object.values(gs.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.id === roomId);
         if (!room) return false;
-        const rng = mulberry32(gs.seed + gs.ticks);
+        const rng = createSeededRandomAdapter(gs.seed + gs.ticks);
         return !!room.duplicateZone(zoneId, gs.company, rng);
     });
 

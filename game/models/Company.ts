@@ -2,7 +2,8 @@
 
 import { Structure, StructureBlueprint, StrainBlueprint, Zone, Company as ICompany, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, SkillName, Skill, Trait, JobRole, Task, TaskType, TaskLocation, PlantingPlan, OvertimePolicy } from '../types';
 import { getAvailableStrains, getBlueprints } from '../blueprints';
-import { yieldToMainThread, RandomAdapter } from '../utils';
+import { yieldToMainThread } from '../utils';
+import type { RandomAdapter } from '../utils';
 import * as finance from '../services/finance';
 import * as hr from '../services/hr';
 import * as market from '../services/market';
@@ -91,7 +92,7 @@ export class Company {
     return finance.spendCapital(this, amount);
   }
 
-  purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number, rng: () => number): boolean {
+  purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number, rng: RandomAdapter): boolean {
     const blueprints = getBlueprints();
     const priceInfo = blueprints.devicePrices[blueprintId];
 
@@ -171,20 +172,20 @@ export class Company {
     hr.declineRaise(this, employeeId);
   }
   
-  async updateJobMarket(rng: () => number, ticks: number, seed: number): Promise<void> {
+  async updateJobMarket(rng: RandomAdapter, ticks: number, seed: number): Promise<void> {
     await market.updateJobMarket(this, rng, ticks, seed);
   }
 
-  breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string, rng: () => number): StrainBlueprint | null {
+  breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string, rng: RandomAdapter): StrainBlueprint | null {
       if (!parentA || !parentB) {
         console.error("Parent strains not found for breeding.");
         return null;
       }
       
-      const random = new RandomAdapter(rng);
+      const random = rng;
       const newStrain: StrainBlueprint = JSON.parse(JSON.stringify(parentA));
 
-      newStrain.id = `custom-${Date.now()}-${rng()}`;
+      newStrain.id = `custom-${Date.now()}-${random.float()}`;
       newStrain.name = newName;
       newStrain.slug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       newStrain.lineage.parents = [parentA.name, parentB.name];
@@ -355,7 +356,7 @@ export class Company {
         }
     }
 
-    async update(rng: () => number, ticks: number, seed: number) {
+    async update(rng: RandomAdapter, ticks: number, seed: number) {
         this.checkForAlerts(ticks);
 
         if (ticks > 0 && ticks % (24 * 7) === 0) {

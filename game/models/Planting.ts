@@ -1,5 +1,7 @@
 import { Plant, GrowthStage } from './Plant';
 import { StrainBlueprint } from '../types';
+import type { RandomAdapter } from '../utils';
+import { createRandomAdapter } from '../utils';
 
 interface Environment {
     temperature_C: number;
@@ -21,11 +23,11 @@ export class Planting {
         // accepts a pre-populated array of Plant instances. This responsibility
         // correctly lies with the calling code (e.g., Zone.ts), which already
         // uses the deterministic RNG. This removes the problematic branch that
-        // could have used Math.random.
+        // previously relied on non-deterministic randomness.
         if (data.plants && data.plants.length > 0 && !(data.plants[0] instanceof Plant)) {
             // Loading from save: data.plants is an array of plain objects. Rehydrate them.
             this.plants = data.plants.map((plantData: any) => {
-                const plant = new Plant(plantData.strainId, () => 0); // Dummy RNG for rehydration
+                const plant = new Plant(plantData.strainId, createRandomAdapter(() => 0)); // Dummy RNG for rehydration
                 Object.assign(plant, plantData); // Re-hydrate instance
                 return plant;
             });
@@ -40,7 +42,7 @@ export class Planting {
         this.quantity = this.plants.length;
     }
 
-    update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
+    update(strain: StrainBlueprint, environment: Environment, rng: RandomAdapter, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
         this.plants.forEach(plant => {
             if (plant.growthStage !== GrowthStage.Dead) {
                 plant.update(strain, environment, rng, isLightOn, hasWater, hasNutrients, lightOnHours, diseaseChance);
