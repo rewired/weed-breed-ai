@@ -193,7 +193,9 @@ export const useGameState = () => {
 
   const purchaseDevicesForZone = createAction((gs, zoneId: string, blueprintId: string, quantity: number) => {
     const zone = Object.values(gs.company.structures).flatMap(s => Object.values(s.rooms)).flatMap(r => Object.values(r.zones)).find(z => z.id === zoneId);
-    return zone ? gs.company.purchaseDevicesForZone(blueprintId, zone, quantity) : false;
+    if (!zone) return false;
+    const rng = gs.company.getActionRng(gs.seed, gs.ticks);
+    return gs.company.purchaseDevicesForZone(blueprintId, zone, quantity, rng);
   });
 
   const purchaseSuppliesForZone = createAction((gs, zoneId: string, type: 'water' | 'nutrients', quantity: number) => {
@@ -220,7 +222,9 @@ export const useGameState = () => {
     const allStrains = getAvailableStrains(gs.company);
     const parentA = allStrains[parentAId];
     const parentB = allStrains[parentBId];
-    return parentA && parentB ? !!gs.company.breedStrain(parentA, parentB, newName) : false;
+    if (!parentA || !parentB) return false;
+    const rng = gs.company.getActionRng(gs.seed, gs.ticks);
+    return !!gs.company.breedStrain(parentA, parentB, newName, rng);
   });
 
   const hireEmployee = createAction((gs, employee: Employee, structureId: string) => 
@@ -347,12 +351,16 @@ export const useGameState = () => {
 
   const duplicateRoom = createAction((gs, structureId: string, roomId: string) => {
     const structure = gs.company.structures[structureId];
-    return structure ? !!structure.duplicateRoom(roomId, gs.company) : false;
+    if (!structure) return false;
+    const rng = gs.company.getActionRng(gs.seed, gs.ticks);
+    return !!structure.duplicateRoom(roomId, gs.company, rng);
   });
 
   const duplicateZone = createAction((gs, roomId: string, zoneId: string) => {
     const room = Object.values(gs.company.structures).flatMap(s => Object.values(s.rooms)).find(r => r.id === roomId);
-    return room ? !!room.duplicateZone(zoneId, gs.company) : false;
+    if (!room) return false;
+    const rng = gs.company.getActionRng(gs.seed, gs.ticks);
+    return !!room.duplicateZone(zoneId, gs.company, rng);
   });
 
   const acknowledgeAlert = createAction((gs, alertId: string) => {

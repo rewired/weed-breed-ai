@@ -23,8 +23,8 @@ export class Plant {
   health: number = 1.0; // 0 to 1
   stress: number = 0.0; // 0 to 1
 
-  constructor(strainId: string) {
-    this.id = `plant-${Date.now()}-${Math.random()}`;
+  constructor(strainId: string, id: string) {
+    this.id = id;
     this.strainId = strainId;
     this.stageStartTick = 0;
   }
