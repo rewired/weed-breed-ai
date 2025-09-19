@@ -17,7 +17,7 @@ import {
   getAvailableStrains,
   loadAllBlueprints,
   Company,
-  mulberry32,
+  createSeededRandom,
 } from '@/src/game/api';
 
 const SAVE_LIST_KEY = 'weedbreed-save-list';
@@ -217,7 +217,7 @@ export const useGameState = () => {
 
   const startNewGame = useCallback(async (companyName: string, seed?: number) => {
     const newState = initialGameState(companyName, seed);
-    const rng = mulberry32(newState.seed);
+    const rng = createSeededRandom(newState.seed);
     await newState.company.updateJobMarket(rng, newState.ticks, newState.seed);
     setGameState(newState);
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -329,7 +329,7 @@ export const useGameState = () => {
     if (!gs.company.purchaseSeeds(strainId, quantity)) return null;
     const zone = Object.values(gs.company.structures).flatMap(s => Object.values(s.rooms)).flatMap(r => Object.values(r.zones)).find(z => z.id === zoneId);
     if (!zone) return null;
-    const rng = mulberry32(gs.seed + gs.ticks);
+    const rng = createSeededRandom(gs.seed + gs.ticks);
     const result = zone.plantStrain(strainId, quantity, gs.company, rng);
     if (result.germinatedCount > 0) {
       zone.status = 'Growing';

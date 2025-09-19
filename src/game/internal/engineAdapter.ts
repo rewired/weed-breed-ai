@@ -1,6 +1,6 @@
 import { initialGameState, gameTick } from '@/game/engine';
 import type { GameSpeed, GameState } from '@/game/types';
-import { mulberry32 } from '@/game/utils';
+import { createSeededRandom } from '@/game/utils';
 import { EventBus } from '../api/eventBus';
 import type {
   AlertEventDTO,
@@ -333,7 +333,7 @@ export class EngineAdapter {
     const companyName = options?.companyName ?? DEFAULT_COMPANY_NAME;
     const seed = options?.seed;
     const initialState = initialGameState(companyName, seed);
-    const rng = mulberry32(initialState.seed);
+    const rng = createSeededRandom(initialState.seed);
 
     try {
       await initialState.company.updateJobMarket(rng, initialState.ticks, initialState.seed);

@@ -1,6 +1,7 @@
 import type { Employee, Task } from '../../types';
 import { getAvailableStrains, getBlueprints } from '../../blueprints';
 import { GrowthStage } from '../Plant';
+import { RandomGenerator } from '../../utils';
 import {
   XP_PER_LEVEL,
   TASK_XP_REWARD,
@@ -15,7 +16,7 @@ import type { Company } from '../Company';
 export class TaskEngine {
   constructor(private readonly company: Company) {}
 
-  resolveTask(employee: Employee, task: Task, ticks: number, rng: () => number) {
+  resolveTask(employee: Employee, task: Task, ticks: number, rng: RandomGenerator) {
     const structure = this.company.structures[task.location.structureId];
     if (!structure) return;
     const room = structure.rooms[task.location.roomId];
@@ -140,7 +141,7 @@ export class TaskEngine {
     }
   }
 
-  updateEmployeesAI(ticks: number, rng: () => number) {
+  updateEmployeesAI(ticks: number, rng: RandomGenerator) {
     const tasksInProgress = new Set<string>();
     Object.values(this.company.employees).forEach(emp => {
       if (emp.status === 'Working' && emp.currentTask) {

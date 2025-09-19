@@ -19,6 +19,10 @@ const bannedPatterns = [
     pattern: '@/game/internal',
     message: 'verwende die öffentliche Fassade `@/game/api` statt interner Pfade',
   },
+  {
+    pattern: 'Math.random',
+    message: 'vermeide Math.random(); verwende den deterministischen RNG-Adapter',
+  },
 ];
 
 const failures = [];

@@ -2,6 +2,7 @@ import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlu
 import { getBlueprints, getAvailableStrains } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
+import { RandomGenerator } from '../utils';
 import {
   RECOMMENDED_AIR_CHANGES_PER_HOUR,
   BASE_DEHUMIDIFICATION_LOAD_KG_PER_M2_HOUR,
@@ -168,7 +169,7 @@ export class Zone {
     });
   }
 
-  addDevice(blueprintId: string, rng: () => number): void {
+  addDevice(blueprintId: string, rng: RandomGenerator): void {
     const blueprints = getBlueprints();
     const blueprint = blueprints.devices[blueprintId];
     if (!blueprint) {
@@ -178,7 +179,7 @@ export class Zone {
     
     const priceInfo = blueprints.devicePrices[blueprintId];
 
-    const newDeviceId = `device-${Date.now()}-${rng()}`;
+    const newDeviceId = `device-${Date.now()}-${rng.float()}`;
     const newDevice: Device = {
       id: newDeviceId,
       blueprintId: blueprintId,
@@ -319,7 +320,7 @@ export class Zone {
     };
   }
 
-  plantStrain(strainId: string, quantity: number, company: Company, rng: () => number): { germinatedCount: number } {
+  plantStrain(strainId: string, quantity: number, company: Company, rng: RandomGenerator): { germinatedCount: number } {
     const capacity = this.getPlantCapacity();
     const currentCount = this.getTotalPlantedCount();
 
@@ -339,8 +340,8 @@ export class Zone {
     const germinationRate = strainBlueprint.germinationRate ?? 1.0;
     const germinatedPlants: Plant[] = [];
     for (let i = 0; i < quantity; i++) {
-        if (rng() <= germinationRate) {
-            const plantId = `plant-${Date.now()}-${rng()}`;
+        if (rng.chance(germinationRate)) {
+            const plantId = `plant-${Date.now()}-${rng.float()}`;
             germinatedPlants.push(new Plant(strainId, plantId));
         }
     }
@@ -562,7 +563,7 @@ export class Zone {
     this.currentEnvironment.co2_ppm = Math.max(0, this.currentEnvironment.co2_ppm);
   }
 
-  update(company: Company, structure: Structure, rng: () => number, ticks: number) {
+  update(company: Company, structure: Structure, rng: RandomGenerator, ticks: number) {
       if (this.status !== 'Growing') {
         return;
       }

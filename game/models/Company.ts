@@ -1,7 +1,7 @@
 
 import { Structure, StructureBlueprint, StrainBlueprint, Zone, FinancialLedger, ExpenseCategory, Plant, Planting, RevenueCategory, Alert, AlertType, Employee, Task, PlantingPlan, OvertimePolicy } from '../types';
 import { getBlueprints } from '../blueprints';
-import { mulberry32 } from '../utils';
+import { createSeededRandom, RandomGenerator } from '../utils';
 import { FinanceService } from './company/FinanceService';
 import { HRService } from './company/HRService';
 import { TaskEngine } from './company/TaskEngine';
@@ -103,7 +103,7 @@ export class Company {
     return this.financeService.spendCapital(amount);
   }
 
-  purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number, rng: () => number): boolean {
+  purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number, rng: RandomGenerator): boolean {
     const blueprints = getBlueprints();
     const priceInfo = blueprints.devicePrices[blueprintId];
 
@@ -162,7 +162,7 @@ export class Company {
     return false;
   }
   
-  breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string, rng: () => number): StrainBlueprint | null {
+  breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string, rng: RandomGenerator): StrainBlueprint | null {
       if (!parentA || !parentB) {
         console.error("Parent strains not found for breeding.");
         return null;
@@ -177,7 +177,7 @@ export class Company {
       newStrain.lineage.parents = [parentA.name, parentB.name];
 
       // --- Breeding Logic ---
-      const mutate = (val: number) => val * (1 + (rng() - 0.5) * MUTATION_FACTOR);
+      const mutate = (val: number) => val * (1 + (rng.float() - 0.5) * MUTATION_FACTOR);
       const avg = (a: number, b: number) => (a + b) / 2;
       
       // Genotype (normalized)
@@ -366,7 +366,7 @@ export class Company {
     this.hrService.declineRaise(employeeId);
   }
 
-  async updateJobMarket(rng: () => number, ticks: number, seed: number) {
+  async updateJobMarket(rng: RandomGenerator, ticks: number, seed: number) {
     await this.marketService.updateJobMarket(rng, ticks, seed);
   }
 
@@ -380,15 +380,15 @@ export class Company {
         }
     }
 
-  resolveTask(employee: Employee, task: Task, ticks: number, rng: () => number) {
+  resolveTask(employee: Employee, task: Task, ticks: number, rng: RandomGenerator) {
     this.taskEngine.resolveTask(employee, task, ticks, rng);
   }
 
-  updateEmployeesAI(ticks: number, rng: () => number) {
+  updateEmployeesAI(ticks: number, rng: RandomGenerator) {
     this.taskEngine.updateEmployeesAI(ticks, rng);
   }
 
-  update(rng: () => number, ticks: number, seed: number) {
+  update(rng: RandomGenerator, ticks: number, seed: number) {
     this.checkForAlerts(ticks);
 
     if (ticks > 0 && ticks % (24 * 7) === 0) { // Every 7 days
@@ -432,9 +432,9 @@ export class Company {
     };
   }
 
-  getActionRng(seed: number, ticks: number): () => number {
+  getActionRng(seed: number, ticks: number): RandomGenerator {
     const baseSeed = seed + ticks * 1000 + this.actionRngNonce;
     this.actionRngNonce += 1;
-    return mulberry32(baseSeed);
+    return createSeededRandom(baseSeed);
   }
 }

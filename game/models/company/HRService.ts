@@ -2,6 +2,7 @@ import type { Employee, JobRole, SkillName } from '../../types';
 import { FinanceService } from './FinanceService';
 import { XP_PER_LEVEL } from '../../constants/balance';
 import type { Company } from '../Company';
+import { RandomGenerator } from '../../utils';
 
 export class HRService {
   constructor(private readonly company: Company, private readonly finance: FinanceService) {}
@@ -99,14 +100,14 @@ export class HRService {
     }
   }
 
-  processDailyCycle(ticks: number, rng: () => number): number {
+  processDailyCycle(ticks: number, rng: RandomGenerator): number {
     let totalSalaries = 0;
     const employeesToQuit: string[] = [];
 
     Object.values(this.company.employees).forEach(emp => {
       totalSalaries += emp.salaryPerDay;
 
-      if (emp.morale < 20 && rng() < 0.05) {
+      if (emp.morale < 20 && rng.chance(0.05)) {
         employeesToQuit.push(emp.id);
       }
 
@@ -120,7 +121,7 @@ export class HRService {
         const baseSalary = 50 + totalSkillPoints * 8;
 
         if (baseSalary > emp.salaryPerDay * 1.05) {
-          const newSalary = baseSalary * (1 + (rng() - 0.5) * 0.1);
+          const newSalary = baseSalary * (1 + (rng.float() - 0.5) * 0.1);
           const alertKey = `${emp.id}-raise_request`;
           const existingAlert = this.company.alerts.find(a => a.id.startsWith(`alert-${alertKey}`));
           if (!existingAlert) {

@@ -2,6 +2,7 @@ import { Zone } from './Zone';
 import { RoomPurpose } from '../roomPurposes';
 import { Company, StrainBlueprint, Structure, Device } from '../types';
 import { GrowthStage } from './Plant';
+import { RandomGenerator } from '../utils';
 
 export class Room {
   id: string;
@@ -59,7 +60,7 @@ export class Room {
     delete this.zones[zoneId];
   }
 
-  duplicateZone(zoneId: string, company: Company, rng: () => number): Zone | null {
+  duplicateZone(zoneId: string, company: Company, rng: RandomGenerator): Zone | null {
     const originalZone = this.zones[zoneId];
     if (!originalZone) {
       console.error(`Zone with id ${zoneId} not found in room ${this.id}`);
@@ -94,7 +95,7 @@ export class Room {
     const newDevices: Record<string, Device> = {};
     for (const deviceId in newZoneData.devices) {
       const oldDevice = newZoneData.devices[deviceId];
-      const newDeviceId = `device-${Date.now()}-${rng()}`;
+      const newDeviceId = `device-${Date.now()}-${rng.float()}`;
       newDevices[newDeviceId] = {
         ...oldDevice,
         id: newDeviceId,
@@ -172,7 +173,7 @@ export class Room {
     }, 0);
   }
 
-  update(company: Company, structure: Structure, rng: () => number, ticks: number) {
+  update(company: Company, structure: Structure, rng: RandomGenerator, ticks: number) {
     for (const zoneId in this.zones) {
       this.zones[zoneId].update(company, structure, rng, ticks);
     }
