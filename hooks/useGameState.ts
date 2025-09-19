@@ -19,12 +19,44 @@ import {
   Company,
   createSeededRandom,
 } from '@/src/game/api';
+import type {
+  AlertEventDTO,
+  FinanceUpdateEventDTO,
+  HealthEventDTO,
+  SimTickEventDTO,
+} from '@/src/game/api/dto';
+import {
+  createEventSnapshot,
+  mapAlertEventsFromSnapshot,
+  mapFinanceEventsFromSnapshot,
+  mapHealthEvent,
+  mapSimTickEventFromSnapshot,
+  mapWorldSummary,
+  type EventSnapshot,
+} from '@/src/game/api/eventMappers';
+import { simulationEventBus } from '@/src/lib/simulationEvents';
 
 const SAVE_LIST_KEY = 'weedbreed-save-list';
 const LAST_PLAYED_KEY = 'weedbreed-last-played';
 const SAVE_PREFIX = 'weedbreed-save-';
 const TICK_INTERVAL = 5000;
 const SAVEGAME_VERSION = 1;
+const TELEMETRY_UPDATE_INTERVAL_MS = 250; // 4 Hz update cadence
+const MAX_BUFFERED_EVENTS = 50;
+
+interface SimulationTelemetryState {
+  simTick: SimTickEventDTO | null;
+  health: HealthEventDTO | null;
+  financeUpdates: FinanceUpdateEventDTO[];
+  alertEvents: AlertEventDTO[];
+}
+
+const createInitialTelemetryState = (): SimulationTelemetryState => ({
+  simTick: null,
+  health: null,
+  financeUpdates: [],
+  alertEvents: [],
+});
 
 type SerializedCompany = ReturnType<Company['toJSON']>;
 type PersistedGameState = Omit<GameState, 'company'> & { company: SerializedCompany };
@@ -103,11 +135,137 @@ export const useGameState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSimRunning, setIsSimRunning] = useState(false);
   const [gameSpeed, setGameSpeed] = useState<GameSpeed>(1);
+  const [telemetry, setTelemetry] = useState<SimulationTelemetryState>(() => createInitialTelemetryState());
   const gameStateRef = useRef(gameState);
+  const gameSpeedRef = useRef<GameSpeed>(gameSpeed);
+  const lastSnapshotRef = useRef<EventSnapshot | null>(null);
+  const latestSimTickRef = useRef<SimTickEventDTO | null>(null);
+  const latestHealthRef = useRef<HealthEventDTO | null>(null);
+  const financeBufferRef = useRef<FinanceUpdateEventDTO[]>([]);
+  const alertBufferRef = useRef<AlertEventDTO[]>([]);
+  const telemetryDirtyRef = useRef(false);
+
+  const resetTelemetryBuffers = useCallback(() => {
+    latestSimTickRef.current = null;
+    latestHealthRef.current = null;
+    financeBufferRef.current = [];
+    alertBufferRef.current = [];
+    telemetryDirtyRef.current = false;
+  }, []);
+
+  const emitSimulationEvents = useCallback((state: GameState) => {
+    const previousSnapshot = lastSnapshotRef.current;
+    const snapshot = createEventSnapshot(state);
+    const timestamp = Date.now();
+    const summary = mapWorldSummary(state);
+    const healthEvent = mapHealthEvent(state, timestamp);
+    const tickEvent = mapSimTickEventFromSnapshot(
+      state,
+      gameSpeedRef.current,
+      summary,
+      healthEvent,
+      snapshot,
+      previousSnapshot,
+      timestamp,
+    );
+
+    simulationEventBus.emit('sim:tick', tickEvent);
+    simulationEventBus.emit('health:event', healthEvent);
+
+    const financeEvents = mapFinanceEventsFromSnapshot(previousSnapshot, snapshot, timestamp);
+    financeEvents.forEach(event => simulationEventBus.emit('finance:update', event));
+
+    const alertEvents = mapAlertEventsFromSnapshot(previousSnapshot, state, timestamp);
+    alertEvents.forEach(event => simulationEventBus.emit('alert:event', event));
+
+    lastSnapshotRef.current = snapshot;
+  }, []);
 
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    gameSpeedRef.current = gameSpeed;
+  }, [gameSpeed]);
+
+  useEffect(() => {
+    const offTick = simulationEventBus.on('sim:tick', event => {
+      latestSimTickRef.current = event;
+      telemetryDirtyRef.current = true;
+    });
+    const offHealth = simulationEventBus.on('health:event', event => {
+      latestHealthRef.current = event;
+      telemetryDirtyRef.current = true;
+    });
+    const offFinance = simulationEventBus.on('finance:update', event => {
+      financeBufferRef.current.push(event);
+      if (financeBufferRef.current.length > MAX_BUFFERED_EVENTS) {
+        financeBufferRef.current.splice(
+          0,
+          financeBufferRef.current.length - MAX_BUFFERED_EVENTS,
+        );
+      }
+      telemetryDirtyRef.current = true;
+    });
+    const offAlert = simulationEventBus.on('alert:event', event => {
+      alertBufferRef.current.push(event);
+      if (alertBufferRef.current.length > MAX_BUFFERED_EVENTS) {
+        alertBufferRef.current.splice(0, alertBufferRef.current.length - MAX_BUFFERED_EVENTS);
+      }
+      telemetryDirtyRef.current = true;
+    });
+
+    return () => {
+      offTick();
+      offHealth();
+      offFinance();
+      offAlert();
+    };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!telemetryDirtyRef.current) {
+        return;
+      }
+      telemetryDirtyRef.current = false;
+
+      const financeBatch = financeBufferRef.current.splice(0, financeBufferRef.current.length);
+      const alertBatch = alertBufferRef.current.splice(0, alertBufferRef.current.length);
+      const nextTick = latestSimTickRef.current;
+      const nextHealth = latestHealthRef.current;
+
+      setTelemetry(prev => {
+        const financeUpdates = financeBatch.length > 0
+          ? [...prev.financeUpdates, ...financeBatch].slice(-MAX_BUFFERED_EVENTS)
+          : prev.financeUpdates;
+        const alertEvents = alertBatch.length > 0
+          ? [...prev.alertEvents, ...alertBatch].slice(-MAX_BUFFERED_EVENTS)
+          : prev.alertEvents;
+        const simTick = nextTick ?? prev.simTick;
+        const health = nextHealth ?? prev.health;
+
+        if (
+          simTick === prev.simTick &&
+          health === prev.health &&
+          financeUpdates === prev.financeUpdates &&
+          alertEvents === prev.alertEvents
+        ) {
+          return prev;
+        }
+
+        return {
+          simTick,
+          health,
+          financeUpdates,
+          alertEvents,
+        };
+      });
+    }, TELEMETRY_UPDATE_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getSaveGames = useCallback((): string[] => {
     const listJSON = localStorage.getItem(SAVE_LIST_KEY);
@@ -122,15 +280,20 @@ export const useGameState = () => {
         const { state } = parseSaveGameString(savedStateJSON);
         const hydratedState = hydrateGameState(state);
         setGameState(hydratedState);
+        gameStateRef.current = hydratedState;
+        lastSnapshotRef.current = null;
+        setTelemetry(createInitialTelemetryState());
+        resetTelemetryBuffers();
+        emitSimulationEvents(hydratedState);
         localStorage.setItem(LAST_PLAYED_KEY, saveName);
       } else {
         console.error(`Save game "${saveName}" not found.`);
       }
     } catch (error) {
-      console.error(`Failed to load game state "${saveName}":`, error);
-      alert(`Error loading game: ${saveName}. The save file might be corrupted.`);
+        console.error(`Failed to load game state "${saveName}":`, error);
+        alert(`Error loading game: ${saveName}. The save file might be corrupted.`);
     }
-  }, []);
+  }, [emitSimulationEvents, resetTelemetryBuffers]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -154,17 +317,22 @@ export const useGameState = () => {
   }, [loadGame, getSaveGames]);
   
   useEffect(() => {
-    if (isSimRunning) {
-        const interval = TICK_INTERVAL / gameSpeed;
-        const timer = setInterval(() => {
-            setGameState(prevState => {
-                if (!prevState) return null;
-                return gameTick(prevState);
-            });
-        }, interval);
-        return () => clearInterval(timer);
+    if (!isSimRunning) {
+      return;
     }
-  }, [isSimRunning, gameSpeed]);
+
+    const interval = TICK_INTERVAL / gameSpeed;
+    const timer = setInterval(() => {
+      setGameState(prevState => {
+        if (!prevState) return null;
+        const nextState = gameTick(prevState);
+        emitSimulationEvents(nextState);
+        return nextState;
+      });
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [isSimRunning, gameSpeed, emitSimulationEvents]);
 
   const updateGameState = useCallback(() => {
     setGameState(gs => gs ? { ...gs } : null);
@@ -220,16 +388,25 @@ export const useGameState = () => {
     const rng = createSeededRandom(newState.seed);
     await newState.company.updateJobMarket(rng, newState.ticks, newState.seed);
     setGameState(newState);
+    gameStateRef.current = newState;
+    lastSnapshotRef.current = null;
+    setTelemetry(createInitialTelemetryState());
+    resetTelemetryBuffers();
+    emitSimulationEvents(newState);
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const saveName = `${companyName} - ${timestamp}`;
     saveGame(saveName, newState);
-  }, [saveGame]);
+  }, [saveGame, emitSimulationEvents, resetTelemetryBuffers]);
 
   const resetGame = useCallback(() => {
     setIsSimRunning(false);
     localStorage.removeItem(LAST_PLAYED_KEY);
     setGameState(null);
-  }, []);
+    gameStateRef.current = null;
+    lastSnapshotRef.current = null;
+    setTelemetry(createInitialTelemetryState());
+    resetTelemetryBuffers();
+  }, [resetTelemetryBuffers]);
 
   const exportGame = useCallback(() => {
     const gs = gameStateRef.current;
@@ -275,6 +452,11 @@ export const useGameState = () => {
       const newGameState = hydrateGameState(state);
       const { company } = newGameState;
       setGameState(newGameState);
+      gameStateRef.current = newGameState;
+      lastSnapshotRef.current = null;
+      setTelemetry(createInitialTelemetryState());
+      resetTelemetryBuffers();
+      emitSimulationEvents(newGameState);
       const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
       const saveName = `(Imported) ${company.name} - ${timestamp}`;
       saveGame(saveName, newGameState);
@@ -283,18 +465,21 @@ export const useGameState = () => {
       console.error("Failed to import game state:", error);
       alert("Error importing game. The file might be invalid or corrupted.");
     }
-  }, [saveGame]);
+  }, [saveGame, emitSimulationEvents, resetTelemetryBuffers]);
 
   // --- Game Logic Handlers ---
-  const createAction = <T extends any[]>(action: (gs: GameState, ...args: T) => boolean | void) => 
+  const createAction = <T extends any[]>(action: (gs: GameState, ...args: T) => boolean | void) =>
     useCallback((...args: T): boolean => {
       const gs = gameStateRef.current;
       if (!gs) return false;
       const result = action(gs, ...args);
       const success = result !== false;
-      if (success) updateGameState();
+      if (success) {
+        emitSimulationEvents(gs);
+        updateGameState();
+      }
       return success;
-    }, [updateGameState]);
+    }, [emitSimulationEvents, updateGameState]);
 
   const rentStructure = createAction((gs, blueprintId: string) => {
     const blueprint = getBlueprints().structures[blueprintId];
@@ -334,9 +519,10 @@ export const useGameState = () => {
     if (result.germinatedCount > 0) {
       zone.status = 'Growing';
     }
+    emitSimulationEvents(gs);
     updateGameState();
     return result;
-  }, [updateGameState]);
+  }, [updateGameState, emitSimulationEvents]);
 
   const breedStrain = createAction((gs, parentAId: string, parentBId: string, newName: string) => {
     const allStrains = getAvailableStrains(gs.company);
@@ -508,7 +694,7 @@ export const useGameState = () => {
   });
 
   return {
-    gameState, isLoading, isSimRunning, setIsSimRunning, updateGameState, gameSpeed, setGameSpeed,
+    gameState, telemetry, isLoading, isSimRunning, setIsSimRunning, updateGameState, gameSpeed, setGameSpeed,
     // Game Lifecycle
     startNewGame, saveGame, loadGame, deleteGame, getSaveGames, resetGame, exportGame, importGame,
     // Game Actions
