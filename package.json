@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm run test:build && node -e \"const fs=require('fs');fs.mkdirSync('dist-test',{recursive:true});fs.writeFileSync('dist-test/package.json','{\\\"type\\\":\\\"commonjs\\\"}')\" && node --test dist-test/tests",
+    "test:build": "tsc --project tsconfig.test.json"
   },
   "dependencies": {
     "react": "^19.1.1",

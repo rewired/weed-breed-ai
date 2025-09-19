@@ -5,6 +5,7 @@ import { StructureBlueprint, Company, StrainBlueprint, Device, Employee, SkillNa
 import { GrowthStage } from './Plant';
 import { getAvailableStrains, getBlueprints } from '../blueprints';
 import { TICKS_PER_MONTH } from '../constants/balance';
+import type { RandomAdapter } from '../utils';
 
 export class Structure {
   id: string;
@@ -67,7 +68,7 @@ export class Structure {
     delete this.rooms[roomId];
   }
   
-  duplicateRoom(roomId: string, company: Company, rng: () => number): Room | null {
+  duplicateRoom(roomId: string, company: Company, rng: RandomAdapter): Room | null {
     const originalRoom = this.rooms[roomId];
     if (!originalRoom) {
       console.error(`Room with id ${roomId} not found in structure ${this.id}`);
@@ -106,7 +107,7 @@ export class Structure {
     for (const zoneId in originalRoom.zones) {
       const originalZone = originalRoom.zones[zoneId];
       const newZoneData = originalZone.toJSON();
-      newZoneData.id = `zone-${Date.now()}-${rng()}`;
+      newZoneData.id = `zone-${Date.now()}-${rng.float()}`;
       newZoneData.plantings = {};
       newZoneData.waterLevel_L = 0;
       newZoneData.nutrientLevel_g = 0;
@@ -114,7 +115,7 @@ export class Structure {
       const newDevices: Record<string, any> = {};
       for (const deviceId in newZoneData.devices) {
         const oldDevice = newZoneData.devices[deviceId];
-        const newDeviceId = `device-${Date.now()}-${rng()}`;
+        const newDeviceId = `device-${Date.now()}-${rng.float()}`;
         newDevices[newDeviceId] = {
           ...oldDevice,
           id: newDeviceId,
@@ -239,7 +240,7 @@ export class Structure {
       return this.getEmployees(company).filter(emp => emp.status === 'Resting').length;
   }
 
-  async update(company: Company, rng: () => number, ticks: number) {
+  async update(company: Company, rng: RandomAdapter, ticks: number) {
     for (const roomId in this.rooms) {
       await this.rooms[roomId].update(company, this, rng, ticks);
     }

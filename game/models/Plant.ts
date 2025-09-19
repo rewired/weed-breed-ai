@@ -1,5 +1,6 @@
 import { StrainBlueprint } from '../types';
 import * as BALANCE from '../constants/balance';
+import type { RandomAdapter } from '../utils';
 
 export enum GrowthStage {
   Seedling = 'seedling',
@@ -24,13 +25,13 @@ export class Plant {
   health: number = 1.0; // 0 to 1
   stress: number = 0.0; // 0 to 1
 
-  constructor(strainId: string, rng: () => number) {
-    this.id = `plant-${Date.now()}-${rng()}`;
+  constructor(strainId: string, rng: RandomAdapter) {
+    this.id = `plant-${Date.now()}-${rng.float()}`;
     this.strainId = strainId;
     this.stageStartTick = 0;
   }
 
-  update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
+  update(strain: StrainBlueprint, environment: Environment, rng: RandomAdapter, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
     this.ageInTicks++;
 
     // 1. Calculate Environmental Stress
@@ -106,11 +107,12 @@ export class Plant {
       this.stress = Math.max(0, Math.min(1, currentStress));
   }
 
-  private updateHealth(strain: StrainBlueprint, isLightOn: boolean, rng: () => number, diseaseChance: number) {
+  private updateHealth(strain: StrainBlueprint, isLightOn: boolean, rng: RandomAdapter, diseaseChance: number) {
       const resilienceFactor = strain.generalResilience || 0;
       const modifiedRecoveryFactor = BALANCE.PLANT_RECOVERY_FACTOR * (1 + resilienceFactor * 0.5);
 
-      if (rng() < (diseaseChance * (1 - resilienceFactor * 0.5))) {
+      const infectionChance = Math.max(0, Math.min(1, diseaseChance * (1 - resilienceFactor * 0.5)));
+      if (rng.chance(infectionChance)) {
         this.health -= BALANCE.PLANT_DISEASE_IMPACT;
       }
 
@@ -122,14 +124,14 @@ export class Plant {
       this.health = Math.max(0, Math.min(1, this.health));
   }
 
-  private grow(strain: StrainBlueprint, rng: () => number, isLightOn: boolean) {
+  private grow(strain: StrainBlueprint, rng: RandomAdapter, isLightOn: boolean) {
       if (this.health <= 0 || !isLightOn) return;
       
       const growthRateModifier = strain.morphology.growthRate;
       
       let noiseModifier = 1.0;
       if (strain.noise?.enabled && strain.noise.pct > 0) {
-          const noiseValue = (rng() * 2 - 1) * strain.noise.pct;
+          const noiseValue = (rng.float() * 2 - 1) * strain.noise.pct;
           noiseModifier += noiseValue;
       }
 
@@ -138,7 +140,7 @@ export class Plant {
       this.biomass += potentialGrowth * noiseModifier;
   }
 
-  private updateStage(strain: StrainBlueprint, rng: () => number) {
+  private updateStage(strain: StrainBlueprint, rng: RandomAdapter) {
     if (this.ageInTicks % 24 !== 0) {
         return;
     }
@@ -160,7 +162,7 @@ export class Plant {
             break;
         case GrowthStage.Vegetative:
             if (daysInCurrentStage >= vegDays) {
-                if (rng() < BALANCE.PLANT_STAGE_TRANSITION_PROB_PER_DAY) {
+                if (rng.chance(BALANCE.PLANT_STAGE_TRANSITION_PROB_PER_DAY)) {
                     newStage = GrowthStage.Flowering;
                     stageChanged = true;
                 }
@@ -168,7 +170,7 @@ export class Plant {
             break;
         case GrowthStage.Flowering:
             if (daysInCurrentStage >= flowerDays) {
-                if (rng() < BALANCE.PLANT_STAGE_TRANSITION_PROB_PER_DAY) {
+                if (rng.chance(BALANCE.PLANT_STAGE_TRANSITION_PROB_PER_DAY)) {
                     newStage = GrowthStage.Harvestable;
                     stageChanged = true;
                 }

@@ -1,14 +1,14 @@
 
 
-import { RoomPurpose } from './roomPurposes';
-import { Company } from './models/Company';
-import { Structure } from './models/Structure';
-import { Room } from './models/Room';
-import { Zone } from './models/Zone';
-import { Planting } from './models/Planting';
-import { Plant } from './models/Plant';
+import type { Company } from './models/Company';
 
-export { Company, Structure, Room, Zone, Planting, Plant, RoomPurpose };
+export { Company } from './models/Company';
+export { Structure } from './models/Structure';
+export { Room } from './models/Room';
+export { Zone } from './models/Zone';
+export { Planting } from './models/Planting';
+export { Plant } from './models/Plant';
+export type { RoomPurpose } from './roomPurposes';
 
 export interface StructureBlueprint {
   id: string;

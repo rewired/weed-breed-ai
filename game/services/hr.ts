@@ -1,6 +1,7 @@
 import { Company, Employee, JobRole, Skill, SkillName, Task, Trait, OvertimePolicy } from '../types';
 import { resolveTask } from './taskEngine';
 import * as BALANCE from '../constants/balance';
+import type { RandomAdapter } from '../utils';
 
 export function hireEmployee(company: Company, employee: Employee, structureId: string, ticks: number): boolean {
     if (company.employees[employee.id]) {
@@ -96,7 +97,7 @@ export function assignEmployeeRole(company: Company, employeeId: string, role: J
     }
 }
 
-export function updateEmployeesAI(company: Company, ticks: number, rng: () => number) {
+export function updateEmployeesAI(company: Company, ticks: number, rng: RandomAdapter) {
       const tasksInProgress = new Set<string>();
       Object.values(company.employees).forEach(emp => {
           if (emp.status === 'Working' && emp.currentTask) {
@@ -197,14 +198,14 @@ export function updateEmployeesAI(company: Company, ticks: number, rng: () => nu
       }
 }
 
-export function processDailyUpdates(company: Company, ticks: number, rng: () => number) {
+export function processDailyUpdates(company: Company, ticks: number, rng: RandomAdapter) {
     let totalSalaries = 0;
     const employeesToQuit: string[] = [];
 
     Object.values(company.employees).forEach(emp => {
         totalSalaries += emp.salaryPerDay;
         
-        if (emp.morale < 20 && rng() < BALANCE.LOW_MORALE_QUIT_CHANCE_PER_DAY) {
+        if (emp.morale < 20 && rng.chance(BALANCE.LOW_MORALE_QUIT_CHANCE_PER_DAY)) {
             employeesToQuit.push(emp.id);
         }
 
@@ -216,7 +217,7 @@ export function processDailyUpdates(company: Company, ticks: number, rng: () => 
             const baseSalary = 50 + (totalSkillPoints * 8);
             
             if (baseSalary > emp.salaryPerDay * 1.05) {
-                const newSalary = baseSalary * (1 + (rng() - 0.5) * 0.1);
+                const newSalary = baseSalary * (1 + (rng.float() - 0.5) * 0.1);
                 const alertKey = `${emp.id}-raise_request`;
                 const existingAlert = company.alerts.find(a => a.id.startsWith(`alert-${alertKey}`));
                 if (!existingAlert) {

@@ -2,6 +2,7 @@ import { Company, Employee, Task, TaskType } from '../types';
 import { getAvailableStrains, getBlueprints } from '../blueprints';
 import { GrowthStage } from '../models/Plant';
 import { TASK_XP_REWARD, XP_PER_LEVEL } from '../constants/balance';
+import type { RandomAdapter } from '../utils';
 
 export function generateTasks(company: Company) {
     const definitions = getBlueprints().taskDefinitions;
@@ -122,7 +123,7 @@ export function generateTasks(company: Company) {
 }
 
 
-export function resolveTask(company: Company, employee: Employee, task: Task, ticks: number, rng: () => number) {
+export function resolveTask(company: Company, employee: Employee, task: Task, ticks: number, rng: RandomAdapter) {
     const structure = company.structures[task.location.structureId];
     if (!structure) return;
     const room = structure.rooms[task.location.roomId];
