@@ -1,6 +1,6 @@
 
 
-import { RoomPurpose } from './roomPurposes';
+import type { RoomPurpose } from './roomPurposes';
 import { Company } from './models/Company';
 import { Structure } from './models/Structure';
 import { Room } from './models/Room';
@@ -8,7 +8,8 @@ import { Zone } from './models/Zone';
 import { Planting } from './models/Planting';
 import { Plant } from './models/Plant';
 
-export { Company, Structure, Room, Zone, Planting, Plant, RoomPurpose };
+export { Company, Structure, Room, Zone, Planting, Plant };
+export type { RoomPurpose };
 
 export interface StructureBlueprint {
   id: string;
