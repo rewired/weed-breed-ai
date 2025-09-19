@@ -1,14 +1,30 @@
 import type { GameSpeed } from '@/game/types';
+import {
+  listHealthDefinitions as loadHealthDefinitions,
+  listTreatmentOptions as loadTreatmentOptions,
+} from '@/game/health/loader';
+import type {
+  DiseaseBalancingConfig,
+  HealthDefinitionSummary,
+  PestBalancingConfig,
+  TreatmentCatalog,
+  TreatmentOption,
+} from '@/game/health/types';
 import { EventBus } from './eventBus';
 import type {
   ApplyTreatmentOptions,
   ApplyTreatmentResult,
+  AlertLocationDTO,
+  AlertSummaryDTO,
+  RoomSummaryDTO,
   SimulationEventMap,
   SimulationEventName,
   SimulationSnapshot,
   SimulationStartOptions,
   SimTickEventDTO,
+  StructureSummaryDTO,
   WorldSummaryDTO,
+  ZoneSummaryDTO,
 } from './dto';
 import { EngineAdapter } from '../internal/engineAdapter';
 
@@ -32,6 +48,13 @@ export type {
 };
 
 export type { GameSpeed };
+export type {
+  DiseaseBalancingConfig,
+  HealthDefinitionSummary,
+  PestBalancingConfig,
+  TreatmentCatalog,
+  TreatmentOption,
+};
 
 export async function start(options?: SimulationStartOptions): Promise<WorldSummaryDTO | null> {
   return adapter.start(options);
@@ -62,4 +85,12 @@ export function getSnapshot(): SimulationSnapshot {
 
 export function applyTreatment(options: ApplyTreatmentOptions): ApplyTreatmentResult {
   return adapter.applyTreatment(options);
+}
+
+export async function listTreatments(): Promise<TreatmentOption[]> {
+  return loadTreatmentOptions();
+}
+
+export async function listHealthDefs(): Promise<HealthDefinitionSummary> {
+  return loadHealthDefinitions();
 }
