@@ -9,7 +9,7 @@ import {
   IDLE_ENERGY_REGEN_PER_TICK,
   ENERGY_REST_THRESHOLD,
   OFF_DUTY_DURATION_TICKS,
-} from './constants';
+} from '../../constants/balance';
 import type { Company } from '../Company';
 
 export class TaskEngine {

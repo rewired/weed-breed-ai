@@ -2,31 +2,24 @@ import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlu
 import { getBlueprints, getAvailableStrains } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
-
-// --- Constants for Environmental Calculations ---
-const RECOMMENDED_ACH = 5; // Air Changes per Hour for climate control
-const BASE_DEHUMIDIFICATION_LOAD_PER_M2_PER_H = 0.02; // kg of water vapor produced by plants per m^2 per hour
-const BASE_CO2_INJECTION_PPM_PER_TICK_PER_M2 = 5; // Required CO2 injection rate to counteract consumption and leakage
-
-// --- Constants for Simulation ---
-const AMBIENT_TEMP_C = 20;
-const AMBIENT_HUMIDITY_RH = 0.50; // 50%
-const AMBIENT_CO2_PPM = 400;
-
-// Rate at which the zone normalizes to ambient conditions per tick (e.g., 10% of the difference)
-const TEMP_NORMALIZATION_FACTOR = 0.1;
-const HUMIDITY_NORMALIZATION_FACTOR = 0.05;
-const CO2_NORMALIZATION_FACTOR = 0.1;
-
-// Magic numbers for device/plant effects
-const LAMP_HEAT_FACTOR = 0.5; // kW of power -> degrees C per tick
-const COOLING_CAPACITY_FACTOR = 0.8; // kW of cooling -> degrees C per tick
-const DEHUMIDIFIER_HEAT_FACTOR = 0.2; // kW of power -> degrees C per tick
-const PLANT_TRANSPIRATION_RH_PER_PLANT = 0.00005; // RH increase per plant per tick
-const PLANT_CO2_CONSUMPTION_PPM_PER_PLANT = 0.2;
-
-const BASE_DURABILITY_DECAY_PER_TICK = 0.00002; // Base wear per tick
-const BASE_DISEASE_CHANCE_PER_TICK = 0.0001; // Base chance of a plant getting sick
+import {
+  RECOMMENDED_AIR_CHANGES_PER_HOUR,
+  BASE_DEHUMIDIFICATION_LOAD_KG_PER_M2_HOUR,
+  BASE_CO2_INJECTION_PPM_PER_TICK_PER_M2,
+  AMBIENT_TEMPERATURE_C,
+  AMBIENT_RELATIVE_HUMIDITY,
+  AMBIENT_CO2_PPM,
+  TEMPERATURE_NORMALIZATION_FACTOR,
+  HUMIDITY_NORMALIZATION_FACTOR,
+  CO2_NORMALIZATION_FACTOR,
+  LAMP_HEAT_GAIN_K_PER_KW_TICK,
+  COOLING_CAPACITY_EFFECT_K_PER_KW_TICK,
+  DEHUMIDIFIER_HEAT_GAIN_K_PER_KW_TICK,
+  PLANT_TRANSPIRATION_RH_PER_PLANT,
+  PLANT_CO2_CONSUMPTION_PPM_PER_PLANT,
+  AIR_DENSITY_KG_PER_M3,
+} from '../constants/env';
+import { BASE_DISEASE_CHANCE_PER_TICK } from '../constants/balance';
 
 export class Zone {
   id: string;
@@ -225,7 +218,7 @@ export class Zone {
 
   getClimateControlDetails(structureHeight: number) {
     const zoneVolume = this.area_m2 * structureHeight;
-    const requiredAirflow = zoneVolume * RECOMMENDED_ACH;
+    const requiredAirflow = zoneVolume * RECOMMENDED_AIR_CHANGES_PER_HOUR;
 
     let actualAirflow = 0;
     const blueprints = getBlueprints();
@@ -249,7 +242,7 @@ export class Zone {
   
   getHumidityControlDetails() {
     // Assuming 1 tick = 1 hour for this calculation's purpose
-    const requiredDehumidification = this.area_m2 * BASE_DEHUMIDIFICATION_LOAD_PER_M2_PER_H;
+    const requiredDehumidification = this.area_m2 * BASE_DEHUMIDIFICATION_LOAD_KG_PER_M2_HOUR;
     let actualDehumidification = 0;
     const blueprints = getBlueprints();
 
@@ -504,7 +497,7 @@ export class Zone {
         }
     }
     const airChangesPerTick = zoneVolume > 0 ? totalAirflow / zoneVolume : 0;
-    const airExchangeMultiplier = 1.0 + (airChangesPerTick / RECOMMENDED_ACH);
+    const airExchangeMultiplier = 1.0 + (airChangesPerTick / RECOMMENDED_AIR_CHANGES_PER_HOUR);
 
     for (const deviceId in this.devices) {
         const device = this.devices[deviceId];
@@ -518,25 +511,25 @@ export class Zone {
         switch(blueprint.kind) {
             case 'Lamp':
                 if (isLightOn && settings.power && settings.heatFraction) {
-                    tempDelta += (settings.power * settings.heatFraction) * LAMP_HEAT_FACTOR;
+                    tempDelta += (settings.power * settings.heatFraction) * LAMP_HEAT_GAIN_K_PER_KW_TICK;
                 }
                 break;
             case 'ClimateUnit':
                  if (settings.coolingCapacity && this.currentEnvironment.temperature_C > settings.targetTemperature) {
                     const tempDiff = this.currentEnvironment.temperature_C - settings.targetTemperature;
                     const coolingEffect = Math.min(1, tempDiff / (settings.fullPowerAtDeltaK || 2)) * settings.coolingCapacity;
-                    tempDelta -= coolingEffect * COOLING_CAPACITY_FACTOR;
+                    tempDelta -= coolingEffect * COOLING_CAPACITY_EFFECT_K_PER_KW_TICK;
                 }
                 break;
             case 'Dehumidifier':
                 if (settings.latentRemovalKgPerTick && settings.power) {
-                    const airMass = zoneVolume * 1.225;
+                    const airMass = zoneVolume * AIR_DENSITY_KG_PER_M3;
                     humidityDelta -= (settings.latentRemovalKgPerTick / airMass);
-                    tempDelta += settings.power * DEHUMIDIFIER_HEAT_FACTOR;
+                    tempDelta += settings.power * DEHUMIDIFIER_HEAT_GAIN_K_PER_KW_TICK;
                 }
                 break;
             case 'HumidityControlUnit':
-                const airMass = zoneVolume * 1.225;
+                const airMass = zoneVolume * AIR_DENSITY_KG_PER_M3;
                 if (settings.dehumidifyRateKgPerTick && this.currentEnvironment.humidity_rh > (settings.targetHumidity + settings.hysteresis)) {
                     humidityDelta -= (settings.dehumidifyRateKgPerTick / airMass);
                 } else if (settings.humidifyRateKgPerTick && this.currentEnvironment.humidity_rh < (settings.targetHumidity - settings.hysteresis)) {
@@ -557,8 +550,8 @@ export class Zone {
         co2Delta -= totalPlantCount * PLANT_CO2_CONSUMPTION_PPM_PER_PLANT;
     }
 
-    tempDelta += (AMBIENT_TEMP_C - this.currentEnvironment.temperature_C) * TEMP_NORMALIZATION_FACTOR * airExchangeMultiplier;
-    humidityDelta += (AMBIENT_HUMIDITY_RH - this.currentEnvironment.humidity_rh) * HUMIDITY_NORMALIZATION_FACTOR * airExchangeMultiplier;
+    tempDelta += (AMBIENT_TEMPERATURE_C - this.currentEnvironment.temperature_C) * TEMPERATURE_NORMALIZATION_FACTOR * airExchangeMultiplier;
+    humidityDelta += (AMBIENT_RELATIVE_HUMIDITY - this.currentEnvironment.humidity_rh) * HUMIDITY_NORMALIZATION_FACTOR * airExchangeMultiplier;
     co2Delta += (AMBIENT_CO2_PPM - this.currentEnvironment.co2_ppm) * CO2_NORMALIZATION_FACTOR * airExchangeMultiplier;
 
     this.currentEnvironment.temperature_C += tempDelta;

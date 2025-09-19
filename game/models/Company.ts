@@ -6,6 +6,7 @@ import { FinanceService } from './company/FinanceService';
 import { HRService } from './company/HRService';
 import { TaskEngine } from './company/TaskEngine';
 import { MarketService } from './company/MarketService';
+import { MUTATION_FACTOR, ALERT_COOLDOWN_TICKS } from '../constants/balance';
 
 
 export class Company {
@@ -176,7 +177,6 @@ export class Company {
       newStrain.lineage.parents = [parentA.name, parentB.name];
 
       // --- Breeding Logic ---
-      const MUTATION_FACTOR = 0.1; // +/- 5% mutation
       const mutate = (val: number) => val * (1 + (rng() - 0.5) * MUTATION_FACTOR);
       const avg = (a: number, b: number) => (a + b) / 2;
       
@@ -241,8 +241,6 @@ export class Company {
   checkForAlerts(ticks: number) {
     const newAlerts: Alert[] = [];
     const newAlertKeys = new Set<string>();
-    const COOLDOWN_TICKS = 2 * 24; 
-
     const previousAlertsMap = new Map(this.alerts.map(a => [`${a.location.zoneId || a.context?.employeeId}-${a.type}`, a]));
 
     for (const key in this.alertCooldowns) {
@@ -334,7 +332,7 @@ export class Company {
 
     for (const [prevKey] of previousAlertsMap) {
         if (!newAlertKeys.has(prevKey)) {
-            this.alertCooldowns[prevKey] = ticks + COOLDOWN_TICKS;
+            this.alertCooldowns[prevKey] = ticks + ALERT_COOLDOWN_TICKS;
         }
     }
     

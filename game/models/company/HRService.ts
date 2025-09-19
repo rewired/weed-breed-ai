@@ -1,6 +1,6 @@
 import type { Employee, JobRole, SkillName } from '../../types';
 import { FinanceService } from './FinanceService';
-import { XP_PER_LEVEL } from './constants';
+import { XP_PER_LEVEL } from '../../constants/balance';
 import type { Company } from '../Company';
 
 export class HRService {
