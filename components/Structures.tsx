@@ -1,5 +1,6 @@
 import React from 'react';
-import { Company, getAvailableStrains } from '@/src/game/api';
+import { getAvailableStrains } from '@/src/game/api';
+import type { Company } from '@/game/models/Company';
 
 interface StructuresProps {
   company: Company;

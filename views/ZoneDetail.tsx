@@ -1,5 +1,10 @@
 import React from 'react';
-import { Company, Zone, Structure, Room } from '@/src/game/api';
+import { getZoneInfo } from '@/src/game/api';
+import type { ZoneInfoDTO } from '@/src/game/api';
+import type { Company } from '@/game/models/Company';
+import type { Zone } from '@/game/models/Zone';
+import type { Structure } from '@/game/models/Structure';
+import type { Room } from '@/game/models/Room';
 import ZoneInfoPanel from '../components/ZoneInfoPanel';
 import ZoneDeviceList from '../components/ZoneDeviceList';
 import ZonePlantingList from '../components/ZonePlantingList';
@@ -25,8 +30,8 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
   if (!zone) {
     return <div className="content-panel">Zone not found.</div>;
   }
-  
-  const supplyConsumption = zone.getSupplyConsumptionRates(company);
+
+  const zoneInfo: ZoneInfoDTO = getZoneInfo(zone, structure, company);
 
   const zoneIds = Object.keys(room.zones);
   const currentIndex = zoneIds.indexOf(zone.id);
@@ -67,11 +72,9 @@ const ZoneDetail: React.FC<ZoneDetailProps> = ({ zone, company, structure, room,
       </div>
 
        <div className="zone-detail-view">
-            <ZoneInfoPanel 
-                zone={zone}
-                structure={structure}
+            <ZoneInfoPanel
+                info={zoneInfo}
                 onOpenModal={onOpenModal}
-                supplyConsumption={supplyConsumption}
             />
         
             <div className="zone-detail-lists-panel">

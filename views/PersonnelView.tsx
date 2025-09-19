@@ -1,13 +1,7 @@
 
 import React, { useState } from 'react';
-import {
-  Company,
-  Employee,
-  SkillName,
-  Trait,
-  JobRole,
-  OvertimePolicy,
-} from '@/src/game/api';
+import type { Company } from '@/game/models/Company';
+import type { Employee, SkillName, Trait, JobRole, OvertimePolicy } from '@/game/types';
 
 const ALL_ROLES: JobRole[] = ['Gardener', 'Technician', 'Janitor', 'Botanist', 'Salesperson', 'Generalist'];
 

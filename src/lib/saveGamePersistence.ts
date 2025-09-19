@@ -1,7 +1,5 @@
-import {
-  Company,
-  type GameState,
-} from '@/src/game/api';
+import type { GameState } from '@/game/types';
+import { Company } from '@/game/models/Company';
 import { compressToBase64, decompressFromBase64 } from '@/src/lib/lzString';
 
 type SerializedCompany = ReturnType<Company['toJSON']>;

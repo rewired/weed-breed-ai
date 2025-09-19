@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Zone, Company, getAvailableStrains, GrowthStage } from '@/src/game/api';
+import { getAvailableStrains } from '@/src/game/api';
+import type { Zone } from '@/game/models/Zone';
+import type { Company } from '@/game/models/Company';
+import { GrowthStage } from '@/game/models/Plant';
 
 interface ZonePlantingListProps {
   zone: Zone;

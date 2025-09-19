@@ -1,5 +1,6 @@
 import React from 'react';
-import { roomPurposes, RoomPurpose } from '@/src/game/api';
+import { roomPurposes } from '@/src/game/api';
+import type { RoomPurpose } from '@/game/roomPurposes';
 
 const AddRoomModalContent = ({ formState, updateForm, handlers, closeModal, selectedStructure }) => {
     return (

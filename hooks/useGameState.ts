@@ -1,16 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  GameState,
-  GameSpeed,
-  StructureBlueprint,
-  RoomPurpose,
-  JobRole,
-  Planting,
-  Plant,
-  Alert,
-  Employee,
-  PlantingPlan,
-  OvertimePolicy,
   initialGameState,
   gameTick,
   getBlueprints,
@@ -18,6 +7,19 @@ import {
   loadAllBlueprints,
   createSeededRandom,
 } from '@/src/game/api';
+import type { GameSpeed } from '@/src/game/api';
+import type {
+  GameState,
+  StructureBlueprint,
+  RoomPurpose,
+  JobRole,
+  Alert,
+  Employee,
+  PlantingPlan,
+  OvertimePolicy,
+} from '@/game/types';
+import type { Planting } from '@/game/models/Planting';
+import type { Plant } from '@/game/models/Plant';
 import type {
   AlertEventDTO,
   FinanceUpdateEventDTO,

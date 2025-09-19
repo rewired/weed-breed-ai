@@ -1,5 +1,3 @@
-import type { GameSpeed } from '@/game/types';
-
 export interface HealthEventDTO {
   tick: number;
   timestamp: number;
@@ -24,6 +22,20 @@ export interface AlertSummaryDTO {
   isAcknowledged?: boolean;
   context?: unknown;
 }
+
+export type GameSpeed = 0.5 | 1 | 10 | 25 | 50 | 100;
+
+export type ExpenseCategory =
+  | 'rent'
+  | 'maintenance'
+  | 'power'
+  | 'structures'
+  | 'devices'
+  | 'supplies'
+  | 'seeds'
+  | 'salaries';
+
+export type RevenueCategory = 'harvests' | 'other';
 
 export interface WorldSummaryDTO {
   tick: number;
@@ -128,4 +140,91 @@ export type PlantTreatmentId =
 export interface ApplyTreatmentResult {
   success: boolean;
   message?: string;
+}
+
+export interface DashboardStatusDTO {
+  capital: number;
+  cumulativeYield_g: number;
+  tick: number;
+}
+
+export interface RevenueBreakdownDTO {
+  category: RevenueCategory;
+  total: number;
+  averagePerDay: number;
+}
+
+export interface ExpenseBreakdownDTO {
+  category: ExpenseCategory;
+  total: number;
+  averagePerDay: number;
+}
+
+export interface FinanceSummaryDTO {
+  netProfit: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  cumulativeYield_g: number;
+  revenue: RevenueBreakdownDTO[];
+  operatingExpenses: ExpenseBreakdownDTO[];
+  capitalExpenses: ExpenseBreakdownDTO[];
+  operatingTotal: { total: number; averagePerDay: number };
+  capitalTotal: { total: number; averagePerDay: number };
+}
+
+export interface ZoneSupplyStatsDTO {
+  waterLevel_L: number | null;
+  nutrientLevel_g: number | null;
+  consumption: {
+    waterPerDay: number;
+    nutrientsPerDay: number;
+  };
+}
+
+export interface ZoneLightingStatsDTO {
+  coverage: number;
+  requiredCoverage: number;
+  averagePPFD: number;
+  dli: number;
+  isSufficient: boolean;
+}
+
+export interface ZoneClimateStatsDTO {
+  actualAirflow: number;
+  requiredAirflow: number;
+  isSufficient: boolean;
+}
+
+export interface ZoneHumidityStatsDTO {
+  actualDehumidification: number;
+  requiredDehumidification: number;
+  isSufficient: boolean;
+}
+
+export interface ZoneCO2StatsDTO {
+  actualInjectionRate: number;
+  requiredInjectionRate: number;
+  isSufficient: boolean;
+}
+
+export interface ZoneEnvironmentDTO {
+  temperature_C: number | null;
+  humidity_rh: number | null;
+  co2_ppm: number | null;
+}
+
+export interface ZoneInfoDTO {
+  id: string;
+  name: string;
+  area_m2: number;
+  plantCapacity: number;
+  plantCount: number;
+  cultivationMethodName: string | null;
+  lightCycle: { on: number; off: number };
+  supplies: ZoneSupplyStatsDTO;
+  lighting: ZoneLightingStatsDTO;
+  climate: ZoneClimateStatsDTO;
+  humidity: ZoneHumidityStatsDTO;
+  co2: ZoneCO2StatsDTO;
+  environment: ZoneEnvironmentDTO;
 }

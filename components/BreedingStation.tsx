@@ -1,5 +1,5 @@
 import React from 'react';
-import { Company } from '@/src/game/api';
+import type { Company } from '@/game/models/Company';
 
 interface BreedingStationProps {
   company: Company;

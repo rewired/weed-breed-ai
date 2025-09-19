@@ -1,6 +1,8 @@
 import React from 'react';
 import Modal from '../Modal';
-import { GameState, Room, Structure } from '@/src/game/api';
+import type { GameState } from '@/game/types';
+import type { Room } from '@/game/models/Room';
+import type { Structure } from '@/game/models/Structure';
 
 // Import all the new content components
 import RentModalContent from './content/RentModalContent';

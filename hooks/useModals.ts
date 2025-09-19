@@ -1,14 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  RoomPurpose,
-  getBlueprints,
-  getAvailableStrains,
-  Structure,
-  Room,
-  Company,
-  GameState,
-  Employee,
-} from '@/src/game/api';
+import { getBlueprints, getAvailableStrains } from '@/src/game/api';
+import type { RoomPurpose } from '@/game/roomPurposes';
+import type { Structure } from '@/game/models/Structure';
+import type { Room } from '@/game/models/Room';
+import type { Company } from '@/game/models/Company';
+import type { GameState, Employee } from '@/game/types';
 
 type ModalType = 'rent' | 'addRoom' | 'addZone' | 'addDevice' | 'addSupply' | 'reset' | 'rename' | 'delete' | 'breedStrain' | 'plantStrain' | 'newGame' | 'save' | 'load' | 'editDevice' | 'editLightCycle' | 'hireEmployee' | 'negotiateSalary' | 'plantingPlan';
 

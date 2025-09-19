@@ -1,9 +1,8 @@
 import React from 'react';
-import { Company, ExpenseCategory, RevenueCategory } from '@/src/game/api';
+import type { ExpenseCategory, FinanceSummaryDTO, RevenueCategory } from '@/src/game/api';
 
 interface FinancesViewProps {
-  company: Company;
-  ticks: number;
+  summary: FinanceSummaryDTO | null;
 }
 
 const categoryNames: Record<ExpenseCategory, string> = {
@@ -26,15 +25,31 @@ const formatCurrency = (value: number) => {
     return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 };
 
-const FinancesView: React.FC<FinancesViewProps> = ({ company, ticks }) => {
-  const { ledger, cumulativeYield_g } = company;
-  const totalExpenses = Object.values(ledger.expenses).reduce((sum, current) => sum + current, 0);
-  const totalRevenue = Object.values(ledger.revenue).reduce((sum, current) => sum + current, 0);
-  const netProfit = totalRevenue - totalExpenses;
-  const daysElapsed = Math.max(1, ticks / 24);
+const FinancesView: React.FC<FinancesViewProps> = ({ summary }) => {
+  if (!summary) {
+    return (
+      <div className="finances-view">
+        <div className="content-panel">
+          <div className="content-panel__header">
+            <h2>Financial Summary</h2>
+          </div>
+          <p className="placeholder-text">Financial data is not available yet.</p>
+        </div>
+      </div>
+    );
+  }
 
-  const operatingExpenses = (ledger.expenses.rent || 0) + (ledger.expenses.maintenance || 0) + (ledger.expenses.power || 0) + (ledger.expenses.salaries || 0);
-  const capitalExpenses = (ledger.expenses.structures || 0) + (ledger.expenses.devices || 0) + (ledger.expenses.supplies || 0) + (ledger.expenses.seeds || 0);
+  const {
+    netProfit,
+    totalRevenue,
+    totalExpenses,
+    cumulativeYield_g,
+    revenue,
+    operatingExpenses,
+    capitalExpenses,
+    operatingTotal,
+    capitalTotal,
+  } = summary;
 
   return (
     <div className="finances-view">
@@ -53,7 +68,7 @@ const FinancesView: React.FC<FinancesViewProps> = ({ company, ticks }) => {
           </div>
           <div className="summary-card">
             <h4>Harvest Revenue</h4>
-            <p className="positive">{formatCurrency(ledger.revenue.harvests || 0)}</p>
+            <p className="positive">{formatCurrency(revenue.find(entry => entry.category === 'harvests')?.total ?? 0)}</p>
           </div>
            <div className="summary-card">
             <h4>Cumulative Yield</h4>
@@ -79,17 +94,17 @@ const FinancesView: React.FC<FinancesViewProps> = ({ company, ticks }) => {
                 </tr>
             </thead>
             <tbody>
-              {Object.entries(ledger.revenue).map(([key, value]) => (
-                <tr key={key}>
-                  <td>{revenueCategoryNames[key as RevenueCategory]}</td>
-                  <td>{formatCurrency(value)}</td>
-                  <td>{formatCurrency(value / daysElapsed)}</td>
+              {revenue.map(entry => (
+                <tr key={entry.category}>
+                  <td>{revenueCategoryNames[entry.category]}</td>
+                  <td>{formatCurrency(entry.total)}</td>
+                  <td>{formatCurrency(entry.averagePerDay)}</td>
                 </tr>
               ))}
               <tr style={{fontWeight: 'bold', borderTop: '2px solid var(--border-color)'}}>
                 <td>Total Revenue</td>
                 <td>{formatCurrency(totalRevenue)}</td>
-                <td>{formatCurrency(totalRevenue / daysElapsed)}</td>
+                <td>{formatCurrency(revenue.reduce((sum, entry) => sum + entry.averagePerDay, 0))}</td>
               </tr>
             </tbody>
         </table>
@@ -112,39 +127,39 @@ const FinancesView: React.FC<FinancesViewProps> = ({ company, ticks }) => {
                 <tr>
                     <td colSpan={3}><strong>Operating Expenses</strong></td>
                 </tr>
-                {['rent', 'maintenance', 'power', 'salaries'].map(cat => (
-                    <tr key={cat}>
-                        <td>&nbsp;&nbsp;&nbsp;{categoryNames[cat as ExpenseCategory]}</td>
-                        <td>{formatCurrency(ledger.expenses[cat as ExpenseCategory] || 0)}</td>
-                        <td>{formatCurrency((ledger.expenses[cat as ExpenseCategory] || 0) / daysElapsed)}</td>
+                {operatingExpenses.map(entry => (
+                    <tr key={entry.category}>
+                        <td>&nbsp;&nbsp;&nbsp;{categoryNames[entry.category]}</td>
+                        <td>{formatCurrency(entry.total)}</td>
+                        <td>{formatCurrency(entry.averagePerDay)}</td>
                     </tr>
                 ))}
                  <tr style={{fontWeight: 'bold'}}>
                     <td>&nbsp;&nbsp;&nbsp;Total Operating</td>
-                    <td>{formatCurrency(operatingExpenses)}</td>
-                    <td>{formatCurrency(operatingExpenses / daysElapsed)}</td>
+                    <td>{formatCurrency(operatingTotal.total)}</td>
+                    <td>{formatCurrency(operatingTotal.averagePerDay)}</td>
                 </tr>
 
 
                 <tr>
                     <td colSpan={3} style={{paddingTop: '2rem'}}><strong>Capital Expenditures</strong></td>
                 </tr>
-                 {['structures', 'devices', 'supplies', 'seeds'].map(cat => (
-                    <tr key={cat}>
-                        <td>&nbsp;&nbsp;&nbsp;{categoryNames[cat as ExpenseCategory]}</td>
-                        <td>{formatCurrency(ledger.expenses[cat as ExpenseCategory] || 0)}</td>
-                        <td>{formatCurrency((ledger.expenses[cat as ExpenseCategory] || 0) / daysElapsed)}</td>
+                 {capitalExpenses.map(entry => (
+                    <tr key={entry.category}>
+                        <td>&nbsp;&nbsp;&nbsp;{categoryNames[entry.category]}</td>
+                        <td>{formatCurrency(entry.total)}</td>
+                        <td>{formatCurrency(entry.averagePerDay)}</td>
                     </tr>
                 ))}
                  <tr style={{fontWeight: 'bold'}}>
                     <td>&nbsp;&nbsp;&nbsp;Total Capital</td>
-                    <td>{formatCurrency(capitalExpenses)}</td>
-                    <td>{formatCurrency(capitalExpenses / daysElapsed)}</td>
+                    <td>{formatCurrency(capitalTotal.total)}</td>
+                    <td>{formatCurrency(capitalTotal.averagePerDay)}</td>
                 </tr>
                  <tr style={{fontWeight: 'bold', borderTop: '2px solid var(--border-color)'}}>
                     <td>Total Expenses</td>
                     <td>{formatCurrency(totalExpenses)}</td>
-                    <td>{formatCurrency(totalExpenses / daysElapsed)}</td>
+                    <td>{formatCurrency(operatingTotal.averagePerDay + capitalTotal.averagePerDay)}</td>
                 </tr>
             </tbody>
         </table>
