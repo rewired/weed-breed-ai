@@ -1,5 +1,6 @@
 import { Plant, GrowthStage } from './Plant';
 import { StrainBlueprint } from '../types';
+import { RandomGenerator } from '../utils';
 
 interface Environment {
     temperature_C: number;
@@ -40,7 +41,7 @@ export class Planting {
         }
     }
 
-    update(strain: StrainBlueprint, environment: Environment, rng: () => number, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
+    update(strain: StrainBlueprint, environment: Environment, rng: RandomGenerator, isLightOn: boolean, hasWater: boolean, hasNutrients: boolean, lightOnHours: number, diseaseChance: number) {
         this.plants.forEach(plant => {
             if (plant.growthStage !== GrowthStage.Dead) {
                 plant.update(strain, environment, rng, isLightOn, hasWater, hasNutrients, lightOnHours, diseaseChance);

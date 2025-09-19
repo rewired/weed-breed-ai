@@ -116,5 +116,6 @@ export {
   loadAllBlueprints,
 } from '@/game/blueprints';
 export { initialGameState, gameTick } from '@/game/engine';
-export { mulberry32 } from '@/game/utils';
+export { mulberry32, createSeededRandom, createRandomGenerator } from '@/game/utils';
+export type { RandomGenerator } from '@/game/utils';
 export { GrowthStage } from '@/game/models/Plant';
