@@ -98,7 +98,6 @@ export type SimulationEventMap = {
   'sim:tick': SimTickEventDTO;
   'finance:update': FinanceUpdateEventDTO;
   'health:event': HealthEventDTO;
-  'world:summary': WorldSummaryDTO;
   'alert:event': AlertEventDTO;
 };
 
@@ -114,17 +113,17 @@ export interface SimulationStepOptions extends SimulationStartOptions {}
 
 export type SimulationSnapshot = WorldSummaryDTO | null;
 
-export interface ApplyTreatmentOptions {
-  zoneId?: string;
-  plantId?: string;
-  treatment:
-    | 'water'
-    | 'nutrients'
-    | 'pesticide'
-    | 'prune'
-    | 'debug';
-  amount?: number;
-}
+export type ZoneTreatmentId =
+  | 'water'
+  | 'nutrients'
+  | 'pesticide'
+  | 'prune'
+  | 'debug';
+
+export type PlantTreatmentId =
+  | 'pesticide'
+  | 'prune'
+  | 'debug';
 
 export interface ApplyTreatmentResult {
   success: boolean;

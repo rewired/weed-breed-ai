@@ -1,6 +1,5 @@
 import React from 'react';
-import { Zone, Structure } from '../game/types';
-import { getBlueprints } from '../game/blueprints';
+import { Zone, Structure, getBlueprints } from '@/src/game/api';
 
 interface ZoneInfoPanelProps {
   zone: Zone;

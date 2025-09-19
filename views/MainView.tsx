@@ -1,5 +1,12 @@
 import React from 'react';
-import { Company, Structure, Room, Zone, JobRole, OvertimePolicy } from '../game/types';
+import {
+  Company,
+  Structure,
+  Room,
+  Zone,
+  JobRole,
+  OvertimePolicy,
+} from '@/src/game/api';
 import Structures from '../components/Structures';
 import StructureDetail from '../components/StructureDetail';
 import RoomDetail from '../components/RoomDetail';

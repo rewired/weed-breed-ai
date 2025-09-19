@@ -1,5 +1,5 @@
 import React from 'react';
-import { getBlueprints } from '../../../game/blueprints';
+import { getBlueprints } from '@/src/game/api';
 
 const EditDeviceModalContent = ({ modalState, formState, updateForm, handlers, closeModal, selectedRoom }) => {
     if (!modalState.itemToEdit || !selectedRoom) return null;

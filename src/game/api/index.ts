@@ -1,21 +1,10 @@
 import type { GameSpeed } from '@/game/types';
-import {
-  listHealthDefinitions as loadHealthDefinitions,
-  listTreatmentOptions as loadTreatmentOptions,
-} from '@/game/health/loader';
-import type {
-  DiseaseBalancingConfig,
-  HealthDefinitionSummary,
-  PestBalancingConfig,
-  TreatmentCatalog,
-  TreatmentOption,
-} from '@/game/health/types';
 import { EventBus } from './eventBus';
 import type {
-  ApplyTreatmentOptions,
   ApplyTreatmentResult,
   AlertLocationDTO,
   AlertSummaryDTO,
+  PlantTreatmentId,
   RoomSummaryDTO,
   SimulationEventMap,
   SimulationEventName,
@@ -25,6 +14,7 @@ import type {
   StructureSummaryDTO,
   WorldSummaryDTO,
   ZoneSummaryDTO,
+  ZoneTreatmentId,
 } from './dto';
 import { EngineAdapter } from '../internal/engineAdapter';
 
@@ -32,7 +22,6 @@ const bus = new EventBus<SimulationEventMap>();
 const adapter = new EngineAdapter(bus);
 
 export type {
-  ApplyTreatmentOptions,
   ApplyTreatmentResult,
   SimulationEventMap,
   SimulationEventName,
@@ -45,27 +34,28 @@ export type {
   RoomSummaryDTO,
   ZoneSummaryDTO,
   WorldSummaryDTO,
+  ZoneTreatmentId,
+  PlantTreatmentId,
 };
 
 export type { GameSpeed };
-export type {
-  DiseaseBalancingConfig,
-  HealthDefinitionSummary,
-  PestBalancingConfig,
-  TreatmentCatalog,
-  TreatmentOption,
-};
 
-export async function start(options?: SimulationStartOptions): Promise<WorldSummaryDTO | null> {
-  return adapter.start(options);
+export async function start(
+  seedOrOptions?: number | SimulationStartOptions,
+): Promise<WorldSummaryDTO | null> {
+  if (typeof seedOrOptions === 'number') {
+    return adapter.start({ seed: seedOrOptions });
+  }
+
+  return adapter.start(seedOrOptions);
 }
 
 export function pause(): void {
   adapter.pause();
 }
 
-export async function step(options?: SimulationStartOptions): Promise<SimTickEventDTO | null> {
-  return adapter.step(options);
+export async function step(steps?: number): Promise<SimTickEventDTO | null> {
+  return adapter.step(steps);
 }
 
 export function setSpeed(speed: GameSpeed): void {
@@ -83,14 +73,48 @@ export function getSnapshot(): SimulationSnapshot {
   return adapter.getSnapshot();
 }
 
-export function applyTreatment(options: ApplyTreatmentOptions): ApplyTreatmentResult {
-  return adapter.applyTreatment(options);
+export function applyTreatmentToZone(
+  zoneId: string,
+  treatmentId: ZoneTreatmentId,
+): ApplyTreatmentResult {
+  return adapter.applyTreatmentToZone(zoneId, treatmentId);
 }
 
-export async function listTreatments(): Promise<TreatmentOption[]> {
-  return loadTreatmentOptions();
+export function applyTreatmentToPlant(
+  plantId: string,
+  treatmentId: PlantTreatmentId,
+): ApplyTreatmentResult {
+  return adapter.applyTreatmentToPlant(plantId, treatmentId);
 }
 
-export async function listHealthDefs(): Promise<HealthDefinitionSummary> {
-  return loadHealthDefinitions();
-}
+export { Company, Structure, Room, Zone, Planting, Plant } from '@/game/types';
+
+export type {
+  GameState,
+  StructureBlueprint,
+  RoomPurpose,
+  JobRole,
+  Planting,
+  Plant,
+  PlantingPlan,
+  Alert,
+  Employee,
+  ExpenseCategory,
+  RevenueCategory,
+  GroupedDeviceInfo,
+  StrainBlueprint,
+  CultivationMethodBlueprint,
+  SkillName,
+  Trait,
+  OvertimePolicy,
+} from '@/game/types';
+
+export { roomPurposes } from '@/game/roomPurposes';
+export {
+  getBlueprints,
+  getAvailableStrains,
+  loadAllBlueprints,
+} from '@/game/blueprints';
+export { initialGameState, gameTick } from '@/game/engine';
+export { mulberry32 } from '@/game/utils';
+export { GrowthStage } from '@/game/models/Plant';
