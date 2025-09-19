@@ -1,8 +1,18 @@
-import { Device, Company, StrainBlueprint, CultivationMethodBlueprint, DeviceBlueprint, GroupedDeviceInfo, Structure, Planting as IPlanting, ZoneStatus, PlantingPlan as IPlantingPlan } from '../types';
+import type {
+  Device,
+  Company,
+  StrainBlueprint,
+  CultivationMethodBlueprint,
+  DeviceBlueprint,
+  GroupedDeviceInfo,
+  ZoneStatus,
+  PlantingPlan,
+} from '../types';
 import { getBlueprints, getAvailableStrains } from '../blueprints';
 import { Planting } from './Planting';
 import { Plant, GrowthStage } from './Plant';
 import { RandomGenerator } from '../utils';
+import type { Structure } from './Structure';
 import {
   RECOMMENDED_AIR_CHANGES_PER_HOUR,
   BASE_DEHUMIDIFICATION_LOAD_KG_PER_M2_HOUR,
@@ -35,7 +45,7 @@ export class Zone {
   nutrientLevel_g: number;
   cyclesUsed: number;
   status: ZoneStatus;
-  plantingPlan: IPlantingPlan | null;
+  plantingPlan: PlantingPlan | null;
   currentEnvironment: {
     temperature_C: number;
     humidity_rh: number; // 0-1
@@ -115,7 +125,7 @@ export class Zone {
     };
   }
   
-  setPlantingPlan(plan: IPlantingPlan | null) {
+  setPlantingPlan(plan: PlantingPlan | null) {
     this.plantingPlan = plan;
   }
   

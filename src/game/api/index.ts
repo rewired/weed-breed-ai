@@ -87,15 +87,18 @@ export function applyTreatmentToPlant(
   return adapter.applyTreatmentToPlant(plantId, treatmentId);
 }
 
-export { Company, Structure, Room, Zone, Planting, Plant } from '@/game/types';
+export { Company } from '@/game/models/Company';
+export { Structure } from '@/game/models/Structure';
+export { Room } from '@/game/models/Room';
+export { Zone } from '@/game/models/Zone';
+export { Planting } from '@/game/models/Planting';
+export { Plant } from '@/game/models/Plant';
 
 export type {
   GameState,
   StructureBlueprint,
   RoomPurpose,
   JobRole,
-  Planting,
-  Plant,
   PlantingPlan,
   Alert,
   Employee,
@@ -108,6 +111,8 @@ export type {
   Trait,
   OvertimePolicy,
 } from '@/game/types';
+export type { Planting } from '@/game/models/Planting';
+export type { Plant } from '@/game/models/Plant';
 
 export { roomPurposes } from '@/game/roomPurposes';
 export {

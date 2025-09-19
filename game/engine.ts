@@ -1,4 +1,5 @@
-import { GameState, Company } from './types';
+import type { GameState } from './types';
+import { Company } from './models/Company';
 import { createSeededRandom } from './utils';
 
 export function initialGameState(companyName: string = 'Weedbreed', seed?: number): GameState {

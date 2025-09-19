@@ -1,6 +1,8 @@
 import { Zone } from './Zone';
-import { RoomPurpose } from '../roomPurposes';
-import { Company, StrainBlueprint, Structure, Device } from '../types';
+import type { RoomPurpose } from '../roomPurposes';
+import type { StrainBlueprint, Device } from '../types';
+import type { Company } from './Company';
+import type { Structure } from './Structure';
 import { GrowthStage } from './Plant';
 import { RandomGenerator } from '../utils';
 
