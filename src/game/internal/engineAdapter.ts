@@ -3,6 +3,7 @@ import type { GameSpeed, GameState } from '@/game/types';
 import { mulberry32 } from '@/game/utils';
 import { EventBus } from '../api/eventBus';
 import type {
+  AlertEventDTO,
   ApplyTreatmentOptions,
   ApplyTreatmentResult,
   FinanceUpdateEventDTO,
@@ -16,30 +17,110 @@ import type {
 
 const DEFAULT_TICK_DURATION_MS = 5000;
 const DEFAULT_COMPANY_NAME = 'Weedbreed';
+const MIN_TICK_INTERVAL_MS = 100; // 10 Hz maximum
 
-function mapSimTickEvent(state: GameState, speed: GameSpeed): SimTickEventDTO {
+function mapSimTickEvent(
+  state: GameState,
+  speed: GameSpeed,
+  previousState: GameState | null,
+  summary: WorldSummaryDTO,
+  health: HealthEventDTO,
+  timestamp: number
+): SimTickEventDTO {
+  const capitalDelta = previousState
+    ? state.company.capital - previousState.company.capital
+    : 0;
+
   return {
     tick: state.ticks,
-    timestamp: Date.now(),
+    timestamp,
     speed,
     seed: state.seed,
     companyCapital: state.company.capital,
-  };
-}
-
-function mapFinanceUpdateEvent(state: GameState): FinanceUpdateEventDTO {
-  return {
-    tick: state.ticks,
-    capital: state.company.capital,
-    ledger: {
-      revenue: { ...state.company.ledger.revenue },
-      expenses: { ...state.company.ledger.expenses },
-    },
+    capitalDelta,
     cumulativeYield_g: state.company.cumulativeYield_g ?? 0,
+    totals: summary.totals,
+    plantHealth: {
+      plantCount: health.plantCount,
+      averageHealth: health.averageHealth,
+      averageStress: health.averageStress,
+      minimumHealth: health.minimumHealth,
+    },
+    activeAlertCount: summary.alerts.length,
   };
 }
 
-function mapHealthEvent(state: GameState): HealthEventDTO {
+function mapFinanceEvents(
+  previousState: GameState | null,
+  nextState: GameState,
+  timestamp: number
+): FinanceUpdateEventDTO[] {
+  if (!previousState) {
+    return [];
+  }
+
+  const events: FinanceUpdateEventDTO[] = [];
+  const prevLedger = previousState.company.ledger;
+  const nextLedger = nextState.company.ledger;
+  const revenueCategories = new Set([
+    ...Object.keys(prevLedger.revenue ?? {}),
+    ...Object.keys(nextLedger.revenue ?? {}),
+  ]);
+  const expenseCategories = new Set([
+    ...Object.keys(prevLedger.expenses ?? {}),
+    ...Object.keys(nextLedger.expenses ?? {}),
+  ]);
+
+  let runningCapital = previousState.company.capital;
+
+  revenueCategories.forEach(category => {
+    const previousValue = prevLedger.revenue?.[category] ?? 0;
+    const nextValue = nextLedger.revenue?.[category] ?? 0;
+    const delta = nextValue - previousValue;
+    if (delta !== 0) {
+      runningCapital += delta;
+      events.push({
+        tick: nextState.ticks,
+        timestamp,
+        reason: `revenue:${category}`,
+        delta,
+        newCapital: runningCapital,
+      });
+    }
+  });
+
+  expenseCategories.forEach(category => {
+    const previousValue = prevLedger.expenses?.[category] ?? 0;
+    const nextValue = nextLedger.expenses?.[category] ?? 0;
+    const delta = nextValue - previousValue;
+    if (delta !== 0) {
+      runningCapital -= delta;
+      events.push({
+        tick: nextState.ticks,
+        timestamp,
+        reason: `expense:${category}`,
+        delta: -delta,
+        newCapital: runningCapital,
+      });
+    }
+  });
+
+  const adjustment = nextState.company.capital - runningCapital;
+  if (Math.abs(adjustment) > 1e-6) {
+    const newCapital = runningCapital + adjustment;
+    events.push({
+      tick: nextState.ticks,
+      timestamp,
+      reason: 'capital:adjustment',
+      delta: adjustment,
+      newCapital,
+    });
+  }
+
+  return events;
+}
+
+function mapHealthEvent(state: GameState, timestamp: number): HealthEventDTO {
   const structures = Object.values(state.company.structures);
   const allPlants = structures.flatMap(structure =>
     Object.values(structure.rooms).flatMap(room =>
@@ -52,6 +133,7 @@ function mapHealthEvent(state: GameState): HealthEventDTO {
   if (allPlants.length === 0) {
     return {
       tick: state.ticks,
+      timestamp,
       plantCount: 0,
       averageHealth: 0,
       averageStress: 0,
@@ -67,12 +149,42 @@ function mapHealthEvent(state: GameState): HealthEventDTO {
 
   return {
     tick: state.ticks,
+    timestamp,
     plantCount: allPlants.length,
     averageHealth: totalHealth / allPlants.length,
     averageStress: totalStress / allPlants.length,
     minimumHealth,
     criticalPlantIds,
   };
+}
+
+function mapAlertEvents(
+  previousState: GameState | null,
+  nextState: GameState,
+  timestamp: number
+): AlertEventDTO[] {
+  if (!previousState) {
+    return [];
+  }
+
+  const previousAlertIds = new Set(
+    previousState.company.alerts.map(alert => alert.id)
+  );
+
+  return nextState.company.alerts
+    .filter(alert => !previousAlertIds.has(alert.id))
+    .map(alert => ({
+      tick: nextState.ticks,
+      timestamp,
+      alertId: alert.id,
+      type: alert.type,
+      message: alert.message,
+      location: {
+        structureId: alert.location?.structureId ?? '',
+        roomId: alert.location?.roomId ?? '',
+        zoneId: alert.location?.zoneId ?? '',
+      },
+    }));
 }
 
 function mapWorldSummary(state: GameState): WorldSummaryDTO {
@@ -120,6 +232,13 @@ function mapWorldSummary(state: GameState): WorldSummaryDTO {
       id: alert.id,
       type: alert.type,
       message: alert.message,
+      location: alert.location
+        ? {
+            structureId: alert.location.structureId,
+            roomId: alert.location.roomId,
+            zoneId: alert.location.zoneId,
+          }
+        : undefined,
     })),
   };
 }
@@ -200,8 +319,12 @@ export class EngineAdapter {
       console.warn('Failed to prime job market during simulation start.', error);
     }
 
+    const timestamp = Date.now();
+    const summary = mapWorldSummary(initialState);
+    const health = mapHealthEvent(initialState, timestamp);
+
     this.state = initialState;
-    this.emitState(initialState);
+    this.emitState(summary, health);
   }
 
   private scheduleLoop(): void {
@@ -213,7 +336,7 @@ export class EngineAdapter {
       clearInterval(this.timer);
     }
 
-    const interval = this.tickDurationMs / this.speed;
+    const interval = Math.max(this.tickDurationMs / this.speed, MIN_TICK_INTERVAL_MS);
     this.timer = setInterval(() => {
       this.advanceTick();
     }, interval);
@@ -224,23 +347,33 @@ export class EngineAdapter {
       return null;
     }
 
-    const nextState = gameTick(this.state);
-    this.state = nextState;
+    const previousState = this.state;
+    const nextState = gameTick(previousState);
+    const timestamp = Date.now();
+    const summary = mapWorldSummary(nextState);
+    const health = mapHealthEvent(nextState, timestamp);
 
-    const tickEvent = mapSimTickEvent(nextState, this.speed);
+    const tickEvent = mapSimTickEvent(nextState, this.speed, previousState, summary, health, timestamp);
     this.bus.emit('sim:tick', tickEvent);
-    this.emitState(nextState);
+
+    const financeEvents = mapFinanceEvents(previousState, nextState, timestamp);
+    financeEvents.forEach(event => this.bus.emit('finance:update', event));
+
+    const alertEvents = mapAlertEvents(previousState, nextState, timestamp);
+    alertEvents.forEach(event => this.bus.emit('alert:event', event));
+
+    this.state = nextState;
+    this.emitState(summary, health);
 
     return tickEvent;
   }
 
-  private emitState(state: GameState): void {
-    const finance = mapFinanceUpdateEvent(state);
-    const health = mapHealthEvent(state);
-    const summary = mapWorldSummary(state);
-
-    this.bus.emit('finance:update', finance);
-    this.bus.emit('health:update', health);
+  private emitState(summary: WorldSummaryDTO, health: HealthEventDTO): void {
+    this.emitHealthEvent(health);
     this.bus.emit('world:summary', summary);
+  }
+
+  private emitHealthEvent(health: HealthEventDTO): void {
+    this.bus.emit('health:event', health);
   }
 }
