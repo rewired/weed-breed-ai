@@ -35,6 +35,7 @@ export class Company {
   alerts: Alert[];
   alertCooldowns: Record<string, number>; // Key: `${zoneId}-${type}`, Value: Expiry tick
   overtimePolicy: OvertimePolicy;
+  actionRngNonce: number;
 
   constructor(data: any) {
     this.id = data.id;
@@ -58,6 +59,7 @@ export class Company {
     this.alerts = data.alerts || [];
     this.alertCooldowns = data.alertCooldowns || {};
     this.overtimePolicy = data.overtimePolicy || 'payout';
+    this.actionRngNonce = data.actionRngNonce ?? 0;
 
     // --- MIGRATION: Handle old save format where revenue was a single number ---
     if (data.ledger && typeof data.ledger.revenue === 'number') {
@@ -115,7 +117,7 @@ export class Company {
     return true;
   }
 
-  purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number): boolean {
+  purchaseDevicesForZone(blueprintId: string, zone: Zone, quantity: number, rng: () => number): boolean {
     const blueprints = getBlueprints();
     const priceInfo = blueprints.devicePrices[blueprintId];
 
@@ -129,7 +131,7 @@ export class Company {
     if (this.spendCapital(totalCost)) {
       this.logExpense('devices', totalCost);
       for (let i = 0; i < quantity; i++) {
-        zone.addDevice(blueprintId);
+        zone.addDevice(blueprintId, rng);
       }
       return true;
     }
@@ -174,7 +176,7 @@ export class Company {
     return false;
   }
   
-  breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string): StrainBlueprint | null {
+  breedStrain(parentA: StrainBlueprint, parentB: StrainBlueprint, newName: string, rng: () => number): StrainBlueprint | null {
       if (!parentA || !parentB) {
         console.error("Parent strains not found for breeding.");
         return null;
@@ -190,7 +192,7 @@ export class Company {
 
       // --- Breeding Logic ---
       const MUTATION_FACTOR = 0.1; // +/- 5% mutation
-      const mutate = (val: number) => val * (1 + (Math.random() - 0.5) * MUTATION_FACTOR);
+      const mutate = (val: number) => val * (1 + (rng() - 0.5) * MUTATION_FACTOR);
       const avg = (a: number, b: number) => (a + b) / 2;
       
       // Genotype (normalized)
@@ -932,6 +934,13 @@ export class Company {
       alerts: this.alerts,
       alertCooldowns: this.alertCooldowns,
       overtimePolicy: this.overtimePolicy,
+      actionRngNonce: this.actionRngNonce,
     };
+  }
+
+  getActionRng(seed: number, ticks: number): () => number {
+    const baseSeed = seed + ticks * 1000 + this.actionRngNonce;
+    this.actionRngNonce += 1;
+    return mulberry32(baseSeed);
   }
 }

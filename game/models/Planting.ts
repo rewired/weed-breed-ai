@@ -20,18 +20,20 @@ export class Planting {
         // If loading from save, data.plants will be an array of plain objects
         if (data.plants && data.plants.length > 0 && !(data.plants[0] instanceof Plant)) {
             this.plants = data.plants.map((plantData: any) => {
-                const plant = new Plant(plantData.strainId);
+                const plant = new Plant(plantData.strainId, plantData.id);
                 Object.assign(plant, plantData); // Re-hydrate instance
                 return plant;
             });
-        } 
+        }
         // If creating a new planting from scratch
         else if (!data.plants) {
             this.plants = [];
             for (let i = 0; i < this.quantity; i++) {
-                this.plants.push(new Plant(this.strainId));
+                const fallbackId = `plant-${Date.now()}-${i}`;
+                // TODO: Inject deterministic plant ID generator when creating new plantings without pre-defined plants.
+                this.plants.push(new Plant(this.strainId, fallbackId));
             }
-        } 
+        }
         // If it's already an array of Plant instances (e.g., from a previous session in memory)
         else {
              this.plants = data.plants;

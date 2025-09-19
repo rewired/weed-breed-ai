@@ -71,7 +71,7 @@ export class Structure {
     delete this.rooms[roomId];
   }
   
-  duplicateRoom(roomId: string, company: Company): Room | null {
+  duplicateRoom(roomId: string, company: Company, rng: () => number): Room | null {
     const originalRoom = this.rooms[roomId];
     if (!originalRoom) {
       console.error(`Room with id ${roomId} not found in structure ${this.id}`);
@@ -110,7 +110,7 @@ export class Structure {
     for (const zoneId in originalRoom.zones) {
       const originalZone = originalRoom.zones[zoneId];
       const newZoneData = originalZone.toJSON();
-      newZoneData.id = `zone-${Date.now()}-${Math.random()}`;
+      newZoneData.id = `zone-${Date.now()}-${rng()}`;
       newZoneData.plantings = {};
       newZoneData.waterLevel_L = 0;
       newZoneData.nutrientLevel_g = 0;
@@ -118,7 +118,7 @@ export class Structure {
       const newDevices: Record<string, any> = {};
       for (const deviceId in newZoneData.devices) {
         const oldDevice = newZoneData.devices[deviceId];
-        const newDeviceId = `device-${Date.now()}-${Math.random()}`;
+        const newDeviceId = `device-${Date.now()}-${rng()}`;
         newDevices[newDeviceId] = {
           ...oldDevice,
           id: newDeviceId,

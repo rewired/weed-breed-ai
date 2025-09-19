@@ -59,7 +59,7 @@ export class Room {
     delete this.zones[zoneId];
   }
 
-  duplicateZone(zoneId: string, company: Company): Zone | null {
+  duplicateZone(zoneId: string, company: Company, rng: () => number): Zone | null {
     const originalZone = this.zones[zoneId];
     if (!originalZone) {
       console.error(`Zone with id ${zoneId} not found in room ${this.id}`);
@@ -94,7 +94,7 @@ export class Room {
     const newDevices: Record<string, Device> = {};
     for (const deviceId in newZoneData.devices) {
       const oldDevice = newZoneData.devices[deviceId];
-      const newDeviceId = `device-${Date.now()}-${Math.random()}`;
+      const newDeviceId = `device-${Date.now()}-${rng()}`;
       newDevices[newDeviceId] = {
         ...oldDevice,
         id: newDeviceId,

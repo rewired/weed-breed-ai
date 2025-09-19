@@ -175,7 +175,7 @@ export class Zone {
     });
   }
 
-  addDevice(blueprintId: string): void {
+  addDevice(blueprintId: string, rng: () => number): void {
     const blueprints = getBlueprints();
     const blueprint = blueprints.devices[blueprintId];
     if (!blueprint) {
@@ -185,7 +185,7 @@ export class Zone {
     
     const priceInfo = blueprints.devicePrices[blueprintId];
 
-    const newDeviceId = `device-${Date.now()}-${Math.random()}`;
+    const newDeviceId = `device-${Date.now()}-${rng()}`;
     const newDevice: Device = {
       id: newDeviceId,
       blueprintId: blueprintId,
@@ -347,7 +347,8 @@ export class Zone {
     const germinatedPlants: Plant[] = [];
     for (let i = 0; i < quantity; i++) {
         if (rng() <= germinationRate) {
-            germinatedPlants.push(new Plant(strainId));
+            const plantId = `plant-${Date.now()}-${rng()}`;
+            germinatedPlants.push(new Plant(strainId, plantId));
         }
     }
 
